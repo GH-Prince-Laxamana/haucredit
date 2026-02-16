@@ -24,10 +24,19 @@ CREATE TABLE IF NOT EXISTS users (
     org_body VARCHAR(200) NOT NULL,
     user_reg_date DATETIME NOT NULL
 )";
-    
-if (mysqli_query($conn, $sql)) {
+
+mysqli_query($conn, $table_sql);
+
+$insert_sql = "
+INSERT IGNORE INTO users
+(user_name, user_password, user_email, stud_num, org_body, user_reg_date)
+VALUES
+('admin', '203', 'admin@hau.edu.ph', '203', 'SOC', NOW())
+";
+
+if (mysqli_query($conn, $insert_sql)) {
     echo "Setup completed!";
 } else {
-    echo "Error creating table: " . mysqli_error($conn);
+    echo "Error: " . mysqli_error($conn);
 }
 ?>
