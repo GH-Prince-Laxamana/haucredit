@@ -4,13 +4,12 @@ include("../app/database.php");
 
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 
-$error = "";
-$success = "";
-
 if (isset($_SESSION["user_id"])) {
     header("Location: home.php");
     exit();
 }
+$error = "";
+$success = "";
 
 $username = $email = $stud_num = $org_body = "";
 
