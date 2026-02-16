@@ -14,7 +14,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HAUCredit - Dashboard</title>
-    <link rel="stylesheet" href="../app/css/styles.css" />
+    <link rel="stylesheet" href="../app/css/layout.css" />
 </head>
 <body>
     <div class="app">
@@ -25,12 +25,12 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
       </div>
 
       <nav class="nav">
-        <a class="nav-item active" href="#">
+        <a class="nav-item active" href="home.php">
           <span class="icon" aria-hidden="true"></span>
           <span>Dashboard</span>
         </a>
 
-        <a class="nav-item" href="#">
+        <a class="nav-item" href="create_event.php">
           <span class="icon" aria-hidden="true"></span>
           <span>Create Event</span>
         </a>
