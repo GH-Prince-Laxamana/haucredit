@@ -105,7 +105,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create Event</title>
-  <link rel="stylesheet" href="../app/css/styles.css" />
+  <link rel="stylesheet" href="../app/css/layout.css" />
 </head>
 
 <body>
@@ -118,22 +118,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       </div>
 
       <nav class="nav">
-        <a class="nav-item" href="dashboard.html">
+        <a class="nav-item" href="home.php">
           <span class="icon" aria-hidden="true"></span>
           <span>Dashboard</span>
         </a>
 
-        <a class="nav-item active" href="ce-with-design.php">
+        <a class="nav-item active" href="create_event.php">
           <span class="icon" aria-hidden="true"></span>
           <span>Create Event</span>
         </a>
 
-        <a class="nav-item" href="calendar.html">
+        <a class="nav-item" href="calendar.php">
           <span class="icon" aria-hidden="true"></span>
           <span>Calendar</span>
         </a>
 
-        <a class="nav-item" href="about.html">
+        <a class="nav-item" href="about.php">
           <span class="icon" aria-hidden="true"></span>
           <span>About Us</span>
         </a>
