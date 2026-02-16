@@ -584,7 +584,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
                     <span>Dashboard</span>
                 </a>
 
-                <a class="nav-item" href="createEvent.php">
+                <a class="nav-item" href="create_event.php">
                     <span class="icon" aria-hidden="true">
                         <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />

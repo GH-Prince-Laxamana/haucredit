@@ -8,6 +8,7 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 // Persist previous inputs
+$organizing_body = $_SESSION['organizing_body'] ?? '';
 $background = $_SESSION['background'] ?? '';
 $activity_type = $_SESSION['activity_type'] ?? '';
 $series = $_SESSION['series'] ?? '';
@@ -25,6 +26,7 @@ $overnight = $_SESSION['overnight'] ?? '';
 
 // Handle form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+  $_SESSION['organizing_body'] = $_POST['organizing_body'] ?? null;
   $_SESSION['background'] = $_POST['background'] ?? null;
   $_SESSION['activity_type'] = $_POST['activity_type'] ?? null;
   $_SESSION['series'] = $_POST['series'] ?? null;
@@ -51,12 +53,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         ");
 
     $user_id = $_SESSION["user_id"];
-    $organizing_body = $_SESSION["org_body"];
 
     $stmt->bind_param(
       "issssssssissssss",
       $user_id,
-      $organizing_body,
+      $_SESSION['organizing_body'],
       $_SESSION['background'],
       $_SESSION['activity_type'],
       $_SESSION['series'],
@@ -76,6 +77,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->execute();
 
     unset(
+      $_SESSION['organizing_body'],
       $_SESSION['background'],
       $_SESSION['activity_type'],
       $_SESSION['series'],
@@ -172,6 +174,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </summary>
 
             <div class="acc-body">
+              <div class="field">
+                <label for="organizing_body">Organizing Body:</label><br>
+                <input list="org_list" id="organizing_body" name="organizing_body" value="<?= htmlspecialchars($organizing_body) ?>"
+                  required>
+                <datalist id="org_list">
+                  <!-- temp selections -->
+                  <option value="SOC">
+                  <option value="SAS">
+                  <option value="SEA">
+                  <option value="CCJEF">
+                  <option value="SHTM">
+                </datalist>
+              </div>
+
               <div class="field">
                 <label>Background:</label><br>
                 <label><input type="radio" name="background" value="OSA-Initiated Activity"
