@@ -1,0 +1,256 @@
+/* =========================
+   THEME / VARIABLES
+   ========================= */
+:root{
+  --burgundy:#4b0014;
+  --offwhite:#f9f3ea;
+  --gold:#c2a14d;
+
+  --shadow: 0 10px 25px rgba(0,0,0,.10);
+  --radius: 14px;
+}
+
+/* =========================
+   RESET / BASE
+   ========================= */
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+body{
+  font-family:"SF Pro Text","SF Pro Icons","Helvetica Neue",Helvetica,Arial,sans-serif;
+  background: var(--offwhite);
+  color:#1a1a1a;
+}
+
+/* =========================
+   APP LAYOUT
+   ========================= */
+.app{
+  min-height:100vh;
+  display:flex;
+}
+
+/* =========================
+   SIDEBAR
+   ========================= */
+.sidebar{
+  width: 240px;
+  background: var(--burgundy);
+  color: var(--offwhite);
+  display:flex;
+  flex-direction:column;
+  padding: 18px 14px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 10px 0 18px;
+}
+
+.avatar{
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: rgba(249,243,234,.35);
+  border: 2px solid rgba(194,161,77,.55);
+}
+
+.nav{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.nav-item{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 12px 12px;
+  border-radius: 12px;
+  color: var(--offwhite);
+  text-decoration:none;
+  opacity: .92;
+  transition: transform .08s ease, background .12s ease, opacity .12s ease;
+}
+
+.nav-item:hover{
+  background: rgba(249,243,234,.12);
+  opacity: 1;
+}
+
+.nav-item:active{
+  transform: scale(.99);
+}
+
+.nav-item .icon{
+  width: 22px;
+  display:inline-flex;
+  justify-content:center;
+  opacity:.95;
+}
+
+.nav-item.active{
+  background: rgba(194,161,77,.18);
+  border: 1px solid rgba(194,161,77,.45);
+}
+
+.account{
+  margin-top:auto;
+  padding-top: 14px;
+}
+
+.account-btn{
+  width:100%;
+  border: 1px solid rgba(249,243,234,.25);
+  background: rgba(249,243,234,.10);
+  color: var(--offwhite);
+  padding: 10px 12px;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  cursor:pointer;
+}
+
+.user-dot{
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(249,243,234,.45);
+  border: 1px solid rgba(194,161,77,.6);
+}
+
+/* =========================
+   MAIN
+   ========================= */
+.main{
+  flex:1;
+  padding: 22px 26px;
+}
+
+.topbar{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.title-wrap h1{
+  font-size: 28px;
+  line-height: 1.1;
+  color: #2a2a2a;
+}
+
+.title-wrap p{
+  margin-top: 6px;
+  font-size: 14px;
+  opacity: .7;
+}
+
+.top-actions{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
+.icon-btn{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  border: 1px solid rgba(194,161,77,.7);
+  background: var(--offwhite);
+  cursor:pointer;
+  box-shadow:0 6px 16px rgba(0,0,0,.06);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+}
+
+.icon-img{
+  width:20px;
+  height:20px;
+  object-fit:contain;
+  display:block;
+  pointer-events:none;
+}
+
+.primary-btn{
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(194,161,77,.7);
+  background: var(--offwhite);
+  color: var(--burgundy);
+  font-weight: 600;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.06);
+}
+
+.primary-btn:hover{
+  background: #fff;
+}
+
+/* =========================
+   CARDS GRID
+   ========================= */
+.content{
+  padding-top: 10px;
+}
+
+.cards{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(240px, 360px));
+  gap: 22px;
+  align-content:start;
+}
+
+.card{
+  height: 140px;
+  border-radius: var(--radius);
+  background: rgba(0,0,0,.15); 
+  box-shadow: var(--shadow);
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+@media (max-width: 900px){
+  .sidebar{ width: 210px; }
+  .cards{ grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px){
+  .app{ flex-direction:column; }
+
+  .sidebar{
+    width: 100%;
+    flex-direction:row;
+    align-items:center;
+    gap: 10px;
+  }
+
+  .brand{ padding: 0; }
+  .avatar{ width: 44px; height: 44px; }
+
+  .nav{
+    flex-direction:row;
+    overflow:auto;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 0;
+  }
+
+  .nav-item{ white-space:nowrap; }
+  .account{ display:none; }
+}
