@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
     user_reg_date DATETIME NOT NULL
 )";
 
-mysqli_query($conn, $table_sql);
+mysqli_query($conn, $sql);
 
 $insert_sql = "
 INSERT IGNORE INTO users
