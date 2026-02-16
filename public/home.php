@@ -17,12 +17,6 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
     <link rel="stylesheet" href="../app/css/styles.css" />
 </head>
 <body>
-
-    <h1>Welcome, <?= $username ?>!</h1>
-
-    <form action="logout.php" method="post">
-        <button type="submit">Logout</button>
-    </form>
     <div class="app">
 
     <aside class="sidebar">
