@@ -2,9 +2,9 @@
 session_start();
 include "../app/database.php";
 
-if(!isset($_SESSION["user_id"])){
-    header("Location:index.php");
-    exit();
+if (!isset($_SESSION["user_id"])) {
+  header("Location:index.php");
+  exit();
 }
 
 // Persist previous inputs
@@ -327,14 +327,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     function toggleBlocks() {
       const seriesBlock = document.getElementById('series-block');
       const offcampusBlock = document.getElementById('offcampus-block');
+
       const background = document.querySelector('input[name="background"]:checked')?.value;
       const activity = document.querySelector('input[name="activity_type"]:checked')?.value;
 
-      // Series block
-      seriesBlock.style.display = (background === 'Participation') ? 'block' : 'none';
+      // Show/hide series block
+      if (background === 'Participation') {
+        seriesBlock.style.display = 'block';
+        seriesBlock.querySelectorAll('input').forEach(i => i.required = true);
+      } else {
+        seriesBlock.style.display = 'none';
+        seriesBlock.querySelectorAll('input').forEach(i => i.required = false);
+      }
 
-      // Off-campus block
-      offcampusBlock.style.display = (activity && activity.includes('Off-Campus')) ? 'block' : 'none';
+      // Show/hide offcampus block
+      if (activity && activity.includes('Off-Campus')) {
+        offcampusBlock.style.display = 'block';
+        offcampusBlock.querySelectorAll('input').forEach(i => i.required = true);
+      } else {
+        offcampusBlock.style.display = 'none';
+        offcampusBlock.querySelectorAll('input').forEach(i => i.required = false);
+      }
     }
 
     window.addEventListener('pageshow', toggleBlocks);
