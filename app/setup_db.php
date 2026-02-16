@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS events (
     event_name VARCHAR(255) NOT NULL,
     start_datetime DATETIME NOT NULL,
     end_datetime DATETIME NOT NULL,
-    number_of_participants INT NOT NULL,
+    participants VARCHAR(255) NOT NULL,
     venue_platform VARCHAR(255) NOT NULL,
     is_extraneous ENUM('Yes', 'No') NOT NULL,
     target_metric VARCHAR(255) NOT NULL,
@@ -52,16 +52,6 @@ CREATE TABLE IF NOT EXISTS events (
     overnight ENUM('Yes', 'No') NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
-        ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS event_requirements (
-    requirement_id INT AUTO_INCREMENT PRIMARY KEY,
-    event_id INT NOT NULL,
-    requirement_name VARCHAR(255) NOT NULL,
-    is_required BOOLEAN DEFAULT TRUE,
-    is_submitted BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (event_id) REFERENCES events(event_id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ";

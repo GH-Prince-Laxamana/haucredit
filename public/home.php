@@ -49,7 +49,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
       <div class="account">
         <button class="account-btn" type="button">
           <span class="user-dot" aria-hidden="true"></span>
-          <span>Account Name</span>
+          <span><?= $username ?></span>
         </button>
       </div>
     </aside>
@@ -84,5 +84,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
     </main>
 
   </div>
+
+  <a href="logout.php">Logout</a>
 </body>
 </html>

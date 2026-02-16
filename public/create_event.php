@@ -2,6 +2,11 @@
 session_start();
 include "../app/database.php";
 
+if(!isset($_SESSION["user_id"])){
+    header("Location:index.php");
+    exit();
+}
+
 // Persist previous inputs
 $background = $_SESSION['background'] ?? '';
 $activity_type = $_SESSION['activity_type'] ?? '';
@@ -10,7 +15,7 @@ $nature = $_SESSION['nature'] ?? '';
 $activity_name = $_SESSION['event_name'] ?? '';
 $start_datetime = $_SESSION['start_datetime'] ?? '';
 $end_datetime = $_SESSION['end_datetime'] ?? '';
-$participants = $_SESSION['number_of_participants'] ?? '';
+$participants = $_SESSION['participants'] ?? '';
 $venue = $_SESSION['venue_platform'] ?? '';
 $extraneous = $_SESSION['is_extraneous'] ?? '';
 $target_metric = $_SESSION['target_metric'] ?? '';
@@ -20,71 +25,89 @@ $overnight = $_SESSION['overnight'] ?? '';
 
 // Handle form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $_SESSION['background'] = $_POST['background'] ?? null;
-    $_SESSION['activity_type'] = $_POST['activity_type'] ?? null;
-    $_SESSION['series'] = $_POST['series'] ?? null;
-    $_SESSION['nature'] = $_POST['nature'] ?? '';
-    $_SESSION['event_name'] = $_POST['activity_name'] ?? '';
-    $_SESSION['start_datetime'] = $_POST['start_datetime'] ?? '';
-    $_SESSION['end_datetime'] = $_POST['end_datetime'] ?? '';
-    $_SESSION['number_of_participants'] = $_POST['participants'] ?? '';
-    $_SESSION['venue_platform'] = $_POST['venue'] ?? '';
-    $_SESSION['is_extraneous'] = $_POST['extraneous'] ?? '';
-    $_SESSION['target_metric'] = $_POST['target_metric'] ?? '';
-    $_SESSION['distance'] = $_POST['distance'] ?? null;
-    $_SESSION['participant_range'] = $_POST['participant_range'] ?? null;
-    $_SESSION['overnight'] = $_POST['overnight'] ?? null;
+  $_SESSION['background'] = $_POST['background'] ?? null;
+  $_SESSION['activity_type'] = $_POST['activity_type'] ?? null;
+  $_SESSION['series'] = $_POST['series'] ?? null;
+  $_SESSION['nature'] = $_POST['nature'] ?? '';
+  $_SESSION['event_name'] = $_POST['activity_name'] ?? '';
+  $_SESSION['start_datetime'] = $_POST['start_datetime'] ?? '';
+  $_SESSION['end_datetime'] = $_POST['end_datetime'] ?? '';
+  $_SESSION['participants'] = $_POST['participants'] ?? '';
+  $_SESSION['venue_platform'] = $_POST['venue'] ?? '';
+  $_SESSION['is_extraneous'] = $_POST['extraneous'] ?? '';
+  $_SESSION['target_metric'] = $_POST['target_metric'] ?? '';
+  $_SESSION['distance'] = $_POST['distance'] ?? null;
+  $_SESSION['participant_range'] = $_POST['participant_range'] ?? null;
+  $_SESSION['overnight'] = $_POST['overnight'] ?? null;
 
-    if (isset($_POST['create_event'])) {
-        $stmt = $conn->prepare("
+  if (isset($_POST['create_event'])) {
+    $stmt = $conn->prepare("
             INSERT INTO events (
                 user_id, organizing_body, background, activity_type, series,
                 nature, event_name, start_datetime, end_datetime,
-                number_of_participants, venue_platform, is_extraneous, target_metric,
+                participants, venue_platform, is_extraneous, target_metric,
                 distance, participant_range, overnight
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
-        $user_id = 1; // temp
-        $organizing_body = "SOC"; // temp
+    $user_id = $_SESSION["user_id"];
+    $organizing_body = $_SESSION["org_body"];
 
-        $stmt->bind_param(
-            "issssssssissssss",
-            $user_id,
-            $organizing_body,
-            $_SESSION['background'],
-            $_SESSION['activity_type'],
-            $_SESSION['series'],
-            $_SESSION['nature'],
-            $_SESSION['event_name'],
-            $_SESSION['start_datetime'],
-            $_SESSION['end_datetime'],
-            $_SESSION['number_of_participants'],
-            $_SESSION['venue_platform'],
-            $_SESSION['is_extraneous'],
-            $_SESSION['target_metric'],
-            $_SESSION['distance'],
-            $_SESSION['participant_range'],
-            $_SESSION['overnight']
-        );
+    $stmt->bind_param(
+      "issssssssissssss",
+      $user_id,
+      $organizing_body,
+      $_SESSION['background'],
+      $_SESSION['activity_type'],
+      $_SESSION['series'],
+      $_SESSION['nature'],
+      $_SESSION['event_name'],
+      $_SESSION['start_datetime'],
+      $_SESSION['end_datetime'],
+      $_SESSION['participants'],
+      $_SESSION['venue_platform'],
+      $_SESSION['is_extraneous'],
+      $_SESSION['target_metric'],
+      $_SESSION['distance'],
+      $_SESSION['participant_range'],
+      $_SESSION['overnight']
+    );
 
-        $stmt->execute();
+    $stmt->execute();
 
-        session_unset();
-        echo "<h2>Event successfully created!</h2>";
-        exit();
-    }
+    unset(
+      $_SESSION['background'],
+      $_SESSION['activity_type'],
+      $_SESSION['series'],
+      $_SESSION['nature'],
+      $_SESSION['event_name'],
+      $_SESSION['start_datetime'],
+      $_SESSION['end_datetime'],
+      $_SESSION['participants'],
+      $_SESSION['venue_platform'],
+      $_SESSION['is_extraneous'],
+      $_SESSION['target_metric'],
+      $_SESSION['distance'],
+      $_SESSION['participant_range'],
+      $_SESSION['overnight']
+    );
+
+    header("Location: home.php");
+    exit();
+  }
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create Event</title>
   <link rel="stylesheet" href="../app/css/styles.css" />
 </head>
+
 <body>
   <div class="app">
 
@@ -151,8 +174,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="acc-body">
               <div class="field">
                 <label>Background:</label><br>
-                <label><input type="radio" name="background" value="OSA-Initiated Activity" <?= ($background === 'OSA-Initiated Activity') ? 'checked' : '' ?>> OSA-Initiated Activity</label><br>
-                <label><input type="radio" name="background" value="Student-Initiated Activity" <?= ($background === 'Student-Initiated Activity') ? 'checked' : '' ?>> Student-Initiated Activity</label><br>
+                <label><input type="radio" name="background" value="OSA-Initiated Activity"
+                    <?= ($background === 'OSA-Initiated Activity') ? 'checked' : '' ?>> OSA-Initiated Activity</label><br>
+                <label><input type="radio" name="background" value="Student-Initiated Activity"
+                    <?= ($background === 'Student-Initiated Activity') ? 'checked' : '' ?>> Student-Initiated
+                  Activity</label><br>
                 <label><input type="radio" name="background" value="Participation" <?= ($background === 'Participation') ? 'checked' : '' ?>> Participation</label>
               </div>
 
@@ -174,7 +200,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 ?>
               </div>
 
-              <div class="field" id="series-block" style="display:<?= ($background === 'Participation') ? 'block' : 'none' ?>;">
+              <div class="field" id="series-block"
+                style="display:<?= ($background === 'Participation') ? 'block' : 'none' ?>;">
                 <label>Series:</label><br>
                 <?php
                 $series_options = ["College Days", "University Days", "Organization Themed-Fairs", "OSA-Initiated Activities", "HAU Institutional Activities"];
@@ -208,18 +235,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
               <div class="field">
                 <label for="activity_name">Activity Name:</label>
-                <input type="text" name="activity_name" id="activity_name" value="<?= htmlspecialchars($activity_name) ?>" required>
+                <input type="text" name="activity_name" id="activity_name"
+                  value="<?= htmlspecialchars($activity_name) ?>" required>
               </div>
 
               <div class="field">
                 <label for="extraneous">Extraneous?</label><br>
-                <label><input type="radio" name="extraneous" value="Yes" <?= ($extraneous === 'Yes') ? 'checked' : '' ?> required> Yes</label>
-                <label><input type="radio" name="extraneous" value="No" <?= ($extraneous === 'No') ? 'checked' : '' ?> required> No</label>
+                <label><input type="radio" name="extraneous" value="Yes" <?= ($extraneous === 'Yes') ? 'checked' : '' ?>
+                    required> Yes</label>
+                <label><input type="radio" name="extraneous" value="No" <?= ($extraneous === 'No') ? 'checked' : '' ?>
+                    required> No</label>
               </div>
 
               <div class="field">
                 <label for="target_metric">Target Metric:</label>
-                <input type="text" name="target_metric" id="target_metric" value="<?= htmlspecialchars($target_metric) ?>">
+                <input type="text" name="target_metric" id="target_metric"
+                  value="<?= htmlspecialchars($target_metric) ?>">
               </div>
             </div>
           </details>
@@ -240,17 +271,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="acc-body">
               <div class="field">
                 <label for="start_datetime">Start Date & Time:</label>
-                <input type="datetime-local" name="start_datetime" id="start_datetime" value="<?= htmlspecialchars($start_datetime) ?>" required>
+                <input type="datetime-local" name="start_datetime" id="start_datetime"
+                  value="<?= htmlspecialchars($start_datetime) ?>" required>
               </div>
 
               <div class="field">
                 <label for="end_datetime">End Date & Time:</label>
-                <input type="datetime-local" name="end_datetime" id="end_datetime" value="<?= htmlspecialchars($end_datetime) ?>" required>
+                <input type="datetime-local" name="end_datetime" id="end_datetime"
+                  value="<?= htmlspecialchars($end_datetime) ?>" required>
               </div>
 
               <div class="field">
-                <label for="participants">Number of Participants:</label>
-                <input type="number" name="participants" id="participants" value="<?= htmlspecialchars($participants) ?>" required>
+                <label for="participants">Participants:</label>
+                <input type="text" name="participants" id="participants" value="<?= htmlspecialchars($participants) ?>"
+                  required>
               </div>
 
               <div class="field">
@@ -258,7 +292,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <input type="text" name="venue" id="venue" value="<?= htmlspecialchars($venue) ?>" required>
               </div>
 
-              <div class="field" id="offcampus-block" style="display:<?= (strpos($activity_type, 'Off-Campus') !== false) ? 'block' : 'none' ?>;">
+              <div class="field" id="offcampus-block"
+                style="display:<?= (strpos($activity_type, 'Off-Campus') !== false) ? 'block' : 'none' ?>;">
                 <label>Distance:</label><br>
                 <label><input type="radio" name="distance" value="Within Angeles City" <?= ($distance === 'Within Angeles City') ? 'checked' : '' ?> required> Within Angeles City</label><br>
                 <label><input type="radio" name="distance" value="Within Central Luzon" <?= ($distance === 'Within Central Luzon') ? 'checked' : '' ?> required> Within Central Luzon</label><br>
@@ -274,8 +309,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 ?>
 
                 <label>More than 12 hours?</label><br>
-                <label><input type="radio" name="overnight" value="Yes" <?= ($overnight === 'Yes') ? 'checked' : '' ?> required> Yes</label>
-                <label><input type="radio" name="overnight" value="No" <?= ($overnight === 'No') ? 'checked' : '' ?> required> No</label>
+                <label><input type="radio" name="overnight" value="Yes" <?= ($overnight === 'Yes') ? 'checked' : '' ?>
+                    required> Yes</label>
+                <label><input type="radio" name="overnight" value="No" <?= ($overnight === 'No') ? 'checked' : '' ?>
+                    required> No</label>
               </div>
             </div>
           </details>
@@ -305,4 +342,5 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     document.querySelectorAll('input[name="activity_type"]').forEach(r => r.addEventListener('change', toggleBlocks));
   </script>
 </body>
+
 </html>
