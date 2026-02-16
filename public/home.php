@@ -69,7 +69,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
         <div class="top-actions">
           <button class="icon-btn" type="button" aria-label="Notifications">
-            <img src="img/bell.png" alt="" class="icon-img">
+            <img src="../app/img/bell.png" alt="" class="icon-img">
           </button>
 
           <button class="primary-btn" type="button">
