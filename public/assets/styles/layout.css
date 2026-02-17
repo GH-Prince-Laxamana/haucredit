@@ -572,12 +572,6 @@ details {
   animation: fadeIn 0.3s ease;
 }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: #747474;
-}
-
 /* Theme colors */
 .primary-btn {
   padding: 12px 24px;
@@ -612,6 +606,12 @@ button:disabled {
 .secondary-btn:hover {
   border-color: var(--burgundy);
   background: #fdfcfa;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #747474;
 }
 
 /* =========================

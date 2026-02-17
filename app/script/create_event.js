@@ -118,32 +118,28 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!step1 || !nextBtn || !createBtn) return;
 
   // ---------- INITIAL STATE ----------
-  step2.forEach(s => s.style.display = "none");
+  step2.forEach((s) => (s.style.display = "none"));
   step2Actions.style.display = "none";
   createBtn.disabled = true;
 
   // ---------- UTILITIES ----------
 
   const isVisible = (el) =>
-    el.offsetParent !== null &&
-    !el.closest("[hidden]") &&
-    !el.disabled;
+    el.offsetParent !== null && !el.closest("[hidden]") && !el.disabled;
 
-  const getInputs = (container) =>
-    [...container.querySelectorAll("input, textarea, select")];
+  const getInputs = (container) => [
+    ...container.querySelectorAll("input, textarea, select"),
+  ];
 
   function validateContainer(container) {
-
     const inputs = getInputs(container).filter(isVisible);
     let valid = true;
 
     const radioGroups = {};
 
     for (const input of inputs) {
-
       // Ignore hidden select used by tag widget
-      if (input.tagName === "SELECT" && input.hidden)
-        continue;
+      if (input.tagName === "SELECT" && input.hidden) continue;
 
       // Radios
       if (input.type === "radio") {
@@ -155,29 +151,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Multi-select
       if (input.tagName === "SELECT" && input.multiple && input.required) {
-        if (input.selectedOptions.length === 0) {
-          valid = false;
-        }
+        if (input.selectedOptions.length === 0) valid = false;
         continue;
       }
 
       // Text / textarea / datetime etc
-      if (input.required && !input.value.trim()) {
-        valid = false;
-      }
+      if (input.required && !input.value.trim()) valid = false;
     }
 
     // Validate radio groups
     for (const group of Object.values(radioGroups)) {
-      if (!group.some(r => r.checked)) {
-        valid = false;
-      }
+      if (!group.some((r) => r.checked)) valid = false;
     }
 
-    const selectedTags = container.querySelectorAll("#selectedTags .tag");
-    if (selectedTags.length === 0) valid = false;
-
-    return valid;
+    const tagsContainer = container.querySelector("#selectedTags");
+    if (tagsContainer && tagsContainer.querySelectorAll(".tag").length === 0) valid = false;
 
     return valid;
   }
@@ -189,7 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function validateStep2() {
-    const valid = [...step2].every(step => validateContainer(step));
+    const valid = [...step2].every((step) => validateContainer(step));
     createBtn.disabled = !valid;
   }
 
@@ -214,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ["style", "class", "open"]
+    attributeFilter: ["style", "class", "open"],
   });
 
   // Initial validation
@@ -231,7 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
     step1Actions.style.display = "none";
 
     // Show Step 2
-    step2.forEach(s => {
+    step2.forEach((s) => {
       s.style.display = "block";
       s.open = true;
     });
@@ -243,15 +231,13 @@ document.addEventListener("DOMContentLoaded", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
-
   backBtn.addEventListener("click", () => {
-
     // Show Step 1
     step1.style.display = "block";
     step1Actions.style.display = "flex";
 
     // Hide Step 2
-    step2.forEach(s => {
+    step2.forEach((s) => {
       s.style.display = "none";
       s.open = false;
     });
@@ -264,5 +250,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
-
 });
