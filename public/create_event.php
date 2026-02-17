@@ -40,7 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $_SESSION['participants'] = $_POST['participants'] ?? '';
   $_SESSION['venue_platform'] = $_POST['venue'] ?? '';
   $_SESSION['is_extraneous'] = $_POST['extraneous'] ?? '';
-  $_SESSION['collect_payments'] = $_POST['do_collect_payments'] ?? '';
+  $_SESSION['do_collect_payments'] = $_POST['collect_payments'] ?? '';
   $_SESSION['target_metric'] = $_POST['target_metric'] ?? '';
   $_SESSION['distance'] = $_POST['distance'] ?? null;
   $_SESSION['participant_range'] = $_POST['participant_range'] ?? null;
@@ -53,15 +53,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 nature, event_name, start_datetime, end_datetime,
                 participants, venue_platform, is_extraneous, do_collect_payments, target_metric,
                 distance, participant_range, overnight
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
     $user_id = $_SESSION["user_id"];
+    $organizing_body_json = isset($_SESSION['organizing_body'])
+    ? json_encode($_SESSION['organizing_body'])
+    : null;
 
     $stmt->bind_param(
-      "issssssssissssss",
+      "issssssssisssssss",
       $user_id,
-      $_SESSION['organizing_body'],
+      $organizing_body_json,
       $_SESSION['background'],
       $_SESSION['activity_type'],
       $_SESSION['series'],

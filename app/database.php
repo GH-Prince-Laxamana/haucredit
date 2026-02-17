@@ -37,7 +37,7 @@ try {
     CREATE TABLE IF NOT EXISTS events (
         event_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
-        organizing_body VARCHAR(100) NOT NULL,
+        organizing_body TEXT NOT NULL,
         background VARCHAR(100) NOT NULL,
         activity_type VARCHAR(150) NOT NULL,
         series VARCHAR(100) NULL,
