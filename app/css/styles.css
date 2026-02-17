@@ -1,764 +1,348 @@
-/* =========================
-   MERGED CSS (LATEST WINS ON CONFLICTS)
-   - Auth UI styles kept EXACT (from latest CSS)
-   - Dashboard/App + Sidebar + Cards + Create Event added (from older CSS)
-   - Uses :has(.container) to apply AUTH background only on auth pages
-========================= */
+/* =========================================================
+   HAUCREDIT — AUTH CSS (CLEAN + BIGGER)
+   - Matte panels
+   - Burgundy navbar
+   - Auth pages only (no dashboard/home styles)
+   - Responsive + scroll-safe
+   ========================================================= */
 
 /* ===== RESET ===== */
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;}
+img{max-width:100%;height:auto;display:block;}
+input,select,button{font:inherit;}
+a{color:inherit;text-decoration:none;}
 
-/* =========================
-   THEME / VARIABLES  (LATEST WINS)
-========================= */
+/* ===== THEME ===== */
 :root{
-  /* latest */
   --burgundy:#5a0016;
   --burgundy-2:#3d0010;
   --gold:#c2a14f;
 
-  --panel-shadow: 0 26px 70px rgba(0,0,0,.28);
-  --radius: 14px;
+  --panel-shadow:0 26px 70px rgba(0,0,0,.28);
+  --radius:14px;
 
-  --stroke: rgba(0,0,0,.08);
+  --stroke:rgba(0,0,0,.10);
   --muted:#6f6f75;
-  --ring: rgba(90,0,22,.18);
+  --ring:rgba(90,0,22,.18);
 
-  /* from older (non-conflicting / useful) */
   --offwhite:#f9f3ea;
-  --shadow: 0 10px 25px rgba(0,0,0,.10);
+  --surface:#ffffff;
+  --surface-2:#fbfaf9;
 }
 
-/* =========================
-   BASE BODY
-   (Default = dashboard/light background)
-========================= */
+/* ===== BASE (BIGGER) ===== */
+html{
+  /* makes everything feel bigger without breaking layout */
+  font-size: clamp(16px, 0.7vw + 14px, 19px);
+}
+
 body{
-  font-family:"SF Pro Text","SF Pro Icons","Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-family:"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
+  background:var(--offwhite);
   color:#1a1a1a;
-  background: var(--offwhite);
   overflow-x:hidden;
-  position:relative;
+  line-height:1.45;
 }
 
-/* =========================
-   AUTH PAGE BACKGROUND (applies only if .container exists)
-   Requires modern browsers (Chrome supports :has)
-========================= */
+/* =========================================================
+   AUTH BACKGROUND (ONLY WHEN .container EXISTS)
+   ========================================================= */
 body:has(.container){
   background:url("../img/HOLY.jpg") center/cover no-repeat fixed;
+  min-height:100vh;
+  overflow-y:auto;
+  padding:16px 0 26px;
 }
 
-/* purple-maroon overlay like screenshot (AUTH only) */
 body:has(.container)::before{
   content:"";
   position:fixed;
   inset:0;
   pointer-events:none;
   background:
-    linear-gradient(135deg, rgba(56,40,78,.70) 0%, rgba(88,22,45,.62) 45%, rgba(50,12,25,.55) 100%),
-    radial-gradient(1100px 650px at 20% 15%, rgba(255,255,255,.06), transparent 60%),
-    radial-gradient(900px 600px at 80% 70%, rgba(0,0,0,.35), transparent 65%);
+    linear-gradient(135deg, rgba(18,14,24,.78) 0%, rgba(90,0,22,.55) 55%, rgba(0,0,0,.55) 100%),
+    radial-gradient(900px 520px at 20% 10%, rgba(255,255,255,.06), transparent 60%),
+    radial-gradient(900px 600px at 85% 75%, rgba(0,0,0,.35), transparent 65%);
 }
 
-/* keep auth content above overlay */
-.navbar, .container{position:relative; z-index:1;}
+.navbar,.container{position:relative;z-index:1;}
 
-/* =========================
-   NAVBAR (AUTH / shared)
-========================= */
+/* =========================================================
+   NAVBAR
+   ========================================================= */
 .navbar{
-  width:min(1120px, 92vw);
-  margin:18px auto 0;
-  background: rgba(255,255,255,.08);
-  border:none;
-  border-radius:12px;
-  backdrop-filter: blur(10px) saturate(1.15);
-  box-shadow: 0 12px 30px rgba(0,0,0,.18);
-
+  width:min(1320px,94vw);
+  margin:12px auto 0;
+  padding:14px 18px;
   display:flex;
   align-items:center;
-  gap:18px;
-  padding:12px 18px;
+  gap:14px;
   color:#fff;
+  background:linear-gradient(180deg,var(--burgundy),var(--burgundy-2));
+  border-radius:var(--radius);
+  box-shadow:var(--panel-shadow);
 }
 
-/* NOTE: .logo exists in your navbar; sidebar avatar is .avatar */
-.logo{
-  width:34px;height:34px;border-radius:50%;
-  background:rgba(255,255,255,.65);
-  flex:0 0 auto;
+.logo{display:none!important;}
+
+.navbar-brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
 }
+
+.navbar-mark{
+  width:38px;
+  height:38px;
+  object-fit:contain;
+}
+
+.navbar-title{
+  font-weight:900;
+  letter-spacing:.7px;
+  text-transform:uppercase;
+  font-size: 1rem;
+}
+.navbar-title .accent{color:var(--gold);}
 
 .navlinks{
   display:flex;
-  gap:12px;
-  align-items:center;
-  flex:1;
+  gap:10px;
+  margin-left:auto;
 }
+
 .navlinks a{
-  color:#fff;
-  text-decoration:none;
-  font-size:13px;
-  font-weight:700;
-  opacity:.92;
-  padding:8px 10px;
-  border-radius:10px;
-  transition: background .18s ease, opacity .18s ease, transform .18s ease;
+  font-size:.92rem;
+  font-weight:900;
+  padding:10px 14px;
+  border-radius:12px;
+  transition:.2s;
 }
 .navlinks a:hover{
-  opacity:1;
   background:rgba(255,255,255,.10);
-  transform:translateY(-1px);
+  color:var(--gold);
+}
+.navlinks a.active{
+  background:rgba(194,161,79,.16);
+  border:1px solid rgba(194,161,79,.35);
 }
 
-.search{
-  margin-left:auto;
-  background:rgba(255,255,255,.14);
-  border:1px solid rgba(255,255,255,.16);
-  border-radius:999px;
-  padding:6px 10px;
-  display:flex;
-  align-items:center;
-}
-.search input{
-  width:180px;
-  border:none;
-  outline:none;
-  background:transparent;
-  color:#fff;
-  font-size:12px;
-}
-.search input::placeholder{color:rgba(255,255,255,.75);}
-
-/* =========================
-   AUTH MAIN SPLIT PANEL
-========================= */
+/* =========================================================
+   MAIN PANEL
+   ========================================================= */
 .container{
-  width:min(1120px, 92vw);
-  margin: 22px auto 40px;
-  height: 560px;
+  width:min(1320px,94vw);
+  margin:14px auto 22px;
   display:flex;
-  overflow:hidden;
-
-  border-radius: 2px;
-  box-shadow: var(--panel-shadow);
-  background:#fff;
-  border:none;
+  background:var(--surface);
+  border-radius:var(--radius);
+  box-shadow:var(--panel-shadow);
+  overflow:hidden; /* keeps corners clean */
 }
 
 /* LEFT PANEL */
 .left-panel{
-  width: 50%;
-  background: linear-gradient(180deg, #540012 0%, #3b000d 100%);
+  width:50%;
+  background:linear-gradient(180deg,var(--burgundy),var(--burgundy-2));
   color:#fff;
-  padding: 62px 62px;
+  padding:72px 64px;
   display:flex;
   flex-direction:column;
   justify-content:center;
-  gap:16px;
-}
-
-.left-panel h1{
-  font-size:44px;
-  font-weight:900;
-  letter-spacing:.6px;
-}
-
-.left-panel p{
-  max-width:430px;
-  font-size:15px;
-  line-height:1.55;
-  color:rgba(255,255,255,.92);
-}
-
-.left-panel ul{
-  margin-top:18px;
-  list-style:none;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.left-panel li{
-  font-size:14px;
-  color:rgba(255,255,255,.95);
-}
-.left-panel li::before{
-  content:"✓";
-  display:inline-block;
-  width:18px;
-  margin-right:8px;
-  color:#fff;
-  font-weight:900;
+  gap:18px;
 }
 
 /* RIGHT PANEL */
 .right-panel{
   flex:1;
-  background:#ffffff;
+  background:var(--surface-2);
+  padding:52px 46px;
   display:flex;
   align-items:center;
   justify-content:center;
-  padding: 40px 40px;
 }
 
-/* FORM CARD (flat) */
-.card{
-  width: 420px;
-  padding: 10px 0;
-  background:transparent;
-  border:none;
-  box-shadow:none;
+/* BRAND STACK */
+.brand-title{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  gap:16px;
 }
+
+.brand-logo{height:150px;}
+
+.brand-name{
+  font-size: clamp(2.2rem, 2.2vw + 1.4rem, 3.4rem);
+  font-weight:1000;
+  text-transform:uppercase;
+  line-height:1.05;
+}
+.brand-accent{color:var(--gold);}
+
+.brand-tagline{
+  font-size: 1rem;
+  max-width:560px;
+  color:rgba(255,255,255,.92);
+}
+
+.left-panel ul{
+  list-style:none;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  align-items:center;
+  font-size: 1rem;
+}
+.left-panel li::before{
+  content:"✓";
+  margin-right:10px;
+  color:var(--gold);
+}
+
+/* =========================================================
+   FORM
+   ========================================================= */
+.card{width:min(580px,100%);}
 
 .card h2{
-  color: var(--burgundy);
-  font-size:22px;
-  font-weight:800;
-  margin-bottom:4px;
+  color:var(--burgundy);
+  font-size: clamp(1.4rem, 1vw + 1.1rem, 1.75rem);
+  font-weight:1000;
 }
 
 .subtitle{
-  font-size:11px;
+  font-size: .95rem;
   color:#777;
-  margin-bottom:16px;
+  margin:6px 0 18px;
 }
 
-/* FORM FIELDS */
-.form-group{ margin-bottom:12px; }
+.form-group{margin-bottom:14px;}
 
 label{
   display:block;
   margin-bottom:6px;
-  font-size:10px;
-  font-weight:800;
-  letter-spacing:.7px;
+  font-size: .78rem;
+  font-weight:900;
+  letter-spacing:.75px;
   text-transform:uppercase;
   color:#7a7a7a;
 }
 
-input, select{
+input,select{
   width:100%;
-  height:34px;
-  padding:0 12px;
-  border-radius:8px;
-  border:1px solid #cfcfd3;
+  height:48px;                 /* BIGGER */
+  padding:0 14px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,.18);
   background:#fff;
-  font-size:12px;
-  transition: box-shadow .15s ease, border-color .15s ease;
+  font-size: 1rem;             /* BIGGER */
 }
 
-input:focus, select:focus{
+input:focus,select:focus{
   outline:none;
-  border-color: rgba(90,0,22,.55);
-  box-shadow: 0 0 0 3px var(--ring);
+  border-color:rgba(194,161,79,.75);
+  box-shadow:0 0 0 3px var(--ring);
 }
 
-input[list]{ padding-right:10px; }
+/* SELECT ARROW */
+.form-group.select-wrap{position:relative;}
+.form-group.select-wrap select{
+  appearance:none;
+  padding-right:52px;
+}
+.form-group.select-wrap::after{
+  content:"";
+  position:absolute;
+  right:16px;
+  top:38px;
+  width:10px;height:10px;
+  border-right:2px solid rgba(0,0,0,.55);
+  border-bottom:2px solid rgba(0,0,0,.55);
+  transform:rotate(45deg);
+  pointer-events:none;
+}
 
 /* BUTTON */
 button{
   width:100%;
-  height:34px;
+  height:48px;                 /* BIGGER */
   border:none;
-  border-radius:8px;
-  cursor:pointer;
-
-  background: linear-gradient(180deg, #5a0016 0%, #3d0010 100%);
+  border-radius:12px;
+  background:linear-gradient(180deg,var(--burgundy),var(--burgundy-2));
   color:#fff;
-  font-size:12px;
-  font-weight:800;
-  margin-top:10px;
-
-  box-shadow: 0 8px 18px rgba(90,0,22,.22);
-  transition: filter .15s ease, transform .15s ease;
+  font-weight:900;
+  font-size: 1rem;             /* BIGGER */
+  box-shadow:0 14px 26px rgba(90,0,22,.22);
+  cursor:pointer;
+  transition: transform .15s ease, filter .15s ease;
 }
-button:hover{ filter:brightness(1.05); transform:translateY(-1px); }
-button:active{ transform:translateY(0); }
+button:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.05);
+}
 
 /* LINKS */
 .link{
-  margin-top:10px;
   text-align:center;
-  font-size:10px;
+  font-size:.9rem;
   color:#777;
+  margin-top:12px;
 }
-.link a{
-  color: var(--burgundy);
-  font-weight:800;
-  text-decoration:none;
-}
-.link a:hover{ text-decoration:underline; }
+.link a{color:var(--burgundy);font-weight:900;}
+.link a:hover{text-decoration:underline;}
 
 .forgot-wrap{
-  margin-top:6px;
   text-align:right;
+  margin-top:10px;
 }
-.forgot-link, .forgot-wrap a{
-  font-size:10px;
-  color: var(--burgundy);
-  font-weight:800;
-  text-decoration:none;
+.forgot-link{
+  color:var(--burgundy);
+  font-weight:900;            /* FIXED */
+  font-size:.9rem;
 }
-.forgot-link:hover, .forgot-wrap a:hover{ text-decoration:underline; }
+.forgot-link:hover{text-decoration:underline;}
 
-/* NOTICE BOX */
+/* NOTICE */
 .notice{
-  margin-top:12px;
-  padding:10px 12px;
-  border-radius:10px;
-  font-size:12px;
-  border:1px solid rgba(0,0,0,.06);
-}
-.notice.error{ background:#ffecec; color:#a00000; }
-.notice.success{ background:#effff2; color:#116b1f; }
-
-/* =========================
-   DASHBOARD / APP LAYOUT (from older CSS)
-========================= */
-.app{
-  min-height:100vh;
-  display:flex;
-}
-
-/* SIDEBAR */
-.sidebar{
-  width: 240px;
-  background: var(--burgundy);
-  color: var(--offwhite);
-  display:flex;
-  flex-direction:column;
-  padding: 18px 14px;
-}
-
-.brand{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding: 10px 0 18px;
-}
-
-.avatar{
-  width: 62px;
-  height: 62px;
-  border-radius: 50%;
-  background: rgba(249,243,234,.35);
-  border: 2px solid rgba(194,161,77,.55);
-}
-
-.nav{
-  display:flex;
-  flex-direction:column;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.nav-item{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  padding: 12px 12px;
-  border-radius: 12px;
-  color: var(--offwhite);
-  text-decoration:none;
-  opacity: .92;
-  transition: transform .08s ease, background .12s ease, opacity .12s ease;
-}
-
-.nav-item:hover{
-  background: rgba(249,243,234,.12);
-  opacity: 1;
-}
-
-.nav-item:active{
-  transform: scale(.99);
-}
-
-.nav-item .icon{
-  width: 22px;
-  display:inline-flex;
-  justify-content:center;
-  opacity:.95;
-}
-
-.nav-item.active{
-  background: rgba(194,161,79,.18);
-  border: 1px solid rgba(194,161,79,.45);
-}
-
-.account{
-  margin-top:auto;
-  padding-top: 14px;
-}
-
-.account-btn{
-  width:100%;
-  border: 1px solid rgba(249,243,234,.25);
-  background: rgba(249,243,234,.10);
-  color: var(--offwhite);
-  padding: 10px 12px;
-  border-radius: 12px;
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  cursor:pointer;
-}
-
-.user-dot{
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(249,243,234,.45);
-  border: 1px solid rgba(194,161,79,.6);
-}
-
-/* MAIN */
-.main{
-  flex:1;
-  padding: 22px 26px;
-}
-
-.topbar{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-
-.title-wrap h1{
-  font-size: 28px;
-  line-height: 1.1;
-  color: #2a2a2a;
-}
-
-.title-wrap p{
-  margin-top: 6px;
-  font-size: 14px;
-  opacity: .7;
-}
-
-.top-actions{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-}
-
-.icon-btn{
-  width:40px;
-  height:40px;
+  margin-top:14px;
+  padding:12px 14px;
   border-radius:12px;
-  border: 1px solid rgba(194,161,79,.7);
-  background: var(--offwhite);
-  cursor:pointer;
-  box-shadow:0 6px 16px rgba(0,0,0,.06);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:0;
+  font-size:.95rem;
 }
+.notice.error{background:#ffecec;color:#a00000;}
+.notice.success{background:#effff2;color:#116b1f;}
 
-.icon-img{
-  width:20px;
-  height:20px;
-  object-fit:contain;
-  display:block;
-  pointer-events:none;
-}
-
-.primary-btn{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(194,161,79,.7);
-  background: var(--offwhite);
-  color: var(--burgundy);
-  font-weight: 600;
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  gap: 8px;
-  box-shadow: 0 6px 16px rgba(0,0,0,.06);
-}
-
-.primary-btn:hover{
-  background: #fff;
-}
-
-/* CARDS GRID */
-.content{
-  padding-top: 10px;
-}
-
-.cards{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(240px, 360px));
-  gap: 22px;
-  align-content:start;
-}
-
-.card-tile{
-  height: 140px;
-  border-radius: var(--radius);
-  background: rgba(0,0,0,.15);
-  box-shadow: var(--shadow);
-}
-
-/* If your dashboard tiles already use .card, keep them distinct from auth .card */
-.card.dashboard-card{
-  width:auto;
-  padding:0;
-}
-
-/* =========================
-   CREATE EVENT PAGE (from older CSS)
-========================= */
-.create-event{
-  max-width: 980px;
-}
-
-/* Accordion container */
-.acc{
-  border: 1px solid rgba(194,161,79,.35);
-  background: rgba(90,0,22,.08);
-  border-radius: 14px;
-  overflow: hidden;
-  margin: 18px 0;
-  box-shadow: var(--shadow);
-}
-
-.acc[open]{
-  background: rgba(90,0,22,.10);
-}
-
-/* Header row */
-.acc-head{
-  list-style: none;
-  cursor: pointer;
-  padding: 18px 18px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-}
-
-.acc-head::-webkit-details-marker{ display:none; }
-
-.acc-left{
-  display:flex;
-  align-items:center;
-  gap: 14px;
-}
-
-.acc-dot{
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(249,243,234,.75);
-  border: 1px solid rgba(194,161,79,.55);
-}
-
-/* text */
-.acc-text{
-  display:flex;
-  flex-direction:column;
-  gap: 2px;
-}
-
-.acc-title{
-  font-weight: 700;
-  color: var(--burgundy);
-}
-
-.acc-sub{
-  font-size: 12px;
-  color: rgba(90,0,22,.60);
-}
-
-/* Chevron */
-.acc-chevron{
-  width: 12px;
-  height: 12px;
-  border-right: 2px solid rgba(90,0,22,.50);
-  border-bottom: 2px solid rgba(90,0,22,.50);
-  transform: rotate(45deg);
-  transition: transform .18s ease;
-  margin-right: 6px;
-}
-
-.acc[open] .acc-chevron{
-  transform: rotate(-135deg);
-}
-
-/* Body spacing */
-.acc-body{
-  padding: 14px 18px 18px;
-  background: rgba(249,243,234,.55);
-  border-top: 1px solid rgba(194,161,79,.25);
-}
-
-.form-grid{
-  display:flex;
-  flex-direction:column;
-  gap: 14px;
-}
-
-.field{
-  height: 44px;
-  border-radius: 10px;
-  background: rgba(90,0,22,.12);
-  border: 1px solid rgba(194,161,79,.22);
-}
-
-.field-row{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-/* Bottom Create button */
-.create-actions{
-  display:flex;
-  justify-content:flex-end;
-  margin-top: 14px;
-}
-
-.create-btn{
-  height: 40px;
-  padding: 0 18px;
-  border-radius: 12px;
-  border: 1px solid rgba(194,161,79,.45);
-  background: rgba(90,0,22,.18);
-  color: rgba(90,0,22,.55);
-  font-weight: 700;
-  cursor:not-allowed;
-}
-
-.create-btn:not(:disabled){
-  background: var(--burgundy);
-  color: var(--offwhite);
-  border-color: rgba(194,161,79,.85);
-  cursor:pointer;
-}
-
-.create-btn:not(:disabled):hover{
-  filter: brightness(1.05);
-}
-
-/* =========================
-   RESPONSIVE (AUTH + DASHBOARD)
-========================= */
-@media(max-width:980px){
-  .search{ display:none; }
-
-  /* AUTH centered */
-  .navbar{
-    width:min(520px, 94vw);
-    margin:16px auto 0;
-  }
-
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (max-width:980px){
+  .navbar{width:min(720px,94vw);}
   .container{
-    height:auto;
+    width:min(720px,94vw);
     flex-direction:column;
-    width:min(520px, 94vw);
-    margin:22px auto 40px;
   }
 
-  .left-panel{
-    width:100%;
-    padding:40px 28px;
-    text-align:center;
-    align-items:center;
+  .left-panel,.right-panel{width:100%;}
+  .left-panel{padding:46px 22px;}
+  .right-panel{padding:28px 18px;}
+
+  .brand-logo{height:96px;}
+}
+
+@media (max-width:520px){
+  .navbar,.container{width:94vw;}
+  .navbar{padding:12px 14px;}
+  .navlinks a{padding:9px 10px;font-size:.9rem;}
+}
+
+/* SCROLLBAR */
+@media(pointer:fine){
+  ::-webkit-scrollbar{width:10px;}
+  ::-webkit-scrollbar-thumb{
+    background:rgba(90,0,22,.28);
+    border-radius:10px;
   }
-
-  .left-panel ul{
-    text-align:left;
-    align-items:flex-start;
-  }
-
-  .right-panel{
-    padding:28px 22px;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-  }
-
-  .card{
-    width:100%;
-    max-width:420px;
-  }
-}
-
-@media (max-width: 900px){
-  .sidebar{ width: 210px; }
-  .cards{ grid-template-columns: 1fr; }
-}
-
-@media (max-width: 700px){
-  .field-row{ grid-template-columns: 1fr; }
-}
-
-@media (max-width: 640px){
-  .app{ flex-direction:column; }
-
-  .sidebar{
-    width: 100%;
-    flex-direction:row;
-    align-items:center;
-    gap: 10px;
-  }
-
-  .brand{ padding: 0; }
-  .avatar{ width: 44px; height: 44px; }
-
-  .nav{
-    flex-direction:row;
-    overflow:auto;
-    gap: 8px;
-    margin: 0;
-    padding: 8px 0;
-  }
-
-  .nav-item{ white-space:nowrap; }
-  .account{ display:none; }
-}
-/* =========================
-   AUTH BOX BIGGER (Desktop like 125% zoom)
-   Paste at the BOTTOM of your CSS
-========================= */
-
-/* Bigger + centered auth canvas */
-body:has(.container){
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Make navbar match the wider box */
-body:has(.container) .navbar{
-  width: min(1320px, 94vw);
-}
-
-/* Make the auth box bigger */
-body:has(.container) .container{
-  width: min(1320px, 94vw);                 /* wider than 1120 */
-  height: min(660px, calc(100vh - 160px));  /* taller, still fits screen */
-  margin: 22px auto 40px;
-}
-
-/* Optional: slightly roomier inside */
-body:has(.container) .left-panel{
-  padding: 100px 130px;
-}  /* from 62 -> 74 */
-
-
-body:has(.container) .right-panel{
-  padding: 52px 52px;  /* from 40 -> 52 */
-}
-
-/* Slightly bigger form card so it matches the zoom feel */
-body:has(.container) .card{
-  width: 460px; /* from 420 */
 }
