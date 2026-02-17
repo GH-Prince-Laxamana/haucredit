@@ -1,49 +1,32 @@
+<?php
+session_start(); // <-- MUST be at the top
+
+require_once "../app/database.php";
+require_once "../app/security_headers.php";
+send_security_headers();
+
+if (!isset($_SESSION["user_id"])) {
+  header("Location: index.php");
+  exit();
+}
+
+$username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
+?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>About Us</title>
-  <link rel="stylesheet" href="assets/styles/layout.css"/>
+  <link rel="stylesheet" href="assets/styles/layout.css" />
 </head>
+
 <body>
   <div class="app">
 
     <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="avatar" aria-hidden="true"></div>
-      </div>
-
-      <nav class="nav">
-        <a class="nav-item" href="index.html">
-          <span class="icon" aria-hidden="true"></span>
-          <span>Dashboard</span>
-        </a>
-
-        <a class="nav-item" href="create_event.php">
-          <span class="icon" aria-hidden="true"></span>
-          <span>Create Event</span>
-        </a>
-
-        <a class="nav-item" href="calendar.php">
-          <span class="icon" aria-hidden="true"></span>
-          <span>Calendar</span>
-        </a>
-
-        <a class="nav-item active" href="about.php">
-          <span class="icon" aria-hidden="true"></span>
-          <span>About Us</span>
-        </a>
-      </nav>
-
-      <div class="account">
-        <button class="account-btn" type="button">
-          <span class="user-dot" aria-hidden="true"></span>
-          <span>Account Name</span>
-        </button>
-      </div>
-    </aside>
+    <?php include 'assets/includes/general_nav.php' ?>
 
     <!-- MAIN -->
     <main class="main">
@@ -82,4 +65,5 @@
 
   </div>
 </body>
+
 </html>

@@ -25,3 +25,4 @@ function send_security_headers(): void
     header("X-Frame-Options: SAMEORIGIN");
     header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
 }
+?>
