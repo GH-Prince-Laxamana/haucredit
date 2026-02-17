@@ -1,167 +1,27 @@
 <?php
-session_start();
+session_start(); // <-- MUST be at the top
+
+include "../app/database.php";
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
 }
 
-require_once("../app/security_headers.php");
-send_security_headers();
-
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HAUCredit - Dashboard</title>
     <link rel="stylesheet" href="assets/styles/layout.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAUCREDIT - Dashboard</title>
     <style>
-        /* =========================
-           THEME / VARIABLES
-           ========================= */
-        :root {
-            --burgundy: #4b0014;
-            --offwhite: #f9f3ea;
-            --gold: #c2a14d;
-            --shadow: 0 10px 25px rgba(0, 0, 0, .10);
-            --radius: 14px;
-        }
-
-        /* =========================
-           RESET / BASE
-           ========================= */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
-            background: var(--offwhite);
-            color: #1a1a1a;
-        }
-
-        /* =========================
-           APP LAYOUT
-           ========================= */
-        .app {
-            min-height: 100vh;
-            display: flex;
-        }
-
-        /* =========================
-           SIDEBAR
-           ========================= */
-        .sidebar {
-            width: 240px;
-            background: var(--burgundy);
-            color: var(--offwhite);
-            display: flex;
-            flex-direction: column;
-            padding: 18px 14px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 0 18px;
-            flex-direction: column;
-        }
-
-        .avatar {
-            width: 62px;
-            height: 62px;
-            border-radius: 50%;
-            background: rgba(249, 243, 234, .35);
-            border: 2px solid rgba(194, 161, 77, .55);
-            margin-bottom: 10px;
-        }
-
-        .brand-name {
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            color: var(--offwhite);
-        }
-
-        .brand-subtitle {
-            font-size: 10px;
-            opacity: 0.75;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            margin-top: 2px;
-        }
-
-        .nav {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 6px;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 12px;
-            border-radius: 12px;
-            color: var(--offwhite);
-            text-decoration: none;
-            opacity: .92;
-            transition: transform .08s ease, background .12s ease, opacity .12s ease;
-        }
-
-        .nav-item:hover {
-            background: rgba(249, 243, 234, .12);
-            opacity: 1;
-        }
-
-        .nav-item:active {
-            transform: scale(.99);
-        }
-
-        .nav-item .icon {
-            width: 22px;
-            display: inline-flex;
-            justify-content: center;
-            opacity: .95;
-        }
-
-        .nav-item.active {
-            background: rgba(194, 161, 77, .18);
-            border: 1px solid rgba(194, 161, 77, .45);
-        }
-
-        .account {
-            margin-top: auto;
-            padding-top: 14px;
-        }
-
-        .account-btn {
-            width: 100%;
-            border: 1px solid rgba(249, 243, 234, .25);
-            background: rgba(249, 243, 234, .10);
-            color: var(--offwhite);
-            padding: 10px 12px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-        }
-
-        .user-dot {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: rgba(249, 243, 234, .45);
-            border: 1px solid rgba(194, 161, 77, .6);
-        }
-
         /* =========================
            MAIN
            ========================= */
@@ -564,30 +424,200 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
         }
     </style>
 </head>
+
 <body>
+    <div class="app">
+        <!-- SIDEBAR -->
+        <?= include 'assets/includes/general_nav.php' ?>
 
-<div class="navbar">
-    <div class="logo"></div>
+        <!-- MAIN -->
+        <main class="main">
+            <header class="topbar">
+                <div class="title-wrap">
+                    <h1>Dashboard</h1>
+                    <p>SAS Student Council • AY 2025-2026</p>
+                </div>
+                <div class="top-actions">
+                    <button class="icon-btn" type="button" aria-label="Notifications">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <button class="primary-btn" type="button">
+                        <span aria-hidden="true">+</span>
+                        Create Event
+                    </button>
+                </div>
+            </header>
 
-    <div class="navlinks">
-        <a href="home.php">Dashboard</a>
-        <a href="create_event.php">Create Event</a>
-        <a href="calendar.php">Calendar</a>
-        <a href="about.php">About Us</a>
+            <section class="content">
+                <!-- Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon blue">
+                                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
+                                    <path
+                                        d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-value">8</div>
+                        <div class="stat-label">Active Events</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon amber">
+                                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 5.99L19.53 19H4.47L12 5.99M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-value">3</div>
+                        <div class="stat-label">Upcoming Deadlines</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon green">
+                                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
+                                    <path
+                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-value">82%</div>
+                        <div class="stat-label">Compliance Progress</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon purple">
+                                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
+                                    <path
+                                        d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-value">24</div>
+                        <div class="stat-label">Archived Events</div>
+                    </div>
+                </div>
+
+                <!-- Active Events -->
+                <div class="section">
+                    <div class="section-header">
+                        <h3 class="section-title">Active Events</h3>
+                        <a href="#" class="view-all">View All →</a>
+                    </div>
+                    <div class="events-table">
+                        <div class="event-row">
+                            <div>
+                                <div class="event-name">Event Name</div>
+                                <div class="event-date">Event Date • Event Venue</div>
+                            </div>
+                            <div class="event-progress">
+                                <div class="progress-bar-mini">
+                                    <div class="progress-fill-mini" style="width: 75%"></div>
+                                </div>
+                                <span class="progress-text">75%</span>
+                            </div>
+                            <span class="status-badge active">Active</span>
+                            <a href="#" class="btn-view">View</a>
+                        </div>
+
+                        <div class="event-row">
+                            <div>
+                                <div class="event-name">Event Name</div>
+                                <div class="event-date">Event Date • Event Venue</div>
+                            </div>
+                            <div class="event-progress">
+                                <div class="progress-bar-mini">
+                                    <div class="progress-fill-mini" style="width: 45%"></div>
+                                </div>
+                                <span class="progress-text">45%</span>
+                            </div>
+                            <span class="status-badge pending">Pending</span>
+                            <a href="#" class="btn-view">View</a>
+                        </div>
+
+                        <div class="event-row">
+                            <div>
+                                <div class="event-name">Event Name</div>
+                                <div class="event-date">Event Date • Event Venue</div>
+                            </div>
+                            <div class="event-progress">
+                                <div class="progress-bar-mini">
+                                    <div class="progress-fill-mini" style="width: 30%"></div>
+                                </div>
+                                <span class="progress-text">30%</span>
+                            </div>
+                            <span class="status-badge upcoming">Upcoming</span>
+                            <a href="#" class="btn-view">View</a>
+                        </div>
+
+                        <div class="event-row">
+                            <div>
+                                <div class="event-name">Event Name</div>
+                                <div class="event-date">Event Date • Event Venue</div>
+                            </div>
+                            <div class="event-progress">
+                                <div class="progress-bar-mini">
+                                    <div class="progress-fill-mini" style="width: 60%"></div>
+                                </div>
+                                <span class="progress-text">60%</span>
+                            </div>
+                            <span class="status-badge active">Active</span>
+                            <a href="#" class="btn-view">View</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Deadlines -->
+                <div class="section">
+                    <div class="section-header">
+                        <h3 class="section-title">Upcoming Deadlines</h3>
+                    </div>
+                    <div class="deadline-item">
+                        <div class="deadline-info">
+                            <h4>Event Name - Requirement Name</h4>
+                            <p>Form code description or requirement details</p>
+                        </div>
+                        <div class="deadline-date">
+                            <strong>Month Day</strong>
+                            <span>X days left</span>
+                        </div>
+                    </div>
+
+                    <div class="deadline-item">
+                        <div class="deadline-info">
+                            <h4>Event Name - Requirement Name</h4>
+                            <p>Form code description or requirement details</p>
+                        </div>
+                        <div class="deadline-date">
+                            <strong>Month Day</strong>
+                            <span>X days left</span>
+                        </div>
+                    </div>
+
+                    <div class="deadline-item">
+                        <div class="deadline-info">
+                            <h4>Event Name - Requirement Name</h4>
+                            <p>Form code description or requirement details</p>
+                        </div>
+                        <div class="deadline-date">
+                            <strong>Month Day</strong>
+                            <span>X days left</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
-
-    <div class="search">
-        <input type="text" placeholder="Search">
-    </div>
-</div>
-
-<div class="home-wrap">
-    <h1>Welcome, <?= $username ?>!</h1>
-
-    <form action="logout.php" method="post">
-        <button class="logout-btn" type="submit">Logout</button>
-    </form>
-</div>
-
 </body>
+
 </html>

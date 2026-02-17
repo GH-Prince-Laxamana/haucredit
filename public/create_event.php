@@ -116,40 +116,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <div class="app">
 
     <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="avatar" aria-hidden="true"></div>
-      </div>
-
-      <nav class="nav">
-        <a class="nav-item" href="home.php">
-          <span class="icon" aria-hidden="true"></span>
-          <span>Dashboard</span>
-        </a>
-
-        <a class="nav-item active" href="create_event.php">
-          <span class="icon" aria-hidden="true"></span>
-          <span>Create Event</span>
-        </a>
-
-        <a class="nav-item" href="calendar.php">
-          <span class="icon" aria-hidden="true"></span>
-          <span>Calendar</span>
-        </a>
-
-        <a class="nav-item" href="about.php">
-          <span class="icon" aria-hidden="true"></span>
-          <span>About Us</span>
-        </a>
-      </nav>
-
-      <div class="account">
-        <button class="account-btn" type="button">
-          <span class="user-dot" aria-hidden="true"></span>
-          <span>Account Name</span>
-        </button>
-      </div>
-    </aside>
+    <?= include 'assets/includes/general_nav.php' ?>
 
     <!-- MAIN -->
     <main class="main">
