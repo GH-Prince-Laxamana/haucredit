@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>About Us</title>
-  <link rel="stylesheet" href="../app/css/layout.css"/>
+  <link rel="stylesheet" href="assets/styles/layout.css"/>
 </head>
 <body>
   <div class="app">

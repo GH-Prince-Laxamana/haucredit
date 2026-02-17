@@ -57,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <title>Forgot Password</title>
-    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../styles/layout.css">
 </head>
 <body>
 
