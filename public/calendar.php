@@ -49,67 +49,15 @@ $todayY = (int) date('Y');
 $todayM = (int) date('n');
 $todayD = (int) date('j');
 
-// Fetch events from database
-$events = [];
-$user_id = $_SESSION["user_id"];
-
-$startDate = sprintf("%04d-%02d-01", $year, $month);
-$endDate = sprintf("%04d-%02d-%02d", $year, $month, $daysInMonth);
-
-$stmt = $conn->prepare("
-    SELECT event_name, start_date, start_time, end_time
-    FROM events 
-    WHERE user_id = ? 
-    AND start_date BETWEEN ? AND ?
-    ORDER BY start_date, start_time
-");
-
-$stmt->bind_param("iss", $user_id, $startDate, $endDate);
-$stmt->execute();
-$result = $stmt->get_result();
-
-while ($row = $result->fetch_assoc()) {
-    $dateKey = $row['start_date'];
-    $title = $row['event_name'];
-    
-    // Format time
-    if ($row['end_time']) {
-        $time = date('H:i', strtotime($row['start_time'])) . ' - ' . date('H:i', strtotime($row['end_time']));
-    } else {
-        $time = date('H:i', strtotime($row['start_time']));
-    }
-    
-    // Store in same format as original
-    $events[$dateKey] = [$title, $time];
-}
-
-$stmt->close();
-
-// Calculate progress metrics for tracker
-$totalEvents = 0;
-$completedEvents = 0;
-$upcomingEvents = 0;
-
-$totalStmt = $conn->prepare("SELECT COUNT(*) as total FROM events WHERE user_id = ?");
-$totalStmt->bind_param("i", $user_id);
-$totalStmt->execute();
-$totalResult = $totalStmt->get_result();
-$totalEvents = $totalResult->fetch_assoc()['total'] ?? 0;
-$totalStmt->close();
-
-$completedStmt = $conn->prepare("SELECT COUNT(*) as completed FROM events WHERE user_id = ? AND start_date < CURDATE()");
-$completedStmt->bind_param("i", $user_id);
-$completedStmt->execute();
-$completedResult = $completedStmt->get_result();
-$completedEvents = $completedResult->fetch_assoc()['completed'] ?? 0;
-$completedStmt->close();
-
-$upcomingStmt = $conn->prepare("SELECT COUNT(*) as upcoming FROM events WHERE user_id = ? AND start_date >= CURDATE()");
-$upcomingStmt->bind_param("i", $user_id);
-$upcomingStmt->execute();
-$upcomingResult = $upcomingStmt->get_result();
-$upcomingEvents = $upcomingResult->fetch_assoc()['upcoming'] ?? 0;
-$upcomingStmt->close();
+// Optional: sample events (replace with DB later)
+// key format: YYYY-MM-DD
+$events = [
+    sprintf("%04d-%02d-03", $year, $month) => ["Prep (RNN)", "08:00"],
+    sprintf("%04d-%02d-05", $year, $month) => ["Classroom", "10:00"],
+    sprintf("%04d-%02d-07", $year, $month) => ["Exam", "10:00 - 11:00"],
+    sprintf("%04d-%02d-11", $year, $month) => ["Presentation", "08:00"],
+    sprintf("%04d-%02d-20", $year, $month) => ["Meeting", "09:00 - 10:00"],
+];
 
 ?>
 <!DOCTYPE html>
@@ -132,7 +80,7 @@ $upcomingStmt->close();
             <header class="topbar">
                 <div class="title-wrap">
                     <h1>Calendar</h1>
-                    <p>View and manage your scheduled events</p>
+                    <p>Text Here</p>
                 </div>
             </header>
 
@@ -147,9 +95,9 @@ $upcomingStmt->close();
                             <button class="cal-tab" type="button" disabled>Day</button>
                         </div>
 
-                        <a href="create_event.php" class="cal-add">
+                        <button class="cal-add" type="button">
                             <span class="plus" aria-hidden="true">+</span> Add
-                        </a>
+                        </button>
                     </div>
 
                     <div class="cal-monthrow">
@@ -244,9 +192,9 @@ $upcomingStmt->close();
                     </div>
 
                     <div class="tracker-list">
-                        <div class="t-row"><span>Total Events</span><span class="t-score"><?php echo $totalEvents; ?></span></div>
-                        <div class="t-row"><span>Completed</span><span class="t-score"><?php echo $completedEvents; ?></span></div>
-                        <div class="t-row"><span>Upcoming</span><span class="t-score"><?php echo $upcomingEvents; ?></span></div>
+                        <div class="t-row"><span>Text here</span><span class="t-score">0/0</span></div>
+                        <div class="t-row"><span>Text here</span><span class="t-score">0/0</span></div>
+                        <div class="t-row"><span>Text here</span><span class="t-score">0/0</span></div>
                     </div>
                 </aside>
 
