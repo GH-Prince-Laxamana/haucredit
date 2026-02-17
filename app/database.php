@@ -9,7 +9,7 @@ $db_name   = "haucredit_db";
 
 try {
     $conn = mysqli_connect($db_server, $db_user, $db_pass);
-    
+
     mysqli_query($conn, "CREATE DATABASE IF NOT EXISTS `$db_name`");
 
     mysqli_select_db($conn, $db_name);
@@ -42,7 +42,7 @@ try {
         target_metric VARCHAR(255) NOT NULL,
         distance VARCHAR(100) NULL,
         participant_range VARCHAR(50) NULL,
-        overnight ENUM('Yes', 'No') NULL,
+        overnight TINYINT(1) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(user_id)
             ON DELETE CASCADE

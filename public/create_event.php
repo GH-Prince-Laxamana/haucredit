@@ -176,8 +176,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="acc-body">
               <div class="field">
                 <label for="organizing_body">Organizing Body:</label><br>
-                <input list="org_list" id="organizing_body" name="organizing_body" value="<?= htmlspecialchars($organizing_body) ?>"
-                  required>
+                <input list="org_list" id="organizing_body" name="organizing_body"
+                  value="<?= htmlspecialchars($organizing_body) ?>" required>
                 <datalist id="org_list">
                   <!-- temp selections -->
                   <option value="SOC">
@@ -325,10 +325,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 ?>
 
                 <label>More than 12 hours?</label><br>
-                <label><input type="radio" name="overnight" value="Yes" <?= ($overnight === 'Yes') ? 'checked' : '' ?>
-                    required> Yes</label>
-                <label><input type="radio" name="overnight" value="No" <?= ($overnight === 'No') ? 'checked' : '' ?>
-                    required> No</label>
+                <label>
+                  <input type="radio" name="overnight" value="1" <?= ($overnight == 1) ? 'checked' : '' ?> required>
+                  Yes
+                </label>
+
+                <label>
+                  <input type="radio" name="overnight" value="0" <?= ($overnight == 0) ? 'checked' : '' ?> required>
+                  No
+                </label>
+
               </div>
             </div>
           </details>
