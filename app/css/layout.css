@@ -801,6 +801,48 @@ body::before{
   filter: brightness(1.05);
 }
 
+/* ===========
+   ABOUT PAGE 
+   ============ */
+
+.about-page{
+  max-width: 1100px;
+}
+
+.about-grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 18px;
+  align-items:start;
+}
+
+/* Card */
+.about-card{
+  background: rgba(249,243,234,.55);
+  border: 1px solid rgba(194,161,77,.25);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px;
+  min-height: 360px;
+}
+
+/* image placeholder */
+.about-img{
+  height: 140px;
+  border-radius: 12px;
+  background: rgba(75,0,20,.12);
+  border: 1px solid rgba(194,161,77,.22);
+  margin-bottom: 12px;
+}
+
+/* Body placeholder */
+.about-body{
+  height: 210px;
+  border-radius: 12px;
+  background: rgba(75,0,20,.08);
+  border: 1px solid rgba(194,161,77,.18);
+}
+
 /* =========================
    RESPONSIVE (merged)
    ========================= */
@@ -863,3 +905,4 @@ body::before{
     grid-template-columns: 1fr;
   }
 }
+
