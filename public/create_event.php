@@ -7,6 +7,8 @@ if (!isset($_SESSION["user_id"])) {
   exit();
 }
 
+require_once("../app/security_headers.php");
+send_security_headers();
 // Persist previous inputs
 $organizing_body = $_SESSION['organizing_body'] ?? '';
 $background = $_SESSION['background'] ?? '';
