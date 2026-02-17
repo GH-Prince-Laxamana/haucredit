@@ -571,10 +571,9 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
     <div class="navlinks">
         <a href="home.php">Dashboard</a>
-        <a href="#">My Events</a>
-        <a href="#">Accreditation</a>
-        <a href="#">About Us</a>
-        <a href="#">Contact Us</a>
+        <a href="create_event.php">Create Event</a>
+        <a href="calendar.php">Calendar</a>
+        <a href="about.php">About Us</a>
     </div>
 
     <div class="search">
