@@ -78,90 +78,101 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>HAUcredit - Register</title>
     <link rel="stylesheet" href="../styles/layout.css">
 </head>
+
 <body>
 
-<div class="container">
-    <div class="left-panel">
-        <h1>HAUCREDIT</h1>
-        <p><b>Compliance & Records Engine</b> for Documentation and Institutional Tracking.</p>
-        <ul>
-            <li>Centralized Event Monitoring</li>
-            <li>Automated OSA Checklists</li>
-            <li>Secure Document Repository</li>
-        </ul>
-    </div>
+    <div class="container">
+        <div class="left-panel">
+            <h1>HAUCREDIT</h1>
+            <p><b>Compliance & Records Engine</b> for Documentation and Institutional Tracking.</p>
+            <ul>
+                <li>Centralized Event Monitoring</li>
+                <li>Automated OSA Checklists</li>
+                <li>Secure Document Repository</li>
+            </ul>
+        </div>
 
-    <div class="right-panel">
-        <div class="card">
-            <h2>Register Account</h2>
-            <div class="subtitle">For recognized student organizations only.</div>
+        <div class="right-panel">
+            <div class="card">
+                <h2>Register Account</h2>
+                <div class="subtitle">For recognized student organizations only.</div>
 
-            <form action="<?= $self ?>" method="post">
+                <form action="<?= $self ?>" method="post">
 
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username"
-                           value="<?= htmlspecialchars($username) ?>" placeholder="Enter username" required>
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" value="<?= htmlspecialchars($username) ?>"
+                            placeholder="Enter username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" value="<?= htmlspecialchars($email) ?>"
+                            placeholder="name@student.hau.edu.ph" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="stud_num">Student No.</label>
+                        <input type="text" id="stud_num" name="stud_num" value="<?= htmlspecialchars($stud_num) ?>"
+                            placeholder="20XXXXXX" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="org_body">Organizing Body</label>
+                        <input list="org_list" id="org_body" name="org_body" value="<?= htmlspecialchars($org_body) ?>"
+                            placeholder="Select/Type org" required>
+                        <datalist id="org_list">
+                            <option value="University Student Council (USC)">
+                            <option value="HAUSG CSC-SOC">
+                            <option value="HAUSG CSC-SAS">
+                            <option value="HAUSG CSC-SHTM">
+                            <option value="HAUSG CSC-SEA">
+                            <option value="HAUSG CSC-SNAMS">
+                            <option value="HAUSG CSC-CCJEF">
+                            <option value="HAUSG CSC-SED">
+                            <option value="HAUSG CSC-SBA">
+                            <option value="Department Organization">
+                            <option value="College Organization">
+                            <option value="Special Interest Group">
+                        </datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Minimum 8 characters"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password"
+                            placeholder="Confirm password" required>
+                    </div>
+
+                    <button type="submit">Create Account</button>
+                </form>
+
+                <?php if ($error !== ""): ?>
+                    <div class="notice error"><?= htmlspecialchars($error) ?></div>
+                <?php endif; ?>
+
+                <?php if ($success !== ""): ?>
+                    <div class="notice success"><?= htmlspecialchars($success) ?></div>
+                <?php endif; ?>
+
+                <div class="link">
+                    Already a Member? <a href="index.php">Log In</a>
                 </div>
-
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email"
-                           value="<?= htmlspecialchars($email) ?>" placeholder="name@student.hau.edu.ph" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="stud_num">Student No.</label>
-                    <input type="text" id="stud_num" name="stud_num"
-                           value="<?= htmlspecialchars($stud_num) ?>" placeholder="20XXXXXX" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="org_body">Organizing Body</label>
-                    <input list="org_list" id="org_body" name="org_body"
-                           value="<?= htmlspecialchars($org_body) ?>" placeholder="Select/Type org" required>
-                    <datalist id="org_list">
-                        <option value="University Student Council (USC)">
-                        <option value="SOC">
-                        <option value="SAS">
-                        <option value="SEA">
-                        <option value="CCJEF">
-                        <option value="SHTM">
-                    </datalist>
-                </div>
-
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Minimum 8 characters" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="confirm_password">Confirm Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password" required>
-                </div>
-
-                <button type="submit">Create Account</button>
-            </form>
-
-            <?php if ($error !== ""): ?>
-                <div class="notice error"><?= htmlspecialchars($error) ?></div>
-            <?php endif; ?>
-
-            <?php if ($success !== ""): ?>
-                <div class="notice success"><?= htmlspecialchars($success) ?></div>
-            <?php endif; ?>
-
-            <div class="link">
-                Already a Member? <a href="index.php">Log In</a>
             </div>
         </div>
     </div>
-</div>
 
 </body>
+
 </html>

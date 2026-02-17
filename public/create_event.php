@@ -149,11 +149,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                   value="<?= htmlspecialchars($organizing_body) ?>" required>
                 <datalist id="org_list">
                   <!-- temp selections -->
-                  <option value="SOC">
-                  <option value="SAS">
-                  <option value="SEA">
-                  <option value="CCJEF">
-                  <option value="SHTM">
+                  <option value="HAUSG CSC-SOC">
+                      <option value="HAUSG CSC-SAS">
+                      <option value="HAUSG CSC-SHTM">
+                      <option value="HAUSG CSC-SEA">
+                      <option value="HAUSG CSC-SNAMS">
+                      <option value="HAUSG CSC-CCJEF">
+                      <option value="HAUSG CSC-SED">
+                      <option value="HAUSG CSC-SBA">
+                      <option value="Department Organization">
+                      <option value="College Organization">
+                      <option value="Special Interest Group">
                 </datalist>
               </div>
 
