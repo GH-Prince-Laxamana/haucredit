@@ -14,6 +14,9 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HAUCredit - Dashboard</title>
+<<<<<<< HEAD
+    <link rel="stylesheet" href="../app/css/layouts.css" />
+=======
     <link rel="stylesheet" href="../app/css/layout.css" />
     <style>
         /* =========================
@@ -561,6 +564,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
             }
         }
     </style>
+>>>>>>> 7cab4b64aaef8bce96de95b201be33f472630fab
 </head>
 
 <body>
