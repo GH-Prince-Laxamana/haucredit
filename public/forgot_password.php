@@ -16,7 +16,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($email === "") {
         $msg = "Please enter your student email.";
     } else {
-        // Find user by email
         $stmt = mysqli_prepare($conn, "SELECT user_id FROM users WHERE user_email = ? LIMIT 1");
         mysqli_stmt_bind_param($stmt, "s", $email);
         mysqli_stmt_execute($stmt);
@@ -24,7 +23,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $user = mysqli_fetch_assoc($res);
         mysqli_stmt_close($stmt);
 
-        // Always show generic success for privacy
         $msg = "If that email exists, a reset link will be generated.";
 
         if ($user) {
@@ -90,7 +88,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <div class="notice success">
                     <?= htmlspecialchars($msg) ?>
                     <?php if ($dev_link !== ""): ?>
-                        <br><br><b>DEV LINK:</b>
+                        <br><br><b>DEV LINK (FOR DEMO PURPOSES ONLY): </b>
                         <a href="<?= htmlspecialchars($dev_link) ?>">
                             <?= htmlspecialchars($dev_link) ?>
                         </a>

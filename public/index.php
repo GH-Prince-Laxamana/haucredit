@@ -8,7 +8,6 @@ send_security_headers();
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 $error = "";
 
-// If already logged in, go home
 if (isset($_SESSION["user_id"])) {
     header("Location: home.php");
     exit();
@@ -40,16 +39,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $stored = $row["user_password"];
             $login_ok = false;
 
-            // ✅ Case 1: already hashed password
             if (password_verify($password, $stored)) {
                 $login_ok = true;
             }
 
-            // ✅ Case 2: old plaintext password (legacy accounts)
             elseif ($password === $stored) {
                 $login_ok = true;
 
-                // 🔁 Auto-upgrade to hashed password after successful login
                 $new_hash = password_hash($password, PASSWORD_DEFAULT);
 
                 $upd = mysqli_prepare($conn, "UPDATE users SET user_password = ? WHERE user_id = ?");
