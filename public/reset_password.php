@@ -1,8 +1,8 @@
 <?php
 session_start();
-require_once("../app/database.php");
 
-require_once("../app/security_headers.php");
+require_once "../app/database.php";
+require_once "../app/security_headers.php";
 send_security_headers();
 
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");

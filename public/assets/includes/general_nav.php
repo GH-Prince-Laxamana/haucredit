@@ -1,14 +1,6 @@
 <?php
-include "../app/database.php";
-
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
-
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
-// Get current page filename
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
@@ -20,8 +12,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </div>
 
     <nav class="nav">
-        <a class="nav-item <?php if ($current_page == 'home.php')
-            echo 'active'; ?>" href="home.php">
+        <a class="nav-item <?= ($current_page == 'home.php') ? 'active' : '' ?>" href="home.php">
             <span class="icon" aria-hidden="true">
                 <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
                     <path
@@ -31,8 +22,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <span>Dashboard</span>
         </a>
 
-        <a class="nav-item <?php if ($current_page == 'create_event.php')
-            echo 'active'; ?>" href="create_event.php">
+        <a class="nav-item <?= ($current_page == 'create_event.php') ? 'active' : '' ?>" href="create_event.php">
             <span class="icon" aria-hidden="true">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -41,8 +31,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <span>Create Event</span>
         </a>
 
-        <a class="nav-item <?php if ($current_page == 'calendar.php')
-            echo 'active'; ?>" href="calendar.php">
+        <a class="nav-item <?= ($current_page == 'calendar.php') ? 'active' : '' ?>" href="calendar.php">
             <span class="icon" aria-hidden="true">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -52,8 +41,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <span>Calendar</span>
         </a>
 
-        <a class="nav-item <?php if ($current_page == 'about.php')
-            echo 'active'; ?>" href="about.php">
+        <a class="nav-item <?= ($current_page == 'about.php') ? 'active' : '' ?>" href="about.php">
             <span class="icon" aria-hidden="true">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -66,10 +54,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <div class="account">
             <button class="account-btn" type="button">
                 <span class="user-dot" aria-hidden="true"></span>
-                <span><?php echo $username; ?></span>
+                <span>
+                    <?= $username ?>
+                </span>
             </button>
+            <a href="logout.php" class="logout-link">Logout</a>
         </div>
-
-        <a href="logout.php">Logout</a>
     </nav>
 </aside>
