@@ -3,9 +3,9 @@
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $db_server = "localhost";
-$db_user   = "root";
-$db_pass   = "";
-$db_name   = "haucredit_db";
+$db_user = "root";
+$db_pass = "";
+$db_name = "haucredit_db";
 
 try {
     $conn = mysqli_connect($db_server, $db_user, $db_pass);
@@ -23,6 +23,15 @@ try {
         stud_num VARCHAR(50) NOT NULL UNIQUE,
         org_body VARCHAR(200) NOT NULL,
         user_reg_date DATETIME NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+    CREATE TABLE IF NOT EXISTS password_resets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        token_hash VARCHAR(255) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
     CREATE TABLE IF NOT EXISTS events (
@@ -50,7 +59,8 @@ try {
     ";
 
     mysqli_multi_query($conn, $sql);
-    while (mysqli_more_results($conn) && mysqli_next_result($conn));
+    while (mysqli_more_results($conn) && mysqli_next_result($conn))
+        ;
 
     $adminPass = password_hash("203", PASSWORD_DEFAULT);
 

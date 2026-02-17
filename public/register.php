@@ -50,15 +50,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $error = "Password must be at least 8 characters including a mix of uppercase (A-Z), lowercase (a-z), and numeric (0-9) characters";
 
     } else {
-
-        // HASH PASSWORD
         $hash = password_hash($password, PASSWORD_DEFAULT);
 
         $stmt = mysqli_prepare(
             $conn,
             "INSERT INTO users 
-                (user_name, user_password, user_email, stud_num, org_body) 
-             VALUES (?, ?, ?, ?, ?)"
+                (user_name, user_password, user_email, stud_num, org_body, user_reg_date) 
+             VALUES (?, ?, ?, ?, ?, NOW())"
         );
 
         mysqli_stmt_bind_param($stmt, "sssss", $username, $hash, $email, $stud_num, $org_body);
