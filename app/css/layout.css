@@ -360,6 +360,250 @@ body{
 }
 
 /* =========================
+   CALENDAR PAGE LAYOUT
+   ========================= */
+
+.calendar-page{
+  display:grid;
+  grid-template-columns: 1fr 320px;
+  gap: 22px;
+  align-items:start;
+}
+
+/* Left calendar card */
+.cal-card{
+  background: rgba(249,243,234,.55);
+  border: 1px solid rgba(194,161,77,.25);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+/* Top controls */
+.cal-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.cal-tabs{
+  display:inline-flex;
+  background: rgba(75,0,20,.10);
+  border: 1px solid rgba(194,161,77,.25);
+  border-radius: 10px;
+  overflow:hidden;
+}
+
+.cal-tab{
+  border:none;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: rgba(75,0,20,.75);
+  cursor:pointer;
+}
+
+.cal-tab[disabled]{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+.cal-tab.active{
+  background: var(--burgundy);
+  color: var(--offwhite);
+}
+
+/* Add button */
+.cal-add{
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(194,161,77,.55);
+  background: var(--offwhite);
+  color: var(--burgundy);
+  font-weight: 700;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+}
+
+.cal-add:hover{
+  background:#fff;
+}
+
+/* Month row */
+.cal-monthrow{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  margin: 6px 0 12px;
+}
+
+.cal-month{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  color: rgba(0,0,0,.70);
+  font-size: 13px;
+}
+
+.cal-navbtn{
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(0,0,0,.08);
+  color: rgba(0,0,0,.55);
+  font-size: 11px;
+  text-decoration:none;
+}
+
+/* Calendar grid */
+.cal-grid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-radius: 12px;
+  overflow:hidden;
+  background: rgba(0,0,0,.04);
+  border: 1px solid rgba(0,0,0,.08);
+}
+
+.cal-cell{
+  min-height: 76px;
+  background: rgba(255,255,255,.85);
+  border-right: 1px solid rgba(0,0,0,.08);
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  padding: 8px;
+  position:relative;
+}
+
+.cal-cell:nth-child(7n){
+  border-right:none;
+}
+
+.cal-cell.head{
+  min-height: 34px;
+  background: rgba(0,0,0,.06);
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(0,0,0,.65);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 0;
+}
+
+.cal-cell.muted{
+  background: rgba(255,255,255,.55);
+}
+
+.day{
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(0,0,0,.55);
+}
+
+.muted .day{
+  color: rgba(0,0,0,.28);
+}
+
+/* Event pill */
+.pill{
+  margin-top: 10px;
+  border-radius: 10px;
+  background: rgba(75,0,20,.10);
+  border: 1px solid rgba(194,161,77,.20);
+  padding: 6px 7px;
+}
+
+.pill-title{
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(75,0,20,.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill-time{
+  font-size: 10px;
+  color: rgba(0,0,0,.55);
+}
+
+/* Today circle indicator */
+.today{
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(75,0,20,.35);
+  position:absolute;
+  right: 8px;
+  bottom: 8px;
+  opacity:.6;
+}
+
+/* Right tracker panel */
+.tracker{
+  background: rgba(0,0,0,.18);
+  border-radius: var(--radius);
+  padding: 16px 16px 18px;
+  box-shadow: var(--shadow);
+  min-height: 430px;
+}
+
+.tracker h2{
+  text-align:right;
+  font-style: italic;
+  font-weight: 800;
+  color: rgba(0,0,0,.40);
+  line-height: 1.05;
+  margin-bottom: 18px;
+}
+
+/* Ring placeholder */
+.ring{
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 12px solid rgba(0,0,0,.18);
+  margin: 0 auto 18px;
+  position:relative;
+}
+
+.ring-inner{
+  position:absolute;
+  inset: 18px;
+  border-radius: 50%;
+  border: 8px solid rgba(255,255,255,.35);
+}
+
+/* Tracker list */
+.tracker-list{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.t-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  color: rgba(0,0,0,.55);
+  font-size: 13px;
+}
+
+.t-score{
+  color: rgba(0,0,0,.45);
+  font-weight: 700;
+}
+
+/* =========================
    RESPONSIVE
    ========================= */
 @media (max-width: 900px){
@@ -394,5 +638,14 @@ body{
 
 @media (max-width: 700px){.field-row{
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px){
+  .calendar-page{
+    grid-template-columns: 1fr;
+  }
+  .tracker{
+    min-height: auto;
   }
 }
