@@ -46,7 +46,7 @@ $events = [
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Calendar</title>
-        <link rel="stylesheet" href="css/style.css" />
+        <link rel="stylesheet" href="../app/css/layout.css" />
     </head>
     <body>
         <div class="app">
@@ -57,8 +57,8 @@ $events = [
         </div>
 
         <nav class="nav">
-            <a class="nav-item" href="index.html"><span class="icon" aria-hidden="true"></span><span>Dashboard</span></a>
-            <a class="nav-item" href="create-event.html"><span class="icon" aria-hidden="true"></span><span>Create Event</span></a>
+            <a class="nav-item" href="index.php"><span class="icon" aria-hidden="true"></span><span>Dashboard</span></a>
+            <a class="nav-item" href="create_event.php"><span class="icon" aria-hidden="true"></span><span>Create Event</span></a>
             <a class="nav-item active" href="calendar.php"><span class="icon" aria-hidden="true"></span><span>Calendar</span></a>
             <a class="nav-item" href="#"><span class="icon" aria-hidden="true"></span><span>About Us</span></a>
         </nav>
