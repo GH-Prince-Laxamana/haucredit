@@ -57,8 +57,8 @@ $events = [
         </div>
 
         <nav class="nav">
-            <a class="nav-item" href="index.html"><span class="icon" aria-hidden="true"></span><span>Dashboard</span></a>
-            <a class="nav-item" href="create-event.html"><span class="icon" aria-hidden="true"></span><span>Create Event</span></a>
+            <a class="nav-item" href="index.php"><span class="icon" aria-hidden="true"></span><span>Dashboard</span></a>
+            <a class="nav-item" href="create_event.php"><span class="icon" aria-hidden="true"></span><span>Create Event</span></a>
             <a class="nav-item active" href="calendar.php"><span class="icon" aria-hidden="true"></span><span>Calendar</span></a>
             <a class="nav-item" href="#"><span class="icon" aria-hidden="true"></span><span>About Us</span></a>
         </nav>
