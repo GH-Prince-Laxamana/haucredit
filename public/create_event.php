@@ -21,6 +21,7 @@ $end_datetime = $_SESSION['end_datetime'] ?? '';
 $participants = $_SESSION['participants'] ?? '';
 $venue = $_SESSION['venue_platform'] ?? '';
 $extraneous = $_SESSION['is_extraneous'] ?? '';
+$collect_payments = $_SESSION['do_collect_payments'] ?? '';
 $target_metric = $_SESSION['target_metric'] ?? '';
 $distance = $_SESSION['distance'] ?? '';
 $participant_range = $_SESSION['participant_range'] ?? '';
@@ -39,6 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $_SESSION['participants'] = $_POST['participants'] ?? '';
   $_SESSION['venue_platform'] = $_POST['venue'] ?? '';
   $_SESSION['is_extraneous'] = $_POST['extraneous'] ?? '';
+  $_SESSION['collect_payments'] = $_POST['do_collect_payments'] ?? '';
   $_SESSION['target_metric'] = $_POST['target_metric'] ?? '';
   $_SESSION['distance'] = $_POST['distance'] ?? null;
   $_SESSION['participant_range'] = $_POST['participant_range'] ?? null;
@@ -49,7 +51,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             INSERT INTO events (
                 user_id, organizing_body, background, activity_type, series,
                 nature, event_name, start_datetime, end_datetime,
-                participants, venue_platform, is_extraneous, target_metric,
+                participants, venue_platform, is_extraneous, do_collect_payments, target_metric,
                 distance, participant_range, overnight
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
@@ -70,6 +72,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $_SESSION['participants'],
       $_SESSION['venue_platform'],
       $_SESSION['is_extraneous'],
+      $_SESSION['do_collect_payments'],
       $_SESSION['target_metric'],
       $_SESSION['distance'],
       $_SESSION['participant_range'],
@@ -90,6 +93,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $_SESSION['participants'],
       $_SESSION['venue_platform'],
       $_SESSION['is_extraneous'],
+      $_SESSION['do_collect_payments'],
       $_SESSION['target_metric'],
       $_SESSION['distance'],
       $_SESSION['participant_range'],
@@ -127,196 +131,259 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
       </header>
 
-      <section class="content create-event">
-        <form method="POST">
-          <!-- Accordion: Basic Information -->
-          <details class="acc" open>
-            <summary class="acc-head">
-              <span class="acc-left">
-                <span class="acc-dot" aria-hidden="true"></span>
-                <span class="acc-text">
-                  <span class="acc-title">Basic Information</span>
-                  <span class="acc-sub">Background & Activity Type</span>
-                </span>
-              </span>
-              <span class="acc-chevron" aria-hidden="true"></span>
-            </summary>
+      <form method="POST" class="event-form">
+        <!-- ================= BASIC INFORMATION ================= -->
+        <details class="acc" open>
+          <summary class="acc-head">
+            <span class="acc-title">Basic Information</span>
+            <span class="acc-sub">Background & Activity Type</span>
+          </summary>
 
-            <div class="acc-body">
-              <div class="field">
-                <label for="organizing_body">Organizing Body:</label><br>
-                <input list="org_list" id="organizing_body" name="organizing_body"
-                  value="<?= htmlspecialchars($organizing_body) ?>" required>
-                <datalist id="org_list">
-                  <!-- temp selections -->
-                  <option value="HAUSG CSC-SOC">
-                      <option value="HAUSG CSC-SAS">
-                      <option value="HAUSG CSC-SHTM">
-                      <option value="HAUSG CSC-SEA">
-                      <option value="HAUSG CSC-SNAMS">
-                      <option value="HAUSG CSC-CCJEF">
-                      <option value="HAUSG CSC-SED">
-                      <option value="HAUSG CSC-SBA">
-                      <option value="Department Organization">
-                      <option value="College Organization">
-                      <option value="Special Interest Group">
-                </datalist>
-              </div>
+          <div class="acc-body">
 
-              <div class="field">
-                <label>Background:</label><br>
-                <label><input type="radio" name="background" value="OSA-Initiated Activity"
-                    <?= ($background === 'OSA-Initiated Activity') ? 'checked' : '' ?>> OSA-Initiated Activity</label><br>
-                <label><input type="radio" name="background" value="Student-Initiated Activity"
-                    <?= ($background === 'Student-Initiated Activity') ? 'checked' : '' ?>> Student-Initiated
-                  Activity</label><br>
-                <label><input type="radio" name="background" value="Participation" <?= ($background === 'Participation') ? 'checked' : '' ?>> Participation</label>
-              </div>
+            <!-- Organizing Body -->
+            <div class="form-group">
+              <label for="organizing_body">Organizing Body</label>
+              <small class="hint">Select one or more organizing bodies. You can also type to search.</small>
 
-              <div class="field">
-                <label>Type of Activity:</label><br>
+              <!-- Hidden semantic select -->
+              <select id="organizing_body" name="organizing_body[]" multiple hidden>
                 <?php
-                $types = [
-                  "On-campus Activity",
-                  "Virtual Activity",
-                  "Off-Campus Activity",
-                  "Community Service - On-campus Activity",
-                  "Community Service - Virtual Activity",
-                  "Off-Campus Community Service"
+                $org_options = [
+                  "University Student Council (USC)",
+                  "HAUSG CSC-SOC",
+                  "HAUSG CSC-SAS",
+                  "HAUSG CSC-SHTM",
+                  "HAUSG CSC-SEA",
+                  "HAUSG CSC-SNAMS",
+                  "HAUSG CSC-CCJEF",
+                  "HAUSG CSC-SED",
+                  "HAUSG CSC-SBA",
+                  "Department Organization",
+                  "College Organization",
+                  "Special Interest Group"
                 ];
-                foreach ($types as $type) {
-                  $checked = ($activity_type === $type) ? 'checked' : '';
-                  echo "<label><input type='radio' name='activity_type' value='$type' $checked required> $type</label><br>";
+
+                foreach ($org_options as $org) {
+                  $selected = (isset($organizing_body) && is_array($organizing_body) && in_array($org, $organizing_body))
+                    ? 'selected' : '';
+                  echo "<option value=\"$org\" $selected>$org</option>";
                 }
                 ?>
+              </select>
+
+              <!-- Custom input + dropdown -->
+              <div class="multi-select" id="orgDropdown">
+                <input type="text" placeholder="Type or select organization..." class="multi-input" autocomplete="off">
+                <div class="dropdown-list"></div>
               </div>
 
-              <div class="field" id="series-block"
-                style="display:<?= ($background === 'Participation') ? 'block' : 'none' ?>;">
-                <label>Series:</label><br>
-                <?php
-                $series_options = ["College Days", "University Days", "Organization Themed-Fairs", "OSA-Initiated Activities", "HAU Institutional Activities"];
-                foreach ($series_options as $opt) {
-                  $checked = ($series === $opt) ? 'checked' : '';
-                  echo "<label><input type='radio' name='series' value='$opt' $checked required> $opt</label><br>";
-                }
-                ?>
+              <!-- Selected tags -->
+              <div class="selected-tags" id="selectedTags">
+                <?php if (!empty($organizing_body) && is_array($organizing_body)): ?>
+                  <?php foreach ($organizing_body as $org): ?>
+                    <div class="tag">
+                      <?= htmlspecialchars($org) ?><span>&times;</span>
+                    </div>
+                  <?php endforeach; ?>
+                <?php endif; ?>
               </div>
             </div>
-          </details>
 
-          <!-- Accordion: Event Classification -->
-          <details class="acc">
-            <summary class="acc-head">
-              <span class="acc-left">
-                <span class="acc-dot" aria-hidden="true"></span>
-                <span class="acc-text">
-                  <span class="acc-title">Event Classification</span>
-                  <span class="acc-sub">Nature & Event Name</span>
-                </span>
-              </span>
-              <span class="acc-chevron" aria-hidden="true"></span>
-            </summary>
+            <!-- Background -->
+            <fieldset class="field">
+              <legend>Background</legend>
+              <small class="hint">Indicate who initiated this activity.</small>
+              <div class="radio-group two-col">
+                <label><input type="radio" name="background" value="OSA-Initiated Activity"
+                    <?= ($background === 'OSA-Initiated Activity') ? 'checked' : '' ?>> OSA-Initiated Activity</label>
 
-            <div class="acc-body">
-              <div class="field">
-                <label for="nature">Nature:</label>
-                <input type="text" name="nature" id="nature" value="<?= htmlspecialchars($nature) ?>" required>
+                <label><input type="radio" name="background" value="Student-Initiated Activity"
+                    <?= ($background === 'Student-Initiated Activity') ? 'checked' : '' ?>> Student-Initiated
+                  Activity</label>
+
+                <label><input type="radio" name="background" value="Participation" <?= ($background === 'Participation') ? 'checked' : '' ?>> Participation</label>
+              </div>
+            </fieldset>
+
+            <!-- Activity Type -->
+            <fieldset class="field">
+              <legend>Type of Activity</legend>
+              <small class="hint">Choose the activity type. This helps categorize events for reporting.</small>
+              <div class="radio-group two-col">
+                <?php
+                $types = ['On-campus Activity', 'Virtual Activity', 'Off-Campus Activity', 'Community Service - On-campus Activity', 'Community Service - Virtual Activity', 'Community Service - Off-campus Activity'];
+
+                foreach ($types as $type) {
+                  $checked = ($activity_type === $type) ? 'checked' : '';
+                  echo "<label><input type='radio' name='activity_type' value='$type' $checked required> $type</label>";
+                }
+                ?>
+              </div>
+            </fieldset>
+
+            <!-- Series -->
+            <fieldset class="field" id="series-block"
+              style="display:<?= ($background === 'Participation') ? 'block' : 'none' ?>;">
+              <legend>Series</legend>
+              <small class="hint">Select the series if this is a participation activity.</small>
+              <div class="radio-group two-col">
+                <?php
+                $series_options = ['College Days', 'University Days', 'Organization Themed-Fairs', 'OSA-Initiated Activities', 'HAU Institutional Activities'];
+
+                foreach ($series_options as $opt) {
+                  $checked = ($series === $opt) ? 'checked' : '';
+                  echo "<label><input type='radio' name='series' value='$opt' $checked required> $opt</label>";
+                }
+                ?>
+              </div>
+            </fieldset>
+
+          </div>
+        </details>
+
+
+        <details class="acc">
+          <summary class="acc-head">
+            <span class="acc-title">Event Classification</span>
+            <span class="acc-sub">Nature & Event Name</span>
+          </summary>
+
+          <div class="acc-body">
+
+            <div class="form-row">
+              <div class="field long-field">
+                <label for="nature">Nature</label>
+                <small class="hint">Describe the nature of the activity (e.g., Workshop, Seminar, Outreach).</small>
+                <textarea name="nature" id="nature" rows="3" required><?= htmlspecialchars($nature) ?></textarea>
               </div>
 
-              <div class="field">
-                <label for="activity_name">Activity Name:</label>
-                <input type="text" name="activity_name" id="activity_name"
-                  value="<?= htmlspecialchars($activity_name) ?>" required>
+              <div class="field long-field">
+                <label for="activity_name">Activity Name</label>
+                <small class="hint">Provide a concise title or name for the activity.</small>
+                <textarea name="activity_name" id="activity_name" rows="3"
+                  required><?= htmlspecialchars($activity_name) ?></textarea>
               </div>
+            </div>
 
-              <div class="field">
-                <label for="extraneous">Extraneous?</label><br>
+            <fieldset class="field">
+              <legend>Extraneous?</legend>
+              <small class="hint">Specify if this event is considered extraneous.</small>
+              <div class="radio-group inline">
                 <label><input type="radio" name="extraneous" value="Yes" <?= ($extraneous === 'Yes') ? 'checked' : '' ?>
                     required> Yes</label>
                 <label><input type="radio" name="extraneous" value="No" <?= ($extraneous === 'No') ? 'checked' : '' ?>
                     required> No</label>
               </div>
-
-              <div class="field">
-                <label for="target_metric">Target Metric:</label>
-                <input type="text" name="target_metric" id="target_metric"
-                  value="<?= htmlspecialchars($target_metric) ?>">
+            </fieldset>
+            
+            <fieldset class="field">
+              <legend>Collect Payments?</legend>
+              <small class="hint">Specify if this event is considered extraneous.</small>
+              <div class="radio-group inline">
+                <label><input type="radio" name="collect_payments" value="Yes" <?= ($collect_payments === 'Yes') ? 'checked' : '' ?>
+                    required> Yes</label>
+                <label><input type="radio" name="collect_payments" value="No" <?= ($collect_payments === 'No') ? 'checked' : '' ?>
+                    required> No</label>
               </div>
+            </fieldset>
+
+            <div class="field long-field">
+              <label for="target_metric">Target Metric</label>
+              <small class="hint">Optional: Enter measurable targets (e.g., number of attendees).</small>
+              <textarea name="target_metric" id="target_metric"
+                rows="2"><?= htmlspecialchars($target_metric) ?></textarea>
             </div>
-          </details>
 
-          <!-- Accordion: Schedule & Logistics -->
-          <details class="acc">
-            <summary class="acc-head">
-              <span class="acc-left">
-                <span class="acc-dot" aria-hidden="true"></span>
-                <span class="acc-text">
-                  <span class="acc-title">Schedule & Logistics</span>
-                  <span class="acc-sub">Dates, Venue, Participants, Distance</span>
-                </span>
-              </span>
-              <span class="acc-chevron" aria-hidden="true"></span>
-            </summary>
+          </div>
+        </details>
 
-            <div class="acc-body">
+        <details class="acc">
+          <summary class="acc-head">
+            <span class="acc-title">Schedule & Logistics</span>
+            <span class="acc-sub">Dates, Venue, Participants</span>
+          </summary>
+
+          <div class="acc-body">
+
+            <!-- Dates -->
+            <div class="form-row">
               <div class="field">
-                <label for="start_datetime">Start Date & Time:</label>
+                <label for="start_datetime">Start Date & Time</label>
+                <small class="hint">When the event starts.</small>
                 <input type="datetime-local" name="start_datetime" id="start_datetime"
                   value="<?= htmlspecialchars($start_datetime) ?>" required>
               </div>
 
               <div class="field">
-                <label for="end_datetime">End Date & Time:</label>
+                <label for="end_datetime">End Date & Time</label>
+                <small class="hint">When the event ends.</small>
                 <input type="datetime-local" name="end_datetime" id="end_datetime"
                   value="<?= htmlspecialchars($end_datetime) ?>" required>
               </div>
+            </div>
 
-              <div class="field">
-                <label for="participants">Participants:</label>
-                <input type="text" name="participants" id="participants" value="<?= htmlspecialchars($participants) ?>"
-                  required>
-              </div>
-
-              <div class="field">
-                <label for="venue">Venue/Platform:</label>
-                <input type="text" name="venue" id="venue" value="<?= htmlspecialchars($venue) ?>" required>
-              </div>
-
-              <div class="field" id="offcampus-block"
-                style="display:<?= (strpos($activity_type, 'Off-Campus') !== false) ? 'block' : 'none' ?>;">
-                <label>Distance:</label><br>
-                <label><input type="radio" name="distance" value="Within Angeles City" <?= ($distance === 'Within Angeles City') ? 'checked' : '' ?> required> Within Angeles City</label><br>
-                <label><input type="radio" name="distance" value="Within Central Luzon" <?= ($distance === 'Within Central Luzon') ? 'checked' : '' ?> required> Within Central Luzon</label><br>
-                <label><input type="radio" name="distance" value="Rest of PH or Overseas" <?= ($distance === 'Rest of PH or Overseas') ? 'checked' : '' ?> required> Rest of PH or Overseas</label><br>
-
-                <label>Participant Range:</label><br>
-                <?php
-                $ranges = ["1-2", "3-15", "15-25", "25+"];
-                foreach ($ranges as $r) {
-                  $checked = ($participant_range === $r) ? 'checked' : '';
-                  echo "<label><input type='radio' name='participant_range' value='$r' $checked required> $r</label><br>";
-                }
-                ?>
-
-                <label>More than 12 hours?</label><br>
-                <label>
-                  <input type="radio" name="overnight" value="1" <?= ($overnight == 1) ? 'checked' : '' ?> required>
-                  Yes
-                </label>
-
-                <label>
-                  <input type="radio" name="overnight" value="0" <?= ($overnight == 0) ? 'checked' : '' ?> required>
-                  No
-                </label>
-
+            <div class="form-row">
+              <div class="field long-field">
+                <label for="participants">Participants</label>
+                <small class="hint">Describe participants or groups expected to attend.</small>
+                <textarea name="participants" id="participants" rows="2"
+                  required><?= htmlspecialchars($participants) ?></textarea>
               </div>
             </div>
-          </details>
 
-          <button type="submit" name="create_event" class="primary-btn">Create Event</button>
-        </form>
-      </section>
+            <div class="form-row">
+              <div class="field long-field">
+                <label for="venue">Venue / Platform</label>
+                <small class="hint">Specify where the event will take place (physical or virtual).</small>
+                <textarea name="venue" id="venue" rows="2" required><?= htmlspecialchars($venue) ?></textarea>
+              </div>
+            </div>
+
+            <!-- Off-campus block -->
+            <fieldset class="field" id="offcampus-block"
+              style="display:<?= (strpos($activity_type, 'Off-Campus') !== false) ? 'block' : 'none' ?>;">
+              <legend>Off-Campus Details</legend>
+              <small class="hint">Provide off-campus location details if applicable.</small>
+
+              <div class="radio-group two-col">
+                <label><input type="radio" name="distance" value="Within Angeles City" <?= ($distance === 'Within Angeles City') ? 'checked' : '' ?> required> Within Angeles City</label>
+                <label><input type="radio" name="distance" value="Within Central Luzon" <?= ($distance === 'Within Central Luzon') ? 'checked' : '' ?> required> Within Central Luzon</label>
+                <label><input type="radio" name="distance" value="Rest of PH or Overseas" <?= ($distance === 'Rest of PH or Overseas') ? 'checked' : '' ?> required> Rest of PH or Overseas</label>
+              </div>
+
+              <legend>Participant Range</legend>
+              <small class="hint">Indicate the expected number of participants.</small>
+              <div class="radio-group inline">
+                <?php
+                $ranges = ['1-2', '3-15', '15-25', '25 or more'];
+                foreach ($ranges as $r) {
+                  $checked = ($participant_range === $r) ? 'checked' : '';
+                  echo "<label><input type='radio' name='participant_range' value='$r' $checked required> $r</label>";
+                }
+                ?>
+              </div>
+
+              <legend>More than 12 hours?</legend>
+              <small class="hint">Indicate if the event spans more than 12 hours.</small>
+              <div class="radio-group inline">
+                <label><input type="radio" name="overnight" value="1" <?= ($overnight == 1) ? 'checked' : '' ?> required>
+                  Yes</label>
+                <label><input type="radio" name="overnight" value="0" <?= ($overnight == 0) ? 'checked' : '' ?> required>
+                  No</label>
+              </div>
+
+            </fieldset>
+
+          </div>
+        </details>
+
+        <button type="submit" name="create_event" class="primary-btn">
+          Create Event
+        </button>
+
+      </form>
+
     </main>
   </div>
 
