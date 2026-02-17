@@ -1,5 +1,5 @@
 <?php
-session_start(); // <-- MUST be at the top
+session_start();
 
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
@@ -49,16 +49,83 @@ $todayY = (int) date('Y');
 $todayM = (int) date('n');
 $todayD = (int) date('j');
 
-// Optional: sample events (replace with DB later)
-// key format: YYYY-MM-DD
-$events = [
-    sprintf("%04d-%02d-03", $year, $month) => ["Prep (RNN)", "08:00"],
-    sprintf("%04d-%02d-05", $year, $month) => ["Classroom", "10:00"],
-    sprintf("%04d-%02d-07", $year, $month) => ["Exam", "10:00 - 11:00"],
-    sprintf("%04d-%02d-11", $year, $month) => ["Presentation", "08:00"],
-    sprintf("%04d-%02d-20", $year, $month) => ["Meeting", "09:00 - 10:00"],
-];
+// Fetch events from database for current month
+$events = [];
+$user_id = $_SESSION["user_id"];
 
+$startDate = sprintf("%04d-%02d-01", $year, $month);
+$endDate = sprintf("%04d-%02d-%02d", $year, $month, $daysInMonth);
+
+$stmt = $conn->prepare("
+    SELECT event_name, nature, start_date, start_time, end_time, activity_type, is_extraneous
+    FROM events 
+    WHERE user_id = ? 
+    AND start_date BETWEEN ? AND ?
+    ORDER BY start_date, start_time
+");
+
+$stmt->bind_param("iss", $user_id, $startDate, $endDate);
+$stmt->execute();
+$result = $stmt->get_result();
+
+while ($row = $result->fetch_assoc()) {
+    $dateKey = $row['start_date'];
+    $title = $row['event_name'];
+    $nature = $row['nature'];
+    
+    // Format time display
+    if ($row['end_time']) {
+        $time = date('H:i', strtotime($row['start_time'])) . ' - ' . date('H:i', strtotime($row['end_time']));
+    } else {
+        $time = date('H:i', strtotime($row['start_time']));
+    }
+    
+    // Store event (can have multiple events per day)
+    if (!isset($events[$dateKey])) {
+        $events[$dateKey] = [];
+    }
+    
+    $events[$dateKey][] = [
+        'title' => $title,
+        'nature' => $nature,
+        'time' => $time,
+        'type' => $row['activity_type']
+    ];
+}
+
+$stmt->close();
+
+// Calculate progress metrics
+$totalEvents = 0;
+$completedEvents = 0;
+$upcomingEvents = 0;
+
+// Total events
+$metricsStmt = $conn->prepare("SELECT COUNT(*) as total FROM events WHERE user_id = ?");
+$metricsStmt->bind_param("i", $user_id);
+$metricsStmt->execute();
+$metricsResult = $metricsStmt->get_result();
+$totalEvents = $metricsResult->fetch_assoc()['total'] ?? 0;
+$metricsStmt->close();
+
+// Completed events (past events)
+$completedStmt = $conn->prepare("SELECT COUNT(*) as completed FROM events WHERE user_id = ? AND start_date < CURDATE()");
+$completedStmt->bind_param("i", $user_id);
+$completedStmt->execute();
+$completedResult = $completedStmt->get_result();
+$completedEvents = $completedResult->fetch_assoc()['completed'] ?? 0;
+$completedStmt->close();
+
+// Upcoming events
+$upcomingStmt = $conn->prepare("SELECT COUNT(*) as upcoming FROM events WHERE user_id = ? AND start_date >= CURDATE()");
+$upcomingStmt->bind_param("i", $user_id);
+$upcomingStmt->execute();
+$upcomingResult = $upcomingStmt->get_result();
+$upcomingEvents = $upcomingResult->fetch_assoc()['upcoming'] ?? 0;
+$upcomingStmt->close();
+
+// Calculate compliance percentage
+$complianceRate = $totalEvents > 0 ? round(($completedEvents / $totalEvents) * 100) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -66,7 +133,7 @@ $events = [
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Calendar</title>
+    <title>HAUCREDIT - Calendar</title>
     <link rel="stylesheet" href="assets/styles/layout.css" />
 </head>
 
@@ -80,7 +147,7 @@ $events = [
             <header class="topbar">
                 <div class="title-wrap">
                     <h1>Calendar</h1>
-                    <p>Text Here</p>
+                    <p>View and manage your scheduled events</p>
                 </div>
             </header>
 
@@ -95,9 +162,9 @@ $events = [
                             <button class="cal-tab" type="button" disabled>Day</button>
                         </div>
 
-                        <button class="cal-add" type="button">
+                        <a href="create_event.php" class="cal-add">
                             <span class="plus" aria-hidden="true">+</span> Add
-                        </button>
+                        </a>
                     </div>
 
                     <div class="cal-monthrow">
@@ -162,14 +229,14 @@ $events = [
                             echo '<div class="' . htmlspecialchars($classes) . '">';
                             echo '<span class="day">' . htmlspecialchars((string) $label) . '</span>';
 
-                            // Event pill (only for current month days)
+                            // Event pills (only for current month days)
                             if ($dateKey && isset($events[$dateKey])) {
-                                $evtTitle = $events[$dateKey][0];
-                                $evtTime = $events[$dateKey][1];
-                                echo '<div class="pill">';
-                                echo '<div class="pill-title">' . htmlspecialchars($evtTitle) . '</div>';
-                                echo '<div class="pill-time">' . htmlspecialchars($evtTime) . '</div>';
-                                echo '</div>';
+                                foreach ($events[$dateKey] as $evt) {
+                                    echo '<div class="pill">';
+                                    echo '<div class="pill-title">' . htmlspecialchars($evt['title']) . '</div>';
+                                    echo '<div class="pill-time">' . htmlspecialchars($evt['time']) . '</div>';
+                                    echo '</div>';
+                                }
                             }
 
                             // Today circle
@@ -188,13 +255,31 @@ $events = [
                     <h2>Progress<br>Tracker</h2>
 
                     <div class="ring" aria-hidden="true">
-                        <div class="ring-inner"></div>
+                        <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#e8dcc8" stroke-width="8"/>
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#c2a14d" stroke-width="8"
+                                stroke-dasharray="<?php echo $complianceRate * 2.51; ?> 251"
+                                transform="rotate(-90 50 50)"
+                                style="transition: stroke-dasharray 0.3s ease;"/>
+                            <text x="50" y="50" text-anchor="middle" dy="7" font-size="20" font-weight="bold" fill="#4b0014">
+                                <?php echo $complianceRate; ?>%
+                            </text>
+                        </svg>
                     </div>
 
                     <div class="tracker-list">
-                        <div class="t-row"><span>Text here</span><span class="t-score">0/0</span></div>
-                        <div class="t-row"><span>Text here</span><span class="t-score">0/0</span></div>
-                        <div class="t-row"><span>Text here</span><span class="t-score">0/0</span></div>
+                        <div class="t-row">
+                            <span>Total Events</span>
+                            <span class="t-score"><?php echo $totalEvents; ?></span>
+                        </div>
+                        <div class="t-row">
+                            <span>Completed</span>
+                            <span class="t-score"><?php echo $completedEvents; ?>/<?php echo $totalEvents; ?></span>
+                        </div>
+                        <div class="t-row">
+                            <span>Upcoming</span>
+                            <span class="t-score"><?php echo $upcomingEvents; ?></span>
+                        </div>
                     </div>
                 </aside>
 
