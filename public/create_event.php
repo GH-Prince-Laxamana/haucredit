@@ -157,20 +157,83 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
               <select id="organizing_body" name="organizing_body[]" multiple hidden>
                 <?php
                 $org_options = [
-                  "University Student Council (USC)",
-                  "HAUSG CSC-SOC",
-                  "HAUSG CSC-SAS",
-                  "HAUSG CSC-SHTM",
-                  "HAUSG CSC-SEA",
-                  "HAUSG CSC-SNAMS",
-                  "HAUSG CSC-CCJEF",
-                  "HAUSG CSC-SED",
-                  "HAUSG CSC-SBA",
-                  "Department Organization",
-                  "College Organization",
-                  "Special Interest Group"
-                ];
+                // HAU OFFICE
+                "HAU OSA",
 
+                // UNIVERSITY STUDENT GOVERNMENT
+                "HAUSG USC",
+                "HAUSG HC",
+                "HAUSG SEN",
+                "HAUSG COMELEC",
+                "HAUSG CSO",
+                "HAUSG CFA",
+
+                // COLLEGE STUDENT COUNCILS
+                "HAUSG CSC-CCJEF",
+                "HAUSG CSC-SAS",
+                "HAUSG CSC-SBA",
+                "HAUSG CSC-SoC",
+                "HAUSG CSC-SEd",
+                "HAUSG CSC-SEA",
+                "HAUSG CSC-SHTM",
+                "HAUSG CSC-SNAMS",
+
+                // STUDENT PUBLICATIONS
+                "HPC Angge",
+                "HPC HQ",
+                "HPC NX",
+                "HPC Enteng",
+                "HPC AP",
+                "HPC Reple",
+                "HPC Soln",
+                "HPC CC",
+                "HPC LL",
+
+                // UNI-WIDE ORGANIZATIONS
+                "Uniwide DC",
+                "Uniwide JJC",
+                "Uniwide JO",
+                "Uniwide GDGoC",
+                "Uniwide ADS",
+                "Uniwide RCY",
+                "Uniwide RAC",
+                "Uniwide APLMS",
+                "Uniwide SVE",
+                "Uniwide 21CC",
+                "Uniwide HPC",
+
+                // SCHOOL ORGANIZATIONS
+                "CCJEF COPS",
+                "CCJEF SAFE",
+                "SAS PsychSoc",
+                "SAS CL",
+                "SBA Mansoc",
+                "SoC MAFIA",
+                "SoC LOOP",
+                "SoC CG",
+                "SoC CSIA",
+                "SEd KAS",
+                "SEd KLDS",
+                "SEA SAEP",
+                "SEA UAPSA",
+                "SEA PSME",
+                "SEA PIIE",
+                "SEA IIEE",
+                "SEA PICE",
+                "SEA IECEP",
+                "SEA ICpEP",
+                "SHTM HMAP",
+                "SHTM LTSP",
+                "SNAMS ARTS",
+                "SNAMS PHISMETS",
+                "SNAMS SANS",
+
+                // POLITICAL PARTIES
+                "PP Lualu",
+                "PP Sulung",
+                "PP Sulagpo",
+                "PP Tindig",
+            ];
                 foreach ($org_options as $org) {
                   $selected = (isset($organizing_body) && is_array($organizing_body) && in_array($org, $organizing_body))
                     ? 'selected' : '';

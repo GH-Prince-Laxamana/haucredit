@@ -96,6 +96,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <div class="navlinks">
             <a href="index.php">Login</a>
             <a class="active" href="register.php">Register</a>
+            <a href="about.php">About</a>
         </div>
     </div>
 
@@ -141,7 +142,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <div class="form-group">
                         <label for="org_body">Organizing Body</label>
                         <input list="org_list" id="org_body" name="org_body" value="<?= htmlspecialchars($org_body) ?>"
-                            placeholder="Select/Type org" required>
+                            placeholder="Search or select organization" required>
                         <datalist id="org_list">
                             <!-- HAU OFFICE -->
                             <option value="HAU OSA">
@@ -183,6 +184,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="Uniwide ADS">
                             <option value="Uniwide RCY">
                             <option value="Uniwide RAC">
+
                             <option value="Uniwide APLMS">
                             <option value="Uniwide SVE">
                             <option value="Uniwide 21CC">
