@@ -53,18 +53,11 @@ a {
   --surface-2: #fbfaf9;
 }
 
-/* ===== BASE (BIGGER) ===== */
-html {
-  /* makes everything feel bigger without breaking layout */
-  font-size: clamp(16px, 0.7vw + 14px, 19px);
-}
-
 body {
   font-family: "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
   background: var(--offwhite);
   color: #1a1a1a;
   overflow-x: hidden;
-  line-height: 1.45;
 }
 
 /* =========================================================
