@@ -7,13 +7,14 @@ send_security_headers();
 
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 
-$error = "";
-$success = "";
-
 if (isset($_SESSION["user_id"])) {
     header("Location: home.php");
     exit();
 }
+
+$error = "";
+$success = "";
+
 
 $username = $email = $stud_num = $org_body = "";
 
@@ -82,15 +83,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <title>HAUcredit - Register</title>
-    <link rel="stylesheet" href="../styles/layout.css">
+    <link rel="stylesheet" href="assets/styles/styles.css">
 </head>
 
 <body>
+    <div class="navbar">
+        <div class="navbar-brand">
+            <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
+            <div class="navbar-title">HAU<span class="accent">CREDIT</span></div>
+        </div>
+
+        <div class="navlinks">
+            <a href="index.php">Login</a>
+            <a class="active" href="register.php">Register</a>
+        </div>
+    </div>
 
     <div class="container">
         <div class="left-panel">
-            <h1>HAUCREDIT</h1>
-            <p><b>Compliance & Records Engine</b> for Documentation and Institutional Tracking.</p>
+            <div class="brand-title">
+                <h1 class="brand-name">HAU<span class="brand-accent">CREDIT</span></h1>
+                <p class="brand-tagline">Compliance & Records Engine for Documentation and Institutional Tracking.</p>
+            </div>
+
             <ul>
                 <li>Centralized Event Monitoring</li>
                 <li>Automated OSA Checklists</li>

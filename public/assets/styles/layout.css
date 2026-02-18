@@ -900,6 +900,23 @@ button:disabled {
   border: 1px solid rgba(194, 161, 77, .18);
 }
 
+.logout-link {
+  width: 100%;
+  height: 30px;
+  margin-top: 2em;
+  /* BIGGER */
+  border-radius: 12px;
+  border: 1px solid rgba(249, 243, 234, .25);
+  background: rgba(168, 168, 168, 0.664);
+  color: var(--offwhite);
+  font-weight: 600;
+  font-size: 0.9rem;
+  /* BIGGER */
+  box-shadow: 0 14px 26px rgba(90, 0, 22, .22);
+  cursor: pointer;
+  transition: transform .15s ease, filter .15s ease;
+}
+
 /* =========================
    RESPONSIVE (merged)
    ========================= */

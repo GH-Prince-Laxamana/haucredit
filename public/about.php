@@ -52,12 +52,12 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
         <div class="about-section">
           <h3>Key Features</h3>
           <ul class="feature-list">
-            <li>✅ <strong>Smart Event Classification</strong> - Automatically determines required documents based on activity type</li>
-            <li>✅ <strong>Dynamic Forms</strong> - Shows only relevant fields for your specific event (on-campus, virtual, off-campus, community service)</li>
-            <li>✅ <strong>Template Library</strong> - Direct access to official HAU OSA form templates via tinyurl links</li>
-            <li>✅ <strong>Compliance Checklist</strong> - Auto-generates requirements list based on your event details</li>
-            <li>✅ <strong>Calendar Integration</strong> - View all scheduled events with progress tracking</li>
-            <li>✅ <strong>Session Management</strong> - Secure login system for student councils and organizations</li>
+            <li></span> <strong>Smart Event Classification</strong> - Automatically determines required documents based on activity type</li>
+            <li><strong>Dynamic Forms</strong> - Shows only relevant fields for your specific event (on-campus, virtual, off-campus, community service)</li>
+            <li><strong>Template Library</strong> - Direct access to official HAU OSA form templates via tinyurl links</li>
+            <li><strong>Compliance Checklist</strong> - Auto-generates requirements list based on your event details</li>
+            <li><strong>Calendar Integration</strong> - View all scheduled events with progress tracking</li>
+            <li><strong>Session Management</strong> - Secure login system for student councils and organizations</li>
           </ul>
         </div>
 

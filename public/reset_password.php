@@ -47,7 +47,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if (!$user) {
             $error = "Invalid reset link.";
         } else {
-            $user_id = (int)$user["user_id"];
+            $user_id = (int) $user["user_id"];
 
             $r = mysqli_prepare(
                 $conn,
@@ -89,62 +89,69 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Reset Password</title>
-    <link rel="stylesheet" href="../styles/layout.css">
+    <link rel="stylesheet" href="assets/styles/styles.css">
 </head>
+
 <body>
+    <div class="container">
+        <div class="left-panel">
+            <div class="brand-title">
+                <h1 class="brand-name">HAU<span class="brand-accent">CREDIT</span></h1>
+                <p class="brand-tagline">Compliance & Records Engine for Documentation and Institutional Tracking.</p>
+            </div>
 
-<div class="container">
-    <div class="left-panel">
-        <h1>HAUCREDIT</h1>
-        <p><b>Compliance & Records Engine</b> for Documentation and Institutional Tracking.</p>
-        <ul>
-            <li>Centralized Event Monitoring</li>
-            <li>Automated OSA Checklists</li>
-            <li>Secure Document Repository</li>
-        </ul>
-    </div>
+            <ul>
+                <li>Centralized Event Monitoring</li>
+                <li>Automated OSA Checklists</li>
+                <li>Secure Document Repository</li>
+            </ul>
+        </div>
 
-    <div class="right-panel">
-        <div class="card">
-            <h2>Reset Password</h2>
-            <div class="subtitle">Create a new password for your account.</div>
+        <div class="right-panel">
+            <div class="card">
+                <h2>Reset Password</h2>
+                <div class="subtitle">Create a new password for your account.</div>
 
-            <form action="<?= $self ?>" method="post">
-                <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
-                <input type="hidden" name="email" value="<?= htmlspecialchars($email) ?>">
+                <form action="<?= $self ?>" method="post">
+                    <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
+                    <input type="hidden" name="email" value="<?= htmlspecialchars($email) ?>">
 
-                <div class="form-group">
-                    <label for="new_password">New Password</label>
-                    <input type="password" id="new_password" name="new_password" placeholder="Enter new password" required>
-                </div>
+                    <div class="form-group">
+                        <label for="new_password">New Password</label>
+                        <input type="password" id="new_password" name="new_password" placeholder="Enter new password"
+                            required>
+                    </div>
 
-                <div class="form-group">
-                    <label for="confirm_password">Confirm Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password" required>
-                </div>
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password"
+                            placeholder="Confirm new password" required>
+                    </div>
 
-                <button type="submit">Update Password</button>
-            </form>
+                    <button type="submit">Update Password</button>
+                </form>
 
-            <?php if ($error !== ""): ?>
-                <div class="notice error"><?= htmlspecialchars($error) ?></div>
-                <div class="link">Back to <a href="index.php">Log In</a></div>
-            <?php endif; ?>
+                <?php if ($error !== ""): ?>
+                    <div class="notice error"><?= htmlspecialchars($error) ?></div>
+                    <div class="link">Back to <a href="index.php">Log In</a></div>
+                <?php endif; ?>
 
-            <?php if ($success !== ""): ?>
-                <div class="notice success"><?= htmlspecialchars($success) ?></div>
-                <div class="link">Go to <a href="index.php">Log In</a></div>
-            <?php endif; ?>
+                <?php if ($success !== ""): ?>
+                    <div class="notice success"><?= htmlspecialchars($success) ?></div>
+                    <div class="link">Go to <a href="index.php">Log In</a></div>
+                <?php endif; ?>
 
-            <?php if ($error === "" && $success === ""): ?>
-                <div class="link">Back to <a href="index.php">Log In</a></div>
-            <?php endif; ?>
+                <?php if ($error === "" && $success === ""): ?>
+                    <div class="link">Back to <a href="index.php">Log In</a></div>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
-</div>
 
 </body>
+
 </html>

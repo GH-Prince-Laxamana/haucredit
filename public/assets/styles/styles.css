@@ -1,0 +1,459 @@
+/* =========================================================
+   HAUCREDIT — AUTH CSS (CLEAN + BIGGER)
+   - Matte panels
+   - Burgundy navbar
+   - Auth pages only (no dashboard/home styles)
+   - Responsive + scroll-safe
+   ========================================================= */
+
+/* ===== RESET ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ===== THEME ===== */
+:root {
+  --burgundy: #5a0016;
+  --burgundy-2: #3d0010;
+  --gold: #c2a14f;
+
+  --panel-shadow: 0 26px 70px rgba(0, 0, 0, .28);
+  --radius: 14px;
+
+  --stroke: rgba(0, 0, 0, .10);
+  --muted: #6f6f75;
+  --ring: rgba(90, 0, 22, .18);
+
+  --offwhite: #f9f3ea;
+  --surface: #ffffff;
+  --surface-2: #fbfaf9;
+}
+
+/* ===== BASE (BIGGER) ===== */
+html {
+  /* makes everything feel bigger without breaking layout */
+  font-size: clamp(16px, 0.7vw + 14px, 19px);
+}
+
+body {
+  font-family: "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--offwhite);
+  color: #1a1a1a;
+  overflow-x: hidden;
+  line-height: 1.45;
+}
+
+/* =========================================================
+   AUTH BACKGROUND (ONLY WHEN .container EXISTS)
+   ========================================================= */
+body:has(.container) {
+  background: url("../images/HOLY.jpg") center/cover no-repeat fixed;
+  min-height: 100vh;
+  overflow-y: auto;
+  padding: 16px 0 26px;
+}
+
+body:has(.container)::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(18, 14, 24, .78) 0%, rgba(90, 0, 22, .55) 55%, rgba(0, 0, 0, .55) 100%),
+    radial-gradient(900px 520px at 20% 10%, rgba(255, 255, 255, .06), transparent 60%),
+    radial-gradient(900px 600px at 85% 75%, rgba(0, 0, 0, .35), transparent 65%);
+}
+
+.navbar,
+.container {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+.navbar {
+  width: min(1320px, 94vw);
+  margin: 12px auto 0;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #fff;
+  background: linear-gradient(180deg, var(--burgundy), var(--burgundy-2));
+  border-radius: var(--radius);
+  box-shadow: var(--panel-shadow);
+}
+
+.logo {
+  display: none !important;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar-mark {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+.navbar-title {
+  font-weight: 900;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  font-size: 1rem;
+}
+
+.navbar-title .accent {
+  color: var(--gold);
+}
+
+.navlinks {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.navlinks a {
+  font-size: .92rem;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 12px;
+  transition: .2s;
+}
+
+.navlinks a:hover {
+  background: rgba(255, 255, 255, .10);
+  color: var(--gold);
+}
+
+.navlinks a.active {
+  background: rgba(194, 161, 79, .16);
+  border: 1px solid rgba(194, 161, 79, .35);
+}
+
+/* =========================================================
+   MAIN PANEL
+   ========================================================= */
+.container {
+  width: min(1320px, 94vw);
+  margin: 14px auto 22px;
+  display: flex;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+  /* keeps corners clean */
+}
+
+/* LEFT PANEL */
+.left-panel {
+  width: 50%;
+  background: linear-gradient(180deg, var(--burgundy), var(--burgundy-2));
+  color: #fff;
+  padding: 72px 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+}
+
+/* RIGHT PANEL */
+.right-panel {
+  flex: 1;
+  background: var(--surface-2);
+  padding: 52px 46px;
+  display: flex;
+}
+
+.dev-link {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.notice-msg {
+  margin: 1em 0;
+}
+
+/* BRAND STACK */
+.brand-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.brand-logo {
+  height: 150px;
+}
+
+.brand-name {
+  font-size: clamp(2.2rem, 2.2vw + 1.4rem, 3.4rem);
+  font-weight: 1000;
+  text-transform: uppercase;
+  line-height: 1.05;
+}
+
+.brand-accent {
+  color: var(--gold);
+}
+
+.brand-tagline {
+  font-size: 1rem;
+  max-width: 560px;
+  color: rgba(255, 255, 255, .92);
+}
+
+.left-panel ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  font-size: 1rem;
+}
+
+.left-panel li::before {
+  content: "✓";
+  margin-right: 10px;
+  color: var(--gold);
+}
+
+/* =========================================================
+   FORM
+   ========================================================= */
+.card {
+  width: min(580px, 100%);
+}
+
+.card h2 {
+  color: var(--burgundy);
+  font-size: clamp(1.4rem, 1vw + 1.1rem, 1.75rem);
+  font-weight: 1000;
+}
+
+.subtitle {
+  font-size: .95rem;
+  color: #777;
+  margin: 6px 0 18px;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: .75px;
+  text-transform: uppercase;
+  color: #7a7a7a;
+}
+
+input,
+select {
+  width: 100%;
+  height: 48px;
+  /* BIGGER */
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, .18);
+  background: #fff;
+  font-size: 1rem;
+  /* BIGGER */
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: rgba(194, 161, 79, .75);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* SELECT ARROW */
+.form-group.select-wrap {
+  position: relative;
+}
+
+.form-group.select-wrap select {
+  appearance: none;
+  padding-right: 52px;
+}
+
+.form-group.select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  top: 38px;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid rgba(0, 0, 0, .55);
+  border-bottom: 2px solid rgba(0, 0, 0, .55);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* BUTTON */
+button {
+  width: 100%;
+  height: 48px;
+  /* BIGGER */
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--burgundy), var(--burgundy-2));
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  /* BIGGER */
+  box-shadow: 0 14px 26px rgba(90, 0, 22, .22);
+  cursor: pointer;
+  transition: transform .15s ease, filter .15s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+/* LINKS */
+.link {
+  text-align: center;
+  font-size: .9rem;
+  color: #777;
+  margin-top: 12px;
+}
+
+.link a {
+  color: var(--burgundy);
+  font-weight: 600;
+}
+
+.link a:hover {
+  text-decoration: underline;
+}
+
+.forgot-wrap {
+  text-align: right;
+  margin-top: 10px;
+}
+
+.forgot-link {
+  color: var(--burgundy);
+  font-weight: 700;
+  /* FIXED */
+  font-size: .9rem;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+/* NOTICE */
+.notice {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: .95rem;
+}
+
+.notice.error {
+  background: #ffecec;
+  color: #a00000;
+}
+
+.notice.success {
+  background: #effff2;
+  color: #116b1f;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (max-width:980px) {
+  .navbar {
+    width: min(720px, 94vw);
+  }
+
+  .container {
+    width: min(720px, 94vw);
+    flex-direction: column;
+  }
+
+  .left-panel,
+  .right-panel {
+    width: 100%;
+  }
+
+  .left-panel {
+    padding: 46px 22px;
+  }
+
+  .right-panel {
+    padding: 28px 18px;
+  }
+
+  .brand-logo {
+    height: 96px;
+  }
+}
+
+@media (max-width:520px) {
+
+  .navbar,
+  .container {
+    width: 94vw;
+  }
+
+  .navbar {
+    padding: 12px 14px;
+  }
+
+  .navlinks a {
+    padding: 9px 10px;
+    font-size: .9rem;
+  }
+}
+
+/* SCROLLBAR */
+@media(pointer:fine) {
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(90, 0, 22, .28);
+    border-radius: 10px;
+  }
+}

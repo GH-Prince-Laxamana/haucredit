@@ -58,7 +58,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     <?= $username ?>
                 </span>
             </button>
-            <a href="logout.php" class="logout-link">Logout</a>
+
+            <form action="logout.php" method="POST">
+                <button type="submit" class="logout-link">Logout</button>
+            </form>
         </div>
     </nav>
 </aside>
