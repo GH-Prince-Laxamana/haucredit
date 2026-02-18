@@ -143,18 +143,87 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         <input list="org_list" id="org_body" name="org_body" value="<?= htmlspecialchars($org_body) ?>"
                             placeholder="Select/Type org" required>
                         <datalist id="org_list">
-                            <option value="University Student Council (USC)">
-                            <option value="HAUSG CSC-SOC">
-                            <option value="HAUSG CSC-SAS">
-                            <option value="HAUSG CSC-SHTM">
-                            <option value="HAUSG CSC-SEA">
-                            <option value="HAUSG CSC-SNAMS">
+                            <!-- HAU OFFICE -->
+                            <option value="HAU OSA">
+
+                            <!-- UNIVERSITY STUDENT GOVERNMENT -->
+                            <option value="HAUSG USC">
+                            <option value="HAUSG HC">
+                            <option value="HAUSG SEN">
+                            <option value="HAUSG COMELEC">
+                            <option value="HAUSG CSO">
+                            <option value="HAUSG CFA">
+
+                            <!-- COLLEGE STUDENT COUNCILS -->
                             <option value="HAUSG CSC-CCJEF">
-                            <option value="HAUSG CSC-SED">
+                            <option value="HAUSG CSC-SAS">
                             <option value="HAUSG CSC-SBA">
-                            <option value="Department Organization">
-                            <option value="College Organization">
-                            <option value="Special Interest Group">
+                            <option value="HAUSG CSC-SoC">
+                            <option value="HAUSG CSC-SEd">
+                            <option value="HAUSG CSC-SEA">
+                            <option value="HAUSG CSC-SHTM">
+                            <option value="HAUSG CSC-SNAMS">
+
+                            <!-- STUDENT PUBLICATIONS -->
+                            <option value="HPC Angge">
+                            <option value="HPC HQ">
+                            <option value="HPC NX">
+                            <option value="HPC Enteng">
+                            <option value="HPC AP">
+                            <option value="HPC Reple">
+                            <option value="HPC Soln">
+                            <option value="HPC CC">
+                            <option value="HPC LL">
+
+                            <!-- UNI-WIDE ORGANIZATIONS -->
+                            <option value="Uniwide DC">
+                            <option value="Uniwide JJC">
+                            <option value="Uniwide JO">
+                            <option value="Uniwide GDGoC">
+                            <option value="Uniwide ADS">
+                            <option value="Uniwide RCY">
+                            <option value="Uniwide RAC">
+                            <option value="Uniwide APLMS">
+                            <option value="Uniwide SVE">
+                            <option value="Uniwide 21CC">
+                            <option value="Uniwide HPC">
+
+                            <!-- SCHOOL ORGANIZATIONS -->
+                            <option value="CCJEF COPS">
+                            <option value="CCJEF SAFE">
+                            <option value="SAS PsychSoc">
+                            <option value="SAS CL">
+                            <option value="SBA Mansoc">
+
+                            <option value="SoC MAFIA">
+                            <option value="SoC LOOP">
+                            <option value="SoC CG">
+                            <option value="SoC CSIA">
+
+                            <option value="SEd KAS">
+                            <option value="SEd KLDS">
+
+                            <option value="SEA SAEP">
+                            <option value="SEA UAPSA">
+                            <option value="SEA PSME">
+                            <option value="SEA PIIE">
+                            <option value="SEA IIEE">
+                            <option value="SEA PICE">
+                            <option value="SEA IECEP">
+                            <option value="SEA ICpEP">
+
+                            <option value="SHTM HMAP">
+                            <option value="SHTM LTSP">
+
+                            <option value="SNAMS ARTS">
+                            <option value="SNAMS PHISMETS">
+                            <option value="SNAMS SANS">
+
+                            <!-- POLITICAL PARTIES -->
+                            <option value="PP Lualu">
+                            <option value="PP Sulung">
+                            <option value="PP Sulagpo">
+                            <option value="PP Tindig">
                         </datalist>
                     </div>
 

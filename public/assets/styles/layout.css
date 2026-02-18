@@ -327,13 +327,13 @@ body {
 }
 
 .acc-title {
-  font-size: 18px;
+  font-size: 1.5rem;
   font-weight: 600;
   color: var(--burgundy);
 }
 
 .acc-sub {
-  font-size: 0.7rem;
+  font-size: 1rem;
   color: var(--text-secondary);
 }
 
@@ -374,7 +374,7 @@ body {
 
 .field-title,
 legend {
-  font-size: 14px;
+  font-size: 1.3rem;
   font-weight: 600;
   color: var(--burgundy);
 }
@@ -382,6 +382,7 @@ legend {
 .hint {
   font-style: italic;
   color: var(--text-secondary);
+  font-size: 1rem;
 }
 
 .multi-select {
@@ -396,7 +397,7 @@ legend {
   border: none;
   outline: none;
   padding: 8px 0;
-  font-size: 14px;
+  font-size: 1rem;
 }
 
 .dropdown-list {
@@ -436,7 +437,7 @@ legend {
   color: #fff;
   padding: 6px 10px;
   border-radius: 20px;
-  font-size: 13px;
+  font-size: 1rem;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -450,7 +451,7 @@ legend {
 input[type="datetime-local"] {
   width: 100%;
   padding: 12px 14px;
-  font-size: 14px;
+  font-size: 1rem;
   background: #fff;
   color: var(--burgundy);
 }
@@ -472,7 +473,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 label:has(input[type="radio"]) {
-  font-size: 0.9rem;
+  font-size: 1rem;
   accent-color: var(--burgundy);
 }
 
@@ -580,7 +581,7 @@ details {
   background: var(--burgundy);
   color: var(--offwhite);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(75, 0, 20, .25);
@@ -598,7 +599,7 @@ details {
   background: white;
   color: var(--burgundy);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
