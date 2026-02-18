@@ -81,6 +81,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 mysqli_stmt_execute($del);
                 mysqli_stmt_close($del);
 
+                $error = "";
+
                 $success = "Password updated! You can now log in.";
             }
         }

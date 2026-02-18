@@ -5,7 +5,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
 <aside class="sidebar">
-    <div class="avatar" aria-label="true"></div>
+    <img class="avatar" src="assets/images/avatar.jpg" alt="HAUCREDIT mark">
     <div class="brand">
         <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
 

@@ -25,7 +25,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $stmt = mysqli_prepare(
             $conn,
-            "SELECT user_id, user_name, user_password
+            "SELECT user_id, user_name, user_password, org_body
              FROM users
              WHERE stud_num = ?
              LIMIT 1"
@@ -63,6 +63,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $_SESSION["user_id"] = $row["user_id"];
                 $_SESSION["username"] = $row["user_name"];
+                $_SESSION["org_body"] = $row["org_body"] ?? "";
 
                 header("Location: home.php");
                 exit();

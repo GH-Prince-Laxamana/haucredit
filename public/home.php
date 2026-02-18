@@ -1,5 +1,5 @@
 <?php
-session_start(); // <-- MUST be at the top
+session_start();
 
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
@@ -11,6 +11,7 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
+$org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
 ?>
 
 <!DOCTYPE html>
@@ -437,7 +438,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
             <header class="topbar">
                 <div class="title-wrap">
                     <h1>Dashboard</h1>
-                    <p>SAS Student Council • AY 2025-2026</p>
+                    <p><?= $org_body ?></p>
                 </div>
                 <div class="top-actions">
                     <button class="icon-btn" type="button" aria-label="Notifications">
