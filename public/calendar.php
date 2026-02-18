@@ -187,14 +187,15 @@ $events = [
                 <aside class="tracker">
                     <h2>Progress<br>Tracker</h2>
 
-                    <div class="ring" aria-hidden="true">
+                    <div class="ring" aria-hidden="true" style="position: relative; display: flex; align-items: center; justify-content: center;">
                         <div class="ring-inner"></div>
+                        <span style="position: absolute; font-size: 24px; font-weight: bold; color: #4b0014; z-index: 10;"><?php echo $completionRate; ?>%</span>
                     </div>
 
                     <div class="tracker-list">
-                        <div class="t-row"><span>Text here</span><span class="t-score">0/0</span></div>
-                        <div class="t-row"><span>Text here</span><span class="t-score">0/0</span></div>
-                        <div class="t-row"><span>Text here</span><span class="t-score">0/0</span></div>
+                        <div class="t-row"><span>Total Events</span><span class="t-score"><?php echo $totalEvents; ?></span></div>
+                        <div class="t-row"><span>Completed</span><span class="t-score"><?php echo $completedEvents; ?>/<?php echo $totalEvents; ?></span></div>
+                        <div class="t-row"><span>Upcoming</span><span class="t-score"><?php echo $upcomingEvents; ?></span></div>
                     </div>
                 </aside>
 
