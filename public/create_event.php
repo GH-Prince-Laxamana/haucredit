@@ -127,7 +127,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     <!-- MAIN -->
     <main class="main">
-      <header class="topbar">
+      <header class="topbar ce-topbar">
         <div class="title-wrap">
           <h1>Create Event</h1>
           <p>Fill out the form below to create a new event.</p>

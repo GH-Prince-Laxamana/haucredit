@@ -178,6 +178,9 @@ body {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+}
+
+.ce-topbar {
   margin: 3em auto 1em;
   max-width: 1200px;
 }
