@@ -4,13 +4,6 @@ session_start(); // <-- MUST be at the top
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
 send_security_headers();
-
-if (!isset($_SESSION["user_id"])) {
-  header("Location: index.php");
-  exit();
-}
-
-$username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -87,7 +80,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
               <img src="assets/images/team/dannah.jpg" alt="Dannah Mikayla M. Sanchez" class="about-img">
               <div class="about-body">
                 <h4>Dannah Mikayla M. Sanchez</h4>
-                <p class="role">UI/UX Designer & Layout Architect</p>
+                <p class="role">Frontend Developer (Layout Architect)</p>
                 <p>Responsible for creating the wireframes, defining the site structure, layouts, and navigation flow, designing the overall user interface reference, and implementing the responsive layout and navigation menu using HTML and CSS</p>
               </div>
             </article>
@@ -96,7 +89,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
               <img src="assets/images/team/kenaz.jpg" alt="Kenaz Brian M. Yañez" class="about-img">
               <div class="about-body">
                 <h4>Kenaz Brian M. Yañez</h4>
-                <p class="role">Frontend Developer (Pages)</p>
+                <p class="role">Frontend Developer (UI/UX Designer)</p>
                 <p>Responsible for contributing to the wireframing and layout planning of the website, helping define the overall structure and visual flow of the pages, designing the dashboard and other site pages, applying basic styling and responsiveness, and coding the static pages using HTML and CSS.</p>
               </div>
             </article>
@@ -163,6 +156,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
       box-shadow: 0 10px 25px rgba(0,0,0,.10);
       margin-bottom: 30px;
       border: 1px solid #e8dcc8;
+      width: 80vw;
     }
 
     .about-hero h2 {
@@ -277,6 +271,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 40px 30px;
       margin-top: 30px;
+      width: 80vw;
     }
     
     .contact-item h4 {
@@ -296,6 +291,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
       padding: 30px 20px;
       color: #5a5a5a;
       font-size: 14px;
+      width: 80vw;
     }
 
     /* --- Responsive Logic --- */

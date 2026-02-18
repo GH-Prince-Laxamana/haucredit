@@ -1,9 +1,8 @@
 <?php
-$username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
+$username = htmlspecialchars((string)($_SESSION["username"] ?? ""), ENT_QUOTES, "UTF-8");
 
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
-
 <aside class="sidebar">
     <img class="avatar" src="assets/images/avatar.jpg" alt="HAUCREDIT mark">
     <div class="brand">
@@ -56,15 +55,27 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </a>
 
         <div class="account">
-            <button class="account-btn" type="button">
-                <span class="user-dot" aria-hidden="true"></span>
-                <span>
-                    <?= $username ?>
-                </span>
-            </button>
+            <?php
+                if ($current_page === 'about.php' && $username === "") {
+                    echo '<button class="account-btn" type="button">
+                            <span style="text-align: center; margin: auto;"> Please Sign In to Continue </span>
+                        </button>';
+                } else {
+                    echo '<button class="account-btn" type="button">
+                            <span class="user-dot" aria-hidden="true"></span>
+                            <span>' . $username . '</span>
+                        </button>';
+                }
+            ?>
 
             <form action="logout.php" method="POST">
-                <button type="submit" class="logout-link">Logout</button>
+                <?php
+                    if ($current_page === 'about.php' && $username === "") {
+                        echo '<button type="submit" class="logout-link">Sign In</button>';
+                    } else {
+                        echo '<button type="submit" class="logout-link">Logout</button>';
+                    }
+                ?>
             </form>
         </div>
     </nav>

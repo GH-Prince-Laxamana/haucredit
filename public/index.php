@@ -101,6 +101,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <div class="navlinks">
             <a class="active" href="index.php">Login</a>
             <a href="register.php">Register</a>
+            <a href="about.php">About</a>
         </div>
     </div>
 
