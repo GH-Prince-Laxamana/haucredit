@@ -5,10 +5,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
 <aside class="sidebar">
+    <div class="avatar" aria-label="true"></div>
     <div class="brand">
-        <div class="avatar" aria-hidden="true"></div>
-        <div class="brand-name">HAUCREDIT</div>
-        <div class="brand-subtitle">Compliance Tracker</div>
+        <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
+
+        <div class="brand-text">
+            <div class="brand-name">HAUCREDIT</div>
+            <div class="brand-subtitle">Compliance Tracker</div>
+        </div>
     </div>
 
     <nav class="nav">
