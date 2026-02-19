@@ -9,7 +9,6 @@ if (!isset($_SESSION["user_id"])) {
   exit();
 }
 
-// Persist previous inputs
 $organizing_body = $_SESSION['organizing_body'] ?? '';
 $background = $_SESSION['background'] ?? '';
 $activity_type = $_SESSION['activity_type'] ?? '';
@@ -27,7 +26,6 @@ $distance = $_SESSION['distance'] ?? '';
 $participant_range = $_SESSION['participant_range'] ?? '';
 $overnight = $_SESSION['overnight'] ?? '';
 
-// Handle form submission
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $_SESSION['organizing_body'] = $_POST['organizing_body'] ?? null;
   $_SESSION['background'] = $_POST['background'] ?? null;
@@ -58,8 +56,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $user_id = $_SESSION["user_id"];
     $organizing_body_json = isset($_SESSION['organizing_body'])
-    ? json_encode($_SESSION['organizing_body'])
-    : null;
+      ? json_encode($_SESSION['organizing_body'])
+      : null;
 
     $stmt->bind_param(
       "issssssssisssssss",
@@ -122,10 +120,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
   <div class="app">
 
-    <!-- SIDEBAR -->
     <?php include 'assets/includes/general_nav.php' ?>
 
-    <!-- MAIN -->
     <main class="main">
       <header class="topbar ce-topbar">
         <div class="title-wrap">
@@ -135,7 +131,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       </header>
 
       <form method="POST" class="event-form">
-        <!-- ================= BASIC INFORMATION ================= -->
         <details class="step-1 acc" open>
           <summary class="acc-head">
             <span class="acc-left">
@@ -149,7 +144,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
           </summary>
 
           <div class="acc-body">
-            <!-- Organizing Body -->
             <fieldset class="field">
               <label for="organizing_body" class="field-title">Organizing Body</label>
               <small class="hint">Select one or more organizing bodies.</small>
@@ -157,83 +151,83 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
               <select id="organizing_body" name="organizing_body[]" multiple hidden>
                 <?php
                 $org_options = [
-                // HAU OFFICE
-                "HAU OSA",
+                  // HAU OFFICE
+                  "HAU OSA",
 
-                // UNIVERSITY STUDENT GOVERNMENT
-                "HAUSG USC",
-                "HAUSG HC",
-                "HAUSG SEN",
-                "HAUSG COMELEC",
-                "HAUSG CSO",
-                "HAUSG CFA",
+                  // UNIVERSITY STUDENT GOVERNMENT
+                  "HAUSG USC",
+                  "HAUSG HC",
+                  "HAUSG SEN",
+                  "HAUSG COMELEC",
+                  "HAUSG CSO",
+                  "HAUSG CFA",
 
-                // COLLEGE STUDENT COUNCILS
-                "HAUSG CSC-CCJEF",
-                "HAUSG CSC-SAS",
-                "HAUSG CSC-SBA",
-                "HAUSG CSC-SoC",
-                "HAUSG CSC-SEd",
-                "HAUSG CSC-SEA",
-                "HAUSG CSC-SHTM",
-                "HAUSG CSC-SNAMS",
+                  // COLLEGE STUDENT COUNCILS
+                  "HAUSG CSC-CCJEF",
+                  "HAUSG CSC-SAS",
+                  "HAUSG CSC-SBA",
+                  "HAUSG CSC-SoC",
+                  "HAUSG CSC-SEd",
+                  "HAUSG CSC-SEA",
+                  "HAUSG CSC-SHTM",
+                  "HAUSG CSC-SNAMS",
 
-                // STUDENT PUBLICATIONS
-                "HPC Angge",
-                "HPC HQ",
-                "HPC NX",
-                "HPC Enteng",
-                "HPC AP",
-                "HPC Reple",
-                "HPC Soln",
-                "HPC CC",
-                "HPC LL",
+                  // STUDENT PUBLICATIONS
+                  "HPC Angge",
+                  "HPC HQ",
+                  "HPC NX",
+                  "HPC Enteng",
+                  "HPC AP",
+                  "HPC Reple",
+                  "HPC Soln",
+                  "HPC CC",
+                  "HPC LL",
 
-                // UNI-WIDE ORGANIZATIONS
-                "Uniwide DC",
-                "Uniwide JJC",
-                "Uniwide JO",
-                "Uniwide GDGoC",
-                "Uniwide ADS",
-                "Uniwide RCY",
-                "Uniwide RAC",
-                "Uniwide APLMS",
-                "Uniwide SVE",
-                "Uniwide 21CC",
-                "Uniwide HPC",
+                  // UNI-WIDE ORGANIZATIONS
+                  "Uniwide DC",
+                  "Uniwide JJC",
+                  "Uniwide JO",
+                  "Uniwide GDGoC",
+                  "Uniwide ADS",
+                  "Uniwide RCY",
+                  "Uniwide RAC",
+                  "Uniwide APLMS",
+                  "Uniwide SVE",
+                  "Uniwide 21CC",
+                  "Uniwide HPC",
 
-                // SCHOOL ORGANIZATIONS
-                "CCJEF COPS",
-                "CCJEF SAFE",
-                "SAS PsychSoc",
-                "SAS CL",
-                "SBA Mansoc",
-                "SoC MAFIA",
-                "SoC LOOP",
-                "SoC CG",
-                "SoC CSIA",
-                "SEd KAS",
-                "SEd KLDS",
-                "SEA SAEP",
-                "SEA UAPSA",
-                "SEA PSME",
-                "SEA PIIE",
-                "SEA IIEE",
-                "SEA PICE",
-                "SEA IECEP",
-                "SEA ICpEP",
-                "SHTM HMAP",
-                "SHTM LTSP",
-                "SNAMS ARTS",
-                "SNAMS PHISMETS",
-                "SNAMS SANS",
+                  // SCHOOL ORGANIZATIONS
+                  "CCJEF COPS",
+                  "CCJEF SAFE",
+                  "SAS PsychSoc",
+                  "SAS CL",
+                  "SBA Mansoc",
+                  "SoC MAFIA",
+                  "SoC LOOP",
+                  "SoC CG",
+                  "SoC CSIA",
+                  "SEd KAS",
+                  "SEd KLDS",
+                  "SEA SAEP",
+                  "SEA UAPSA",
+                  "SEA PSME",
+                  "SEA PIIE",
+                  "SEA IIEE",
+                  "SEA PICE",
+                  "SEA IECEP",
+                  "SEA ICpEP",
+                  "SHTM HMAP",
+                  "SHTM LTSP",
+                  "SNAMS ARTS",
+                  "SNAMS PHISMETS",
+                  "SNAMS SANS",
 
-                // POLITICAL PARTIES
-                "PP Lualu",
-                "PP Sulung",
-                "PP Sulagpo",
-                "PP Tindig",
-            ];
+                  // POLITICAL PARTIES
+                  "PP Lualu",
+                  "PP Sulung",
+                  "PP Sulagpo",
+                  "PP Tindig",
+                ];
                 foreach ($org_options as $org) {
                   $selected = (isset($organizing_body) && is_array($organizing_body) && in_array($org, $organizing_body))
                     ? 'selected' : '';
@@ -387,8 +381,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
           </summary>
 
           <div class="acc-body">
-
-            <!-- Dates -->
             <div class="form-row">
               <div class="field">
                 <label for="start_datetime" class="field-title">Start Date and Time</label>

@@ -4,3 +4,6 @@ Holy Angel University Compliance &amp; Records Engine for Documentation and Inst
 File Structure Descriptions:
 1. public - Contains only files that should be accessed by the browser.
 2. app - Holds the main application logic.
+
+# Important note
+- Codes are still in the process of development and are particularly subject to evaluation and revisions, all to produce a product that is efficient, reliable, and centered on the minds of the project's developers.

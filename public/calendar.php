@@ -1,5 +1,5 @@
 <?php
-session_start(); // <-- MUST be at the top
+session_start();
 
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
@@ -12,7 +12,6 @@ if (!isset($_SESSION["user_id"])) {
 
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
-// 1) Get month/year from URL or default to current
 $year = isset($_GET['y']) ? (int) $_GET['y'] : (int) date('Y');
 $month = isset($_GET['m']) ? (int) $_GET['m'] : (int) date('n');
 
@@ -29,13 +28,11 @@ if ($year > 2100) {
     $year = 2100;
 }
 
-// 2) Build date helpers
 $firstDayTs = strtotime("$year-$month-01");
 $daysInMonth = (int) date('t', $firstDayTs);
-$startWeekday = (int) date('w', $firstDayTs); // 0=Sun..6=Sat
+$startWeekday = (int) date('w', $firstDayTs);
 $monthName = date('F', $firstDayTs);
 
-// prev / next month links
 $prevTs = strtotime("-1 month", $firstDayTs);
 $nextTs = strtotime("+1 month", $firstDayTs);
 
@@ -44,13 +41,10 @@ $prevM = (int) date('n', $prevTs);
 $nextY = (int) date('Y', $nextTs);
 $nextM = (int) date('n', $nextTs);
 
-// Today
 $todayY = (int) date('Y');
 $todayM = (int) date('n');
 $todayD = (int) date('j');
 
-// Optional: sample events (replace with DB later)
-// key format: YYYY-MM-DD
 $events = [
     sprintf("%04d-%02d-03", $year, $month) => ["Prep (RNN)", "08:00"],
     sprintf("%04d-%02d-05", $year, $month) => ["Classroom", "10:00"],
@@ -72,10 +66,9 @@ $events = [
 
 <body>
     <div class="app">
-        <!-- SIDEBAR -->
+
         <?php include 'assets/includes/general_nav.php' ?>
 
-        <!-- MAIN -->
         <main class="main">
             <header class="topbar">
                 <div class="title-wrap">
@@ -85,8 +78,6 @@ $events = [
             </header>
 
             <section class="content calendar-page">
-
-                <!-- CALENDAR CARD -->
                 <div class="cal-card">
                     <div class="cal-top">
                         <div class="cal-tabs">
@@ -112,7 +103,6 @@ $events = [
                     </div>
 
                     <div class="cal-grid">
-                        <!-- Header -->
                         <?php
                         $weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                         foreach ($weekdays as $wd) {
@@ -123,7 +113,6 @@ $events = [
                         <?php
                         $totalCells = 42;
 
-                        // Determine previous month days to fill leading blanks
                         $prevMonthTs = strtotime("-1 month", $firstDayTs);
                         $daysInPrev = (int) date('t', $prevMonthTs);
 
@@ -135,25 +124,19 @@ $events = [
                             $dateKey = "";
                             $isToday = false;
 
-                            // Leading days (previous month)
                             if ($dayNum < 1) {
                                 $prevDay = $daysInPrev + $dayNum;
                                 $classes .= " muted";
                                 $label = $prevDay;
-                            }
-                            // Current month
-                            else if ($dayNum >= 1 && $dayNum <= $daysInMonth) {
+                            } else if ($dayNum >= 1 && $dayNum <= $daysInMonth) {
                                 $label = $dayNum;
                                 $dateKey = sprintf("%04d-%02d-%02d", $year, $month, $dayNum);
 
-                                // today indicator
                                 if ($year === $todayY && $month === $todayM && $dayNum === $todayD) {
                                     $classes .= " is-today";
                                     $isToday = true;
                                 }
-                            }
-                            // Trailing days (next month)
-                            else {
+                            } else {
                                 $nextDay = $dayNum - $daysInMonth;
                                 $classes .= " muted";
                                 $label = $nextDay;
@@ -162,7 +145,6 @@ $events = [
                             echo '<div class="' . htmlspecialchars($classes) . '">';
                             echo '<span class="day">' . htmlspecialchars((string) $label) . '</span>';
 
-                            // Event pill (only for current month days)
                             if ($dateKey && isset($events[$dateKey])) {
                                 $evtTitle = $events[$dateKey][0];
                                 $evtTime = $events[$dateKey][1];
@@ -172,7 +154,6 @@ $events = [
                                 echo '</div>';
                             }
 
-                            // Today circle
                             if ($isToday) {
                                 echo '<div class="today" aria-hidden="true"></div>';
                             }
@@ -183,7 +164,6 @@ $events = [
                     </div>
                 </div>
 
-                <!-- PROGRESS TRACKER -->
                 <aside class="tracker">
                     <h2>Progress<br>Tracker</h2>
 
@@ -197,7 +177,6 @@ $events = [
                         <div class="t-row"><span>Text here</span><span class="t-score">0/0</span></div>
                     </div>
                 </aside>
-
             </section>
         </main>
     </div>

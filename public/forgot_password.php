@@ -45,7 +45,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             mysqli_stmt_execute($ins);
             mysqli_stmt_close($ins);
 
-            // DEV ONLY (remove in production)
+            // for demo purposes only
             $dev_link = "reset_password.php?token=" . urlencode($token) . "&email=" . urlencode($email);
         }
     }

@@ -25,9 +25,6 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAUCREDIT - Dashboard</title>
     <style>
-        /* =========================
-           MAIN
-           ========================= */
         .main {
             flex: 1;
             padding: 22px 26px;
@@ -109,9 +106,6 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
             background: #fff;
         }
 
-        /* =========================
-           STATS CARDS
-           ========================= */
         .content {
             padding-top: 10px;
         }
@@ -183,9 +177,6 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
             font-weight: 500;
         }
 
-        /* =========================
-           SECTIONS
-           ========================= */
         .section {
             background: white;
             border-radius: var(--radius);
@@ -220,9 +211,6 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
             color: var(--burgundy);
         }
 
-        /* =========================
-           EVENTS TABLE
-           ========================= */
         .event-row {
             border-bottom: 1px solid #e2e8f0;
             padding: 16px 0;
@@ -326,9 +314,6 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
             color: white;
         }
 
-        /* =========================
-           DEADLINES
-           ========================= */
         .deadline-item {
             display: flex;
             justify-content: space-between;
@@ -368,9 +353,6 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
             color: #64748b;
         }
 
-        /* =========================
-           RESPONSIVE
-           ========================= */
         @media (max-width: 900px) {
             .sidebar {
                 width: 210px;
@@ -430,10 +412,9 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
 
 <body>
     <div class="app">
-        <!-- SIDEBAR -->
+
         <?php include 'assets/includes/general_nav.php' ?>
 
-        <!-- MAIN -->
         <main class="main">
             <header class="topbar">
                 <div class="title-wrap">
@@ -456,7 +437,6 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
             </header>
 
             <section class="content">
-                <!-- Stats Grid -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-header">
@@ -511,7 +491,6 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
                     </div>
                 </div>
 
-                <!-- Active Events -->
                 <div class="section">
                     <div class="section-header">
                         <h3 class="section-title">Active Events</h3>
@@ -580,7 +559,6 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
                     </div>
                 </div>
 
-                <!-- Upcoming Deadlines -->
                 <div class="section">
                     <div class="section-header">
                         <h3 class="section-title">Upcoming Deadlines</h3>

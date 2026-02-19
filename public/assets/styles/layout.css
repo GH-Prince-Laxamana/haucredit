@@ -1,14 +1,3 @@
-/* =========================
-   MERGED + FINAL CSS
-   Rule: if selectors are the same, the LATEST CSS (2nd block) wins.
-   Note: To avoid .card conflicts (dashboard cards vs login card),
-         dashboard cards are scoped to .cards .card.
-========================= */
-
-
-/* =========================
-  THEME / VARIABLES
-      ========================= */
 :root {
   --burgundy: #4b0014;
   --burgundy-light: #6b1020;
@@ -23,9 +12,7 @@
   --border-fields: #b8b8b8;
 }
 
-/* =========================
-           RESET / BASE
-           ========================= */
+/* Reset */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -38,17 +25,13 @@ body {
   color: #1a1a1a;
 }
 
-/* =========================
-           APP LAYOUT
-           ========================= */
+/* Main div wrap */
 .app {
   min-height: 100vh;
   display: flex;
 }
 
-/* =========================
-           SIDEBAR
-           ========================= */
+/* Sidebar */
 .sidebar {
   width: 240px;
   background: var(--burgundy);
@@ -164,9 +147,7 @@ body {
   border: 1px solid rgba(194, 161, 77, .6);
 }
 
-/* =========================
-   MAIN (from 1st)
-   ========================= */
+/* Main */
 .main {
   flex: 1;
   padding: 22px 26px;
@@ -240,14 +221,7 @@ body {
   box-shadow: 0 6px 16px rgba(0, 0, 0, .06);
 }
 
-/* .primary-btn:hover {
-  background: #fff;
-} */
-
-/* =========================
-   CARDS GRID (from 1st)
-   NOTE: scoped to avoid conflict with .card (latest)
-   ========================= */
+/* Cards */
 .content {
   padding-top: 10px;
 }
@@ -276,9 +250,7 @@ body {
   content: none;
 }
 
-/* =========================
-   CREATE EVENT PAGE (from 1st)
-   ========================= */
+/* Create Event */
 .event-form {
   max-width: 1200px;
   margin: 0 auto;
@@ -500,7 +472,6 @@ label:has(input[type="radio"]) {
   gap: .5rem 1.5rem;
 }
 
-
 input,
 textarea,
 .multi-select {
@@ -522,18 +493,15 @@ textarea:focus,
   border-color: var(--burgundy);
 }
 
-/* Hide default arrow */
 details summary {
   list-style: none;
   cursor: default;
 }
 
-/* Prevent manual toggling */
 details summary::-webkit-details-marker {
   display: none;
 }
 
-/* Step transition */
 details {
   transition: all 0.3s ease;
 }
@@ -559,7 +527,6 @@ details {
   }
 }
 
-/* Buttons styling */
 .step-actions {
   display: flex;
   gap: 2em;
@@ -569,7 +536,6 @@ details {
 .step-2,
 .step-2-actions {
   display: none;
-  /* hide all step-2 content and buttons initially */
 }
 
 .step-2.active,
@@ -579,7 +545,6 @@ details {
   animation: fadeIn 0.3s ease;
 }
 
-/* Theme colors */
 .primary-btn {
   padding: 12px 24px;
   border-radius: 10px;
@@ -621,10 +586,7 @@ button:disabled {
   background: #747474;
 }
 
-/* =========================
-   CALENDAR PAGE LAYOUT
-   ========================= */
-
+/* Calendar */
 .calendar-page {
   display: grid;
   grid-template-columns: 1fr 320px;
@@ -632,7 +594,6 @@ button:disabled {
   align-items: start;
 }
 
-/* Left calendar card */
 .cal-card {
   background: rgba(249, 243, 234, .55);
   border: 1px solid rgba(194, 161, 77, .25);
@@ -641,7 +602,6 @@ button:disabled {
   padding: 14px;
 }
 
-/* Top controls */
 .cal-top {
   display: flex;
   align-items: center;
@@ -677,7 +637,6 @@ button:disabled {
   color: var(--offwhite);
 }
 
-/* Add button */
 .cal-add {
   height: 28px;
   padding: 0 12px;
@@ -696,7 +655,6 @@ button:disabled {
   background: #fff;
 }
 
-/* Month row */
 .cal-monthrow {
   display: flex;
   align-items: center;
@@ -725,7 +683,6 @@ button:disabled {
   text-decoration: none;
 }
 
-/* Calendar grid */
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -774,7 +731,6 @@ button:disabled {
   color: rgba(0, 0, 0, .28);
 }
 
-/* Event pill */
 .pill {
   margin-top: 10px;
   border-radius: 10px;
@@ -797,7 +753,6 @@ button:disabled {
   color: rgba(0, 0, 0, .55);
 }
 
-/* Today circle indicator */
 .today {
   width: 22px;
   height: 22px;
@@ -809,7 +764,6 @@ button:disabled {
   opacity: .6;
 }
 
-/* Right tracker panel */
 .tracker {
   background: rgba(0, 0, 0, .18);
   border-radius: var(--radius);
@@ -827,7 +781,6 @@ button:disabled {
   margin-bottom: 18px;
 }
 
-/* Ring placeholder */
 .ring {
   width: 160px;
   height: 160px;
@@ -844,7 +797,6 @@ button:disabled {
   border: 8px solid rgba(255, 255, 255, .35);
 }
 
-/* Tracker list */
 .tracker-list {
   display: flex;
   flex-direction: column;
@@ -865,10 +817,7 @@ button:disabled {
   font-weight: 700;
 }
 
-/* ===========
-   ABOUT PAGE 
-   ============ */
-
+/* About */
 .about-page {
   max-width: 1100px;
 }
@@ -880,7 +829,6 @@ button:disabled {
   align-items: start;
 }
 
-/* Card */
 .about-card {
   background: rgba(249, 243, 234, .55);
   border: 1px solid rgba(194, 161, 77, .25);
@@ -890,7 +838,6 @@ button:disabled {
   min-height: 360px;
 }
 
-/* image placeholder */
 .about-img {
   height: 140px;
   border-radius: 12px;
@@ -899,7 +846,6 @@ button:disabled {
   margin-bottom: 12px;
 }
 
-/* Body placeholder */
 .about-body {
   height: 210px;
   border-radius: 12px;
@@ -911,14 +857,12 @@ button:disabled {
   width: 100%;
   height: 30px;
   margin-top: 2em;
-  /* BIGGER */
   border-radius: 12px;
   border: 1px solid rgba(249, 243, 234, .25);
   background: rgba(168, 168, 168, 0.664);
   color: var(--offwhite);
   font-weight: 600;
   font-size: 0.9rem;
-  /* BIGGER */
   box-shadow: 0 14px 26px rgba(90, 0, 22, .22);
   cursor: pointer;
   transition: transform .15s ease, filter .15s ease;
@@ -928,9 +872,7 @@ button:disabled {
   display: flex;
   flex-direction: row;
   align-items: center;
-  /* vertically center */
   gap: 12px;
-  /* space between logo and text */
 }
 
 .brand-text {
@@ -940,16 +882,11 @@ button:disabled {
 
 .navbar-mark {
   height: 40px;
-  /* adjust as needed */
   width: auto;
 }
 
-/* =========================
-   RESPONSIVE (merged)
-   ========================= */
+/* Responsiveness */
 @media (max-width: 900px) {
-
-  /* latest mobile (navbar + split layout) */
   .container {
     flex-direction: column;
   }
@@ -977,7 +914,6 @@ button:disabled {
     display: none;
   }
 
-  /* from 1st (sidebar/cards) */
   .sidebar {
     width: 210px;
   }

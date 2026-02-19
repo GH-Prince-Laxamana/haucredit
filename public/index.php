@@ -40,16 +40,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $stored = $row["user_password"];
             $login_ok = false;
 
-            // Case 1: hashed password
             if (password_verify($password, $stored)) {
                 $login_ok = true;
-            }
-
-            // Case 2: legacy plaintext password
-            elseif ($password === $stored) {
+            } elseif ($password === $stored) {
                 $login_ok = true;
 
-                // auto-upgrade
                 $new_hash = password_hash($password, PASSWORD_DEFAULT);
 
                 $upd = mysqli_prepare($conn, "UPDATE users SET user_password = ? WHERE user_id = ?");
@@ -90,8 +85,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 
 <body>
-
-    <!-- MATTE NAVBAR (no circle) -->
     <div class="navbar">
         <div class="navbar-brand">
             <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">

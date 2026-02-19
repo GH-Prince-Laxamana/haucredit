@@ -1,9 +1,4 @@
 <?php
-// =========================
-// ../app/security_headers.php
-// Put this file in: app/security_headers.php
-// =========================
-
 function send_security_headers(): void
 {
     $csp = implode("; ", [
