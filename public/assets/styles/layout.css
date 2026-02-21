@@ -250,14 +250,13 @@ body {
   content: none;
 }
 
-/* Create Event */
+/* ===== CREATE EVENT PAGE ===== Head: Kenaz, Prince */
 .event-form {
   max-width: 1200px;
   margin: 0 auto;
 }
 
 .acc {
-  background: white;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
@@ -333,7 +332,6 @@ body {
 .acc-body {
   padding: 0 24px 24px;
   border-top: 1px solid var(--border);
-  background: white;
 }
 
 .form-row {
@@ -586,7 +584,8 @@ button:disabled {
   background: #747474;
 }
 
-/* Calendar */
+/* ===== CALENDAR PAGE ===== Head: Dannah */
+/* UNDER CONSTRUCTION (Continue after PHP functions have been finalzied)*/
 .calendar-page {
   display: grid;
   grid-template-columns: 1fr 320px;
@@ -978,11 +977,14 @@ button:disabled {
 }
 
 footer {
-  text-align: center;
+  position: relative;
+  bottom: 0;
+  margin: 0 auto;
   padding: 30px 20px;
-  color: #5a5a5a;
-  font-size: 14px;
   width: 80vw;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 /* Responsiveness */

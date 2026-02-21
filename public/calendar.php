@@ -1,6 +1,7 @@
 <?php
-session_start();
+/* UNDER CONSTRUCTION (Continue after PHP functions have been finalzied)*/
 
+session_start();
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
 send_security_headers();
@@ -52,8 +53,8 @@ $events = [
     sprintf("%04d-%02d-11", $year, $month) => ["Presentation", "08:00"],
     sprintf("%04d-%02d-20", $year, $month) => ["Meeting", "09:00 - 10:00"],
 ];
-
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -178,6 +179,9 @@ $events = [
                     </div>
                 </aside>
             </section>
+
+        <?php include 'assets/includes/footer.php' ?>
+
         </main>
     </div>
 </body>
