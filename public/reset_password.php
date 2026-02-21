@@ -95,12 +95,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <title>Reset Password</title>
-    <link rel="stylesheet" href="assets/styles/styles.css">
+    <link rel="stylesheet" href="assets/styles/layout.css" />
+    <link rel="stylesheet" href="assets/styles/auth_styles.css" />
 </head>
 
 <body>
-    <div class="container">
-        <div class="left-panel">
+    <div class="auth-container">
+        <div class="auth-left-panel">
             <div class="brand-title">
                 <h1 class="brand-name">HAU<span class="brand-accent">CREDIT</span></h1>
                 <p class="brand-tagline">Compliance & Records Engine for Documentation and Institutional Tracking.</p>
@@ -113,8 +114,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </ul>
         </div>
 
-        <div class="right-panel">
-            <div class="card">
+        <div class="auth-right-panel">
+            <div class="auth-card">
                 <h2>Reset Password</h2>
                 <div class="subtitle">Create a new password for your account.</div>
 
@@ -154,6 +155,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
     </div>
 
+    <?php include 'assets/includes/footer.php' ?>
 </body>
 
 </html>

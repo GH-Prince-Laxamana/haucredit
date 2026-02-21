@@ -83,7 +83,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <title>HAUcredit - Register</title>
-    <link rel="stylesheet" href="assets/styles/styles.css">
+    <link rel="stylesheet" href="assets/styles/layout.css" />
+    <link rel="stylesheet" href="assets/styles/auth_styles.css" />
 </head>
 
 <body>
@@ -100,8 +101,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
     </div>
 
-    <div class="container">
-        <div class="left-panel">
+    <div class="auth-container">
+        <div class="auth-left-panel">
             <div class="brand-title">
                 <h1 class="brand-name">HAU<span class="brand-accent">CREDIT</span></h1>
                 <p class="brand-tagline">Compliance & Records Engine for Documentation and Institutional Tracking.</p>
@@ -114,8 +115,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </ul>
         </div>
 
-        <div class="right-panel">
-            <div class="card">
+        <div class="auth-right-panel">
+            <div class="auth-card">
                 <h2>Register Account</h2>
                 <div class="subtitle">For recognized student organizations only.</div>
 
@@ -147,7 +148,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <!-- HAU OFFICE -->
                             <option value="HAU OSA">
 
-                            <!-- UNIVERSITY STUDENT GOVERNMENT -->
+                                <!-- UNIVERSITY STUDENT GOVERNMENT -->
                             <option value="HAUSG USC">
                             <option value="HAUSG HC">
                             <option value="HAUSG SEN">
@@ -155,7 +156,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="HAUSG CSO">
                             <option value="HAUSG CFA">
 
-                            <!-- COLLEGE STUDENT COUNCILS -->
+                                <!-- COLLEGE STUDENT COUNCILS -->
                             <option value="HAUSG CSC-CCJEF">
                             <option value="HAUSG CSC-SAS">
                             <option value="HAUSG CSC-SBA">
@@ -165,7 +166,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="HAUSG CSC-SHTM">
                             <option value="HAUSG CSC-SNAMS">
 
-                            <!-- STUDENT PUBLICATIONS -->
+                                <!-- STUDENT PUBLICATIONS -->
                             <option value="HPC Angge">
                             <option value="HPC HQ">
                             <option value="HPC NX">
@@ -176,7 +177,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="HPC CC">
                             <option value="HPC LL">
 
-                            <!-- UNI-WIDE ORGANIZATIONS -->
+                                <!-- UNI-WIDE ORGANIZATIONS -->
                             <option value="Uniwide DC">
                             <option value="Uniwide JJC">
                             <option value="Uniwide JO">
@@ -190,7 +191,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="Uniwide 21CC">
                             <option value="Uniwide HPC">
 
-                            <!-- SCHOOL ORGANIZATIONS -->
+                                <!-- SCHOOL ORGANIZATIONS -->
                             <option value="CCJEF COPS">
                             <option value="CCJEF SAFE">
                             <option value="SAS PsychSoc">
@@ -221,7 +222,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="SNAMS PHISMETS">
                             <option value="SNAMS SANS">
 
-                            <!-- POLITICAL PARTIES -->
+                                <!-- POLITICAL PARTIES -->
                             <option value="PP Lualu">
                             <option value="PP Sulung">
                             <option value="PP Sulagpo">
@@ -258,7 +259,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
         </div>
     </div>
-
+    <?php include 'assets/includes/footer.php' ?>
 </body>
 
 </html>

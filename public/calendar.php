@@ -63,6 +63,7 @@ $events = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Calendar</title>
     <link rel="stylesheet" href="assets/styles/layout.css" />
+    <link rel="stylesheet" href="assets/styles/calendar_styles.css" />
 </head>
 
 <body>

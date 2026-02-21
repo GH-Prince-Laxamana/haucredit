@@ -13,6 +13,7 @@ send_security_headers();
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>About Us</title>
   <link rel="stylesheet" href="assets/styles/layout.css" />
+  <link rel="stylesheet" href="assets/styles/about_styles.css" />
 </head>
 
 <body>

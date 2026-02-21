@@ -17,12 +17,11 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
 <html lang="en">
 
 <head>
-    <meta name="viewport" home-content="width=device-width, initial-scale=1.0" />
-    <title>HAUCredit - Dashboard</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
     <meta charset="UTF-8">
     <meta name="viewport" home-content="width=device-width, initial-scale=1.0">
     <title>HAUCREDIT - Dashboard</title>
+    <link rel="stylesheet" href="assets/styles/layout.css" />
+    <link rel="stylesheet" href="assets/styles/home_styles.css" />
 </head>
 
 <body>
@@ -52,8 +51,8 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
             </header>
 
             <section class="home-content">
-                
-            <!-- STATS -->
+
+                <!-- STATS -->
                 <section class="home-stats-grid">
                     <article class="home-stat-card">
                         <div class="home-stat-header">

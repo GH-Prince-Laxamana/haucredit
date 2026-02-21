@@ -1,28 +1,3 @@
-/* For Authentication Pages Only */
-:root {
-  --burgundy: #5a0016;
-  --burgundy-2: #3d0010;
-  --gold: #c2a14f;
-
-  --panel-shadow: 0 26px 70px rgba(0, 0, 0, .28);
-  --radius: 14px;
-
-  --stroke: rgba(0, 0, 0, .10);
-  --muted: #6f6f75;
-  --ring: rgba(90, 0, 22, .18);
-
-  --offwhite: #f9f3ea;
-  --surface: #ffffff;
-  --surface-2: #fbfaf9;
-}
-
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 html,
 body {
   height: 100%;
@@ -45,22 +20,14 @@ a {
   text-decoration: none;
 }
 
-body {
-  font-family: "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  background: var(--offwhite);
-  color: #1a1a1a;
-  overflow-x: hidden;
-}
-
-/* Background */
-body:has(.container) {
+body:has(.auth-container) {
   background: url("../images/HOLY.jpg") center/cover no-repeat fixed;
   min-height: 100vh;
   overflow-y: auto;
   padding: 16px 0 26px;
 }
 
-body:has(.container)::before {
+body:has(.auth-container)::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -72,7 +39,7 @@ body:has(.container)::before {
 }
 
 .navbar,
-.container {
+.auth-container {
   position: relative;
   z-index: 1;
 }
@@ -88,11 +55,7 @@ body:has(.container)::before {
   color: #fff;
   background: linear-gradient(180deg, var(--burgundy), var(--burgundy-2));
   border-radius: var(--radius);
-  box-shadow: var(--panel-shadow);
-}
-
-.logo {
-  display: none !important;
+  box-shadow: var(--shadow);
 }
 
 .navbar-brand {
@@ -143,17 +106,17 @@ body:has(.container)::before {
 }
 
 /* Panels */
-.container {
+.auth-container {
   width: min(1320px, 94vw);
   margin: 14px auto 22px;
   display: flex;
   background: var(--surface);
   border-radius: var(--radius);
-  box-shadow: var(--panel-shadow);
+  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
-.left-panel {
+.auth-left-panel {
   width: 50%;
   background: linear-gradient(180deg, var(--burgundy), var(--burgundy-2));
   color: #fff;
@@ -164,7 +127,7 @@ body:has(.container)::before {
   gap: 18px;
 }
 
-.right-panel {
+.auth-right-panel {
   flex: 1;
   background: var(--surface-2);
   padding: 52px 46px;
@@ -210,7 +173,7 @@ body:has(.container)::before {
   color: rgba(255, 255, 255, .92);
 }
 
-.left-panel ul {
+.auth-left-panel ul {
   list-style: none;
   display: flex;
   flex-direction: column;
@@ -219,18 +182,18 @@ body:has(.container)::before {
   font-size: 1rem;
 }
 
-.left-panel li::before {
+.auth-left-panel li::before {
   content: "✓";
   margin-right: 10px;
   color: var(--gold);
 }
 
 /* Form */
-.card {
+.auth-card {
   width: min(580px, 100%);
 }
 
-.card h2 {
+.auth-card h2 {
   color: var(--burgundy);
   font-size: clamp(1.4rem, 1vw + 1.1rem, 1.75rem);
   font-weight: 1000;
@@ -365,27 +328,31 @@ button:hover {
   color: #116b1f;
 }
 
+footer {
+  color: rgba(255, 255, 255, 0.672);
+}
+
 /* Responsiveness */
 @media (max-width:980px) {
   .navbar {
     width: min(720px, 94vw);
   }
 
-  .container {
+  .auth-container {
     width: min(720px, 94vw);
     flex-direction: column;
   }
 
-  .left-panel,
-  .right-panel {
+  .auth-left-panel,
+  .auth-right-panel {
     width: 100%;
   }
 
-  .left-panel {
+  .auth-left-panel {
     padding: 46px 22px;
   }
 
-  .right-panel {
+  .auth-right-panel {
     padding: 28px 18px;
   }
 
@@ -397,7 +364,7 @@ button:hover {
 @media (max-width:520px) {
 
   .navbar,
-  .container {
+  .auth-container {
     width: 94vw;
   }
 
