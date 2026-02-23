@@ -9,59 +9,51 @@ if (!isset($_SESSION["user_id"])) {
   exit();
 }
 
-$organizing_body = $_SESSION['organizing_body'] ?? '';
-$background = $_SESSION['background'] ?? '';
-$activity_type = $_SESSION['activity_type'] ?? '';
-$series = $_SESSION['series'] ?? '';
-$nature = $_SESSION['nature'] ?? '';
-$activity_name = $_SESSION['event_name'] ?? '';
-$start_datetime = $_SESSION['start_datetime'] ?? '';
-$end_datetime = $_SESSION['end_datetime'] ?? '';
-$participants = $_SESSION['participants'] ?? '';
-$venue = $_SESSION['venue_platform'] ?? '';
-$extraneous = $_SESSION['is_extraneous'] ?? '';
-$collect_payments = $_SESSION['do_collect_payments'] ?? '';
-$target_metric = $_SESSION['target_metric'] ?? '';
-$distance = $_SESSION['distance'] ?? '';
-$participant_range = $_SESSION['participant_range'] ?? '';
-$overnight = $_SESSION['overnight'] ?? '';
+$ce_fields = [
+  'organizing_body',
+  'background',
+  'activity_type',
+  'series',
+  'nature',
+  'event_name',
+  'start_datetime',
+  'end_datetime',
+  'participants',
+  'venue_platform',
+  'extraneous',
+  'collect_payments',
+  'target_metric',
+  'distance',
+  'participant_range',
+  'overnight'
+];
+
+$formData = [];
+
+foreach ($ce_fields as $field) {
+  $formData[$field] = $_SESSION[$field] ?? '';
+}
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-  $_SESSION['organizing_body'] = $_POST['organizing_body'] ?? null;
-  $_SESSION['background'] = $_POST['background'] ?? null;
-  $_SESSION['activity_type'] = $_POST['activity_type'] ?? null;
-  $_SESSION['series'] = $_POST['series'] ?? null;
-  $_SESSION['nature'] = $_POST['nature'] ?? '';
-  $_SESSION['event_name'] = $_POST['activity_name'] ?? '';
-  $_SESSION['start_datetime'] = $_POST['start_datetime'] ?? '';
-  $_SESSION['end_datetime'] = $_POST['end_datetime'] ?? '';
-  $_SESSION['participants'] = $_POST['participants'] ?? '';
-  $_SESSION['venue_platform'] = $_POST['venue'] ?? '';
-  $_SESSION['is_extraneous'] = $_POST['extraneous'] ?? '';
-  $_SESSION['do_collect_payments'] = $_POST['collect_payments'] ?? '';
-  $_SESSION['target_metric'] = $_POST['target_metric'] ?? '';
-  $_SESSION['distance'] = $_POST['distance'] ?? null;
-  $_SESSION['participant_range'] = $_POST['participant_range'] ?? null;
-  $_SESSION['overnight'] = $_POST['overnight'] ?? null;
+  foreach ($ce_fields as $field) {
+    $_SESSION[$field] = $_POST[$field] ?? null;
+  }
 
   if (isset($_POST['create_event'])) {
     $stmt = $conn->prepare("
             INSERT INTO events (
                 user_id, organizing_body, background, activity_type, series,
                 nature, event_name, start_datetime, end_datetime,
-                participants, venue_platform, is_extraneous, do_collect_payments, target_metric,
+                participants, venue_platform, extraneous, collect_payments, target_metric,
                 distance, participant_range, overnight
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
 
-    $user_id = $_SESSION["user_id"];
-    $organizing_body_json = isset($_SESSION['organizing_body'])
-      ? json_encode($_SESSION['organizing_body'])
-      : null;
+    $organizing_body_json = isset($_SESSION['organizing_body']) ? json_encode($_SESSION['organizing_body']) : null;
 
     $stmt->bind_param(
       "issssssssisssssss",
-      $user_id,
+      $_SESSION["user_id"],
       $organizing_body_json,
       $_SESSION['background'],
       $_SESSION['activity_type'],
@@ -72,8 +64,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $_SESSION['end_datetime'],
       $_SESSION['participants'],
       $_SESSION['venue_platform'],
-      $_SESSION['is_extraneous'],
-      $_SESSION['do_collect_payments'],
+      $_SESSION['extraneous'],
+      $_SESSION['collect_payments'],
       $_SESSION['target_metric'],
       $_SESSION['distance'],
       $_SESSION['participant_range'],
@@ -82,24 +74,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $stmt->execute();
 
-    unset(
-      $_SESSION['organizing_body'],
-      $_SESSION['background'],
-      $_SESSION['activity_type'],
-      $_SESSION['series'],
-      $_SESSION['nature'],
-      $_SESSION['event_name'],
-      $_SESSION['start_datetime'],
-      $_SESSION['end_datetime'],
-      $_SESSION['participants'],
-      $_SESSION['venue_platform'],
-      $_SESSION['is_extraneous'],
-      $_SESSION['do_collect_payments'],
-      $_SESSION['target_metric'],
-      $_SESSION['distance'],
-      $_SESSION['participant_range'],
-      $_SESSION['overnight']
-    );
+    foreach ($ce_fields as $field) {
+      unset($_SESSION[$field]);
+    }
 
     header("Location: home.php");
     exit();
@@ -267,17 +244,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
               <div class="radio-group two-col">
                 <label>
                   <input type="radio" name="background" value="OSA-Initiated Activity" required
-                    <?= ($background === 'OSA-Initiated Activity') ? 'checked' : '' ?>> OSA-Initiated Activity
+                    <?= ($formData['background'] === 'OSA-Initiated Activity') ? 'checked' : '' ?>> OSA-Initiated Activity
                 </label>
 
                 <label>
                   <input type="radio" name="background" value="Student-Initiated Activity"
-                    <?= ($background === 'Student-Initiated Activity') ? 'checked' : '' ?> required> Student-Initiated
+                    <?= ($formData['background'] === 'Student-Initiated Activity') ? 'checked' : '' ?> required>
+                  Student-Initiated
                   Activity
                 </label>
 
                 <label>
-                  <input type="radio" name="background" value="Participation" <?= ($background === 'Participation') ? 'checked' : '' ?> required> Participation
+                  <input type="radio" name="background" value="Participation"
+                    <?= ($formData['background'] === 'Participation') ? 'checked' : '' ?> required> Participation
                 </label>
               </div>
             </fieldset>
@@ -291,7 +270,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $types = ['On-campus Activity', 'Virtual Activity', 'Off-Campus Activity', 'Community Service - On-campus Activity', 'Community Service - Virtual Activity', 'Community Service - Off-campus Activity'];
 
                 foreach ($types as $type) {
-                  $checked = ($activity_type === $type) ? 'checked' : '';
+                  $checked = ($formData['activity_type'] === $type) ? 'checked' : '';
 
                   echo "<label><input type='radio' name='activity_type' value='$type' $checked required> $type</label>";
                 }
@@ -300,7 +279,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </fieldset>
 
             <fieldset class="field" id="series-block"
-              style="display:<?= ($background === 'Participation') ? 'flex' : 'none' ?>;">
+              style="display:<?= ($formData['background'] === 'Participation') ? 'flex' : 'none' ?>;">
               <label for="series" class="field-title">Series</label>
               <small class="hint">Select the series if this is a participation activity.</small>
 
@@ -309,7 +288,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $series_options = ['College Days', 'University Days', 'Organization Themed-Fairs', 'OSA-Initiated Activities', 'HAU Institutional Activities'];
 
                 foreach ($series_options as $opt) {
-                  $checked = ($series === $opt) ? 'checked' : '';
+                  $checked = ($formData['series'] === $opt) ? 'checked' : '';
 
                   echo "<label><input type='radio' name='series' value='$opt' $checked required> $opt</label>";
                 }
@@ -347,19 +326,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 Campaign, Amazing Race, Forum, Seminar, Workshop, Focus Group Discussion)
               </small>
 
-              <textarea name="nature" id="nature" required><?= htmlspecialchars($nature) ?></textarea>
+              <textarea name="nature" id="nature" required><?= htmlspecialchars($formData['nature']) ?></textarea>
             </div>
 
             <div class="field long-field">
-              <label for="activity_name" class="field-title">Name of the Event</label>
+              <label for="event_name" class="field-title">Name of the Event</label>
               <small class="hint">
                 If this is one event in a series of events (e.g. College Days, UDays, festivals with
                 mini-events), place the umbrella event first, then put a colon with the name and a hyphen for the nature
                 description. (ex. SAS Days 2025: Kundiman - Concert for a cause)
               </small>
 
-              <textarea name="activity_name" id="activity_name"
-                required><?= htmlspecialchars($activity_name) ?></textarea>
+              <textarea name="event_name" id="event_name"
+                required><?= htmlspecialchars($formData['event_name']) ?></textarea>
             </div>
 
             <div class="field long-field">
@@ -370,7 +349,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
               </small>
 
               <textarea name="target_metric" id="target_metric"
-                rows="2"><?= htmlspecialchars($target_metric) ?></textarea>
+                rows="2"><?= htmlspecialchars($formData['target_metric']) ?></textarea>
             </div>
 
             <fieldset class="field">
@@ -378,12 +357,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
               <div class="radio-group inline">
                 <label>
-                  <input type="radio" name="extraneous" value="Yes" <?= ($extraneous === 'Yes') ? 'checked' : '' ?>
-                    required> Yes
+                  <input type="radio" name="extraneous" value="Yes" <?= ($formData['extraneous'] === 'Yes') ? 'checked' : '' ?> required> Yes
                 </label>
 
                 <label>
-                  <input type="radio" name="extraneous" value="No" <?= ($extraneous === 'No') ? 'checked' : '' ?> required>
+                  <input type="radio" name="extraneous" value="No" <?= ($formData['extraneous'] === 'No') ? 'checked' : '' ?> required>
                   No
                 </label>
               </div>
@@ -397,12 +375,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
               <div class="radio-group inline">
                 <label>
-                  <input type="radio" name="collect_payments" value="Yes" <?= ($collect_payments === 'Yes') ? 'checked' : '' ?> required>
+                  <input type="radio" name="collect_payments" value="Yes" <?= ($formData['collect_payments'] === 'Yes') ? 'checked' : '' ?> required>
                   Yes
                 </label>
 
                 <label>
-                  <input type="radio" name="collect_payments" value="No" <?= ($collect_payments === 'No') ? 'checked' : '' ?> required> No
+                  <input type="radio" name="collect_payments" value="No" <?= ($formData['collect_payments'] === 'No') ? 'checked' : '' ?> required> No
                 </label>
               </div>
             </fieldset>
@@ -432,7 +410,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <small class="hint">Indicate the start of ingress</small>
 
                 <input type="datetime-local" name="start_datetime" id="start_datetime"
-                  value="<?= htmlspecialchars($start_datetime) ?>" required>
+                  value="<?= htmlspecialchars($formData['start_datetime']) ?>" required>
               </div>
 
               <div class="field">
@@ -440,7 +418,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <small class="hint">Indicate the start of egress</small>
 
                 <input type="datetime-local" name="end_datetime" id="end_datetime"
-                  value="<?= htmlspecialchars($end_datetime) ?>" required>
+                  value="<?= htmlspecialchars($formData['end_datetime']) ?>" required>
               </div>
             </div>
 
@@ -452,21 +430,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
               </small>
 
               <textarea name="participants" id="participants" rows="2"
-                required><?= htmlspecialchars($participants) ?></textarea>
+                required><?= htmlspecialchars($formData['participants']) ?></textarea>
             </div>
 
             <div class="field long-field">
-              <label for="venue" class="field-title">Venue / Platform</label>
+              <label for="venue_platform" class="field-title">Venue / Platform</label>
               <small class="hint">
                 Indicate the room number for caserooms. Provide the invite link if for online sessions
                 and invite either studentactivities@hau.edu.ph or studentactivities.hauosa@gmail.com
               </small>
 
-              <textarea name="venue" id="venue" required><?= htmlspecialchars($venue) ?></textarea>
+              <textarea name="venue_platform" id="venue_platform" required><?= htmlspecialchars($formData['venue_platform']) ?></textarea>
             </div>
 
             <fieldset class="field" id="offcampus-block"
-              style="display:<?= (strpos($activity_type, 'Off-Campus') !== false) ? 'block' : 'none' ?>;">
+              style="display:<?= (strpos($formData['activity_type'], 'Off-Campus') !== false) ? 'block' : 'none' ?>;">
 
               <div class="form-row">
                 <fieldset class="field">
@@ -477,7 +455,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $ranges = ['1-2', '3-15', '15-25', '25 or more'];
 
                     foreach ($ranges as $r) {
-                      $checked = ($participant_range === $r) ? 'checked' : '';
+                      $checked = ($formData['participant_range'] === $r) ? 'checked' : '';
 
                       echo "<label><input type='radio' name='participant_range' value='$r' $checked required> $r</label>";
                     }
@@ -492,10 +470,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <?php
                     $distances = ['Within Angeles City', 'Within Central Luzon', 'Rest of PH or Overseas'];
 
-                    foreach ($distances as $distance) {
-                      $checked = ($distances === $distance) ? 'checked' : '';
+                    foreach ($distances as $option) {
+                      $checked = (($formData['distance'] ?? '') === $option) ? 'checked' : '';
 
-                      echo "<label><input type='radio' name='distance' value='$distance' $checked required> $distance</label>";
+                      echo "<label>
+                              <input type='radio' name='distance' value='" . htmlspecialchars($option) . "' $checked required>
+                              $option
+                            </label>";
                     }
                     ?>
                   </div>
@@ -510,11 +491,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 <div class="radio-group inline">
                   <label>
-                    <input type="radio" name="overnight" value="1" <?= ($overnight == 1) ? 'checked' : '' ?> required> Yes
+                    <input type="radio" name="overnight" value="1" <?= ($formData['overnight'] == 1) ? 'checked' : '' ?>
+                      required> Yes
                   </label>
 
                   <label>
-                    <input type="radio" name="overnight" value="0" <?= ($overnight == 0) ? 'checked' : '' ?> required> No
+                    <input type="radio" name="overnight" value="0" <?= ($formData['overnight'] == 0) ? 'checked' : '' ?>
+                      required> No
                   </label>
                 </div>
               </div>
