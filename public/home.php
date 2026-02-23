@@ -11,6 +11,25 @@ if (!isset($_SESSION["user_id"])) {
 
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
+
+$user_id = $_SESSION['user_id'];
+
+$stmt = $conn->prepare("
+    SELECT event_id, event_name, start_datetime, end_datetime, venue_platform
+    FROM events
+    WHERE user_id = ?
+    /*remove comment in the future (to show only actual active events) AND NOW() BETWEEN start_datetime AND end_datetime */
+    LIMIT 4
+");
+
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+
+$events = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+$show_view_all = count($events) > 3;
+
+$active_events = array_slice($events, 0, 3);
 ?>
 
 <!DOCTYPE html>
@@ -64,7 +83,7 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
                             </div>
                         </div>
 
-                        <p class="home-stat-value">8</p>
+                        <p class="home-stat-value"><?= count($events) ?></p>
 
                         <p class="home-stat-label">Active Events</p>
                     </article>
@@ -119,72 +138,48 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
                 <section class="home-section">
                     <header class="home-section-header">
                         <h2 class="home-section-title">Active Events</h2>
-                        <a href="#" class="home-view-all">View All →</a>
+
+                        <?php if ($show_view_all): ?>
+                            <a href="active_events.php" class="home-view-all">
+                                View All →
+                            </a>
+                        <?php endif; ?>
                     </header>
 
                     <ul class="events-table">
-                        <li>
-                            <article class="home-event-row">
-                                <div>
-                                    <h3 class="home-event-name">Event Name</h3>
-                                    <p class="home-event-date">
-                                        <time datetime="2026-03-12">Event Date</time> • Event Venue
-                                    </p>
-                                </div>
+                        <?php if (!empty($active_events)): ?>
 
-                                <div class="home-event-progress">
-                                    <div class="home-progress-bar-mini">
-                                        <div class="home-progress-fill-mini" style="width: 75%"></div>
-                                    </div>
-                                    <span class="home-progress-text">75%</span>
-                                </div>
+                            <?php foreach ($active_events as $event): ?>
+                                <li>
+                                    <article class="home-event-row">
+                                        <div>
+                                            <h3 class="home-event-name">
+                                                <?= htmlspecialchars($event['event_name']) ?>
+                                            </h3>
+                                            <p class="home-event-date">
+                                                <time datetime="<?= htmlspecialchars($event['start_datetime']) ?>">
+                                                    <?= htmlspecialchars(date("F j, Y", strtotime($event['start_datetime']))) ?>
+                                                </time>
+                                                • <?= htmlspecialchars($event['venue_platform']) ?>
+                                            </p>
+                                        </div>
 
-                                <span class="home-status-badge active">Active</span>
-                                <a href="#" class="home-btn-view">View</a>
-                            </article>
-                        </li>
+                                        <div class="home-event-progress">
+                                            <div class="home-progress-bar-mini">
+                                                <div class="home-progress-fill-mini" style="width: 50%"></div>
+                                            </div>
+                                            <span class="home-progress-text">50%</span>
+                                        </div>
 
-                        <li>
-                            <article class="home-event-row">
-                                <div>
-                                    <h3 class="home-event-name">Event Name</h3>
-                                    <p class="home-event-date">
-                                        <time datetime="2026-03-12">Event Date</time> • Event Venue
-                                    </p>
-                                </div>
+                                        <span class="home-status-badge active">Active</span>
+                                        <a href="view_event.php?id=<?= $event['event_id'] ?>" class="home-btn-view">View</a>
+                                    </article>
+                                </li>
+                            <?php endforeach; ?>
 
-                                <div class="home-event-progress">
-                                    <div class="home-progress-bar-mini">
-                                        <div class="home-progress-fill-mini" style="width: 32%"></div>
-                                    </div>
-                                    <span class="home-progress-text">32%</span>
-                                </div>
-
-                                <span class="home-status-badge active">Active</span>
-                                <a href="#" class="home-btn-view">View</a>
-                            </article>
-                        </li>
-
-                        <li>
-                            <article class="home-event-row">
-                                <div>
-                                    <h3 class="home-event-name">Event Name</h3>
-                                    <p class="home-event-date">
-                                        <time datetime="2026-03-12">Event Date</time> • Event Venue
-                                    </p>
-                                </div>
-
-                                <div class="home-event-progress">
-                                    <div class="home-progress-bar-mini">
-                                        <div class="home-progress-fill-mini" style="width: 55%"></div>
-                                    </div>
-                                    <span class="home-progress-text">55%</span>
-                                </div>
-
-                                <span class="home-status-badge active">Active</span>
-                                <a href="#" class="home-btn-view">View</a>
-                            </article>
-                        </li>
+                        <?php else: ?>
+                            <li>No active events.</li>
+                        <?php endif; ?>
                     </ul>
                 </section>
 

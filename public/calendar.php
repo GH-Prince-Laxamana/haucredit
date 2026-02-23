@@ -16,18 +16,8 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 $year = isset($_GET['y']) ? (int) $_GET['y'] : (int) date('Y');
 $month = isset($_GET['m']) ? (int) $_GET['m'] : (int) date('n');
 
-if ($month < 1) {
-    $month = 1;
-}
-if ($month > 12) {
-    $month = 12;
-}
-if ($year < 1970) {
-    $year = 1970;
-}
-if ($year > 2100) {
-    $year = 2100;
-}
+$month = max(1, min(12, $month));
+$year = max(1970, min(2100, $year));
 
 $firstDayTs = strtotime("$year-$month-01");
 $daysInMonth = (int) date('t', $firstDayTs);
@@ -46,13 +36,27 @@ $todayY = (int) date('Y');
 $todayM = (int) date('n');
 $todayD = (int) date('j');
 
-$events = [
-    sprintf("%04d-%02d-03", $year, $month) => ["Prep (RNN)", "08:00"],
-    sprintf("%04d-%02d-05", $year, $month) => ["Classroom", "10:00"],
-    sprintf("%04d-%02d-07", $year, $month) => ["Exam", "10:00 - 11:00"],
-    sprintf("%04d-%02d-11", $year, $month) => ["Presentation", "08:00"],
-    sprintf("%04d-%02d-20", $year, $month) => ["Meeting", "09:00 - 10:00"],
-];
+$user_id = $_SESSION['user_id'];
+$monthStart = "$year-$month-01 00:00:00";
+$monthEnd = date("Y-m-t 23:59:59", strtotime($monthStart));
+
+$stmt = $conn->prepare("
+    SELECT event_name, start_datetime
+    FROM events
+    WHERE user_id = ?
+      AND start_datetime BETWEEN ? AND ?
+    ORDER BY start_datetime ASC
+");
+$stmt->bind_param("iss", $user_id, $monthStart, $monthEnd);
+$stmt->execute();
+$result = $stmt->get_result();
+
+$events = [];
+while ($row = $result->fetch_assoc()) {
+    $dateKey = date('Y-m-d', strtotime($row['start_datetime']));
+    $time = date('H:i', strtotime($row['start_datetime']));
+    $events[$dateKey][] = [$row['event_name'], $time];
+}
 ?>
 
 <!DOCTYPE html>
@@ -108,19 +112,15 @@ $events = [
                         <?php
                         $weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                         foreach ($weekdays as $wd) {
-                            echo '<div class="cal-cell head">' . $wd . '</div>';
+                            echo '<div class="cal-cell head">' . htmlspecialchars($wd) . '</div>';
                         }
-                        ?>
 
-                        <?php
                         $totalCells = 42;
-
                         $prevMonthTs = strtotime("-1 month", $firstDayTs);
                         $daysInPrev = (int) date('t', $prevMonthTs);
 
                         for ($cell = 0; $cell < $totalCells; $cell++) {
                             $dayNum = $cell - $startWeekday + 1;
-
                             $classes = "cal-cell";
                             $label = "";
                             $dateKey = "";
@@ -148,12 +148,14 @@ $events = [
                             echo '<span class="day">' . htmlspecialchars((string) $label) . '</span>';
 
                             if ($dateKey && isset($events[$dateKey])) {
-                                $evtTitle = $events[$dateKey][0];
-                                $evtTime = $events[$dateKey][1];
-                                echo '<div class="pill">';
-                                echo '<div class="pill-title">' . htmlspecialchars($evtTitle) . '</div>';
-                                echo '<div class="pill-time">' . htmlspecialchars($evtTime) . '</div>';
-                                echo '</div>';
+                                foreach ($events[$dateKey] as $evt) {
+                                    $evtTitle = $evt[0];
+                                    $evtTime = $evt[1];
+                                    echo '<div class="pill">';
+                                    echo '<div class="pill-title">' . htmlspecialchars($evtTitle) . '</div>';
+                                    echo '<div class="pill-time">' . htmlspecialchars($evtTime) . '</div>';
+                                    echo '</div>';
+                                }
                             }
 
                             if ($isToday) {
@@ -181,7 +183,7 @@ $events = [
                 </aside>
             </section>
 
-        <?php include 'assets/includes/footer.php' ?>
+            <?php include 'assets/includes/footer.php' ?>
 
         </main>
     </div>
