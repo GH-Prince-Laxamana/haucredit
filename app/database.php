@@ -64,16 +64,20 @@ try {
     while (mysqli_more_results($conn) && mysqli_next_result($conn))
         ;
 
-    $adminPass = password_hash("203", PASSWORD_DEFAULT);
+    $checkAdmin = mysqli_query($conn, "SELECT 1 FROM users WHERE user_id=1 LIMIT 1");
 
-    $insert = "
-    INSERT IGNORE INTO users
-    (user_name, user_password, user_email, stud_num, org_body, user_reg_date)
-    VALUES
-    ('admin', '$adminPass', 'admin@hau.edu.ph', '203', 'SOC', NOW())
-    ";
+    if (!mysqli_fetch_assoc($checkAdmin)) {
+        $adminPass = password_hash("203", PASSWORD_DEFAULT);
 
-    mysqli_query($conn, $insert);
+        $insert = "
+                INSERT INTO users
+                (user_name, user_password, user_email, stud_num, org_body, user_reg_date)
+                VALUES
+                ('admin', '$adminPass', 'admin@hau.edu.ph', '203', 'SOC', NOW())
+                ";
+
+        mysqli_query($conn, $insert);
+    }
 
 } catch (mysqli_sql_exception $e) {
     die("Database Error: " . $e->getMessage());
