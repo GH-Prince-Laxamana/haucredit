@@ -2,6 +2,40 @@
 .event-form {
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
+}
+
+.ce-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.ce-topbar .hamburger {
+  flex-shrink: 0;
+}
+
+.ce-topbar .title-wrap {
+  flex: 1;
+  min-width: 200px;
+}
+
+.ce-topbar .title-wrap h1 {
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--text-primary);
+  text-align: left;
+  margin: 0;
+}
+
+.ce-topbar .title-wrap p {
+  margin-top: 6px;
+  font-size: 14px;
+  opacity: 0.7;
+  text-align: left;
 }
 
 .acc {
@@ -94,6 +128,7 @@
   gap: 8px;
   border: none;
   margin: 1.5em 0.5em 1em;
+  width: 100%;
 }
 
 .field-title,
@@ -178,6 +213,8 @@ input[type="datetime-local"] {
   font-size: 1rem;
   background: #fff;
   color: var(--burgundy);
+  border: 1px solid var(--border-fields);
+  border-radius: 8px;
 }
 
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
@@ -277,19 +314,38 @@ details {
 .step-actions {
   display: flex;
   gap: 2em;
-  margin-top: 25px;
+  margin: 25px 0 40px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
-.step-2,
+/* Step 1 actions - only Next button */
+.step-1-actions {
+  display: flex;
+  justify-content: flex-end; /* Align Next button to the right if desired */
+}
+
+.step-1-actions .back-btn {
+  display: none !important; /* Hide back button in step 1 */
+}
+
+/* Step 2 actions - both Back and Create Event buttons */
 .step-2-actions {
-  display: none;
+  display: none; /* Hidden by default */
 }
 
-.step-2.active,
-.step-2-home-top-actions.active,
 .step-2-actions.active {
-  display: block;
+  display: flex;
   animation: fadeIn 0.3s ease;
+  gap: 2em;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.step-2-actions.active .back-btn,
+.step-2-actions.active .create-btn {
+  display: inline-flex; /* Show both buttons */
 }
 
 .primary-btn {
@@ -303,11 +359,18 @@ details {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(75, 0, 20, .25);
+  min-width: 160px;
 }
 
 .primary-btn:hover:not(:disabled) {
   background: var(--burgundy-light);
   box-shadow: 0 6px 16px rgba(75, 0, 20, .35);
+}
+
+.primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #747474;
 }
 
 .secondary-btn {
@@ -320,6 +383,7 @@ details {
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-width: 100px;
 }
 
 .secondary-btn:hover {
@@ -327,101 +391,457 @@ details {
   background: #fdfcfa;
 }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: #747474;
+/* Step actions info text */
+.step-actions p,
+.step-actions .submit-info {
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
 }
+
 /* =========================
-   NAV HAMBURGER (MOBILE)
-   - shows hamburger on small screens
-   - collapses .navlinks into a dropdown panel
-   - toggle: add/remove .nav-open on .navbar
+   RESPONSIVE - CREATE EVENT
    ========================= */
 
-/* default: desktop */
-.hamburger{
-  display:none;
-  width:44px;
-  height:44px;
-  border:1px solid rgba(255,255,255,.18);
-  background: transparent;
-  border-radius: 12px;
-  cursor:pointer;
-  align-items:center;
-  justify-content:center;
-  gap:5px;
-  padding:0;
-}
-
-.hamburger span{
-  display:block;
-  width:20px;
-  height:2px;
-  background: #fff;
-  border-radius: 2px;
-  transition: transform .2s ease, opacity .2s ease, background .2s ease;
-}
-
-/* mobile behavior */
-@media (max-width: 900px){
-  .navbar{
-    position: sticky;
-    top:0;
-    z-index: 50;
+/* Tablet: 768px - 1024px */
+@media (max-width: 1024px) {
+  .event-form {
+    max-width: 100%;
+    padding: 0 10px;
+    padding-bottom: 40px;
   }
 
-  .hamburger{
-    display:flex;
-    margin-left:auto; /* pushes hamburger to the right */
+  .acc-title {
+    font-size: 1.3rem;
   }
 
-  /* collapse links into dropdown */
-  .navbar .navlinks{
-    position:absolute;
-    left: 12px;
-    right: 12px;
-    top: calc(100% + 10px);
-    display: none;
+  .acc-sub {
+    font-size: 0.95rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .field-title {
+    font-size: 1.2rem;
+  }
+
+  .hint {
+    font-size: 0.95rem;
+  }
+
+  input[type="datetime-local"],
+  textarea,
+  input,
+  select {
+    width: 100%;
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  input[type="datetime-local"] {
+    display: block;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+
+  .step-actions {
     flex-direction: column;
+    gap: 12px;
+    margin-top: 18px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    align-items: stretch;
+  }
+
+  .step-1-actions {
+    justify-content: stretch;
+  }
+
+  .step-2-actions.active {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .step-actions p,
+  .step-actions .submit-info {
+    text-align: left;
+    width: 100%;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .main {
+    overflow-y: auto;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+}
+
+/* Standard tablet/mobile breakpoint */
+@media (max-width: 900px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .form-row .field {
+    width: 100%;
+    margin: 0.5em 0;
+  }
+
+  input[type="datetime-local"],
+  textarea,
+  input,
+  select {
+    width: 100%;
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  .step-actions {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+  }
+
+  .step-2-actions.active {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    min-height: 48px;
+  }
+}
+
+/* Mobile: 640px - 767px */
+@media (max-width: 767px) {
+  .ce-topbar {
+    display: flex;
+    flex-direction: row; /* Keep row layout */
+    align-items: center;
+    gap: 12px;
+    padding: 0 0 10px 0;
+    flex-wrap: nowrap; /* Prevent wrapping */
+  }
+
+  .ce-topbar .hamburger {
+    flex-shrink: 0;
+    margin: 0;
+  }
+
+  .ce-topbar .title-wrap {
+    flex: 1;
+    padding-left: 0;
+    min-width: 0; /* Allow shrinking */
+  }
+
+  .ce-topbar .title-wrap h1 {
+    font-size: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ce-topbar .title-wrap p {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .event-form {
+    padding: 0;
+    padding-bottom: 50px;
+  }
+
+  .acc {
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+
+  .acc-head {
+    padding: 16px 14px;
+  }
+
+  .acc-left {
     gap: 10px;
+  }
+
+  .acc-dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .acc-title {
+    font-size: 1.1rem;
+  }
+
+  .acc-sub {
+    font-size: 0.85rem;
+  }
+
+  .acc-body {
+    padding: 0 14px 18px;
+  }
+
+  .field {
+    margin: 1em 0 0.8em;
+    width: 100%;
+  }
+
+  .field-title {
+    font-size: 1.1rem;
+  }
+
+  .hint {
+    font-size: 0.9rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .form-row .field {
+    width: 100%;
+    margin: 0;
+  }
+
+  input[type="datetime-local"],
+  textarea,
+  .multi-select,
+  input,
+  select {
+    font-size: 16px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .form-row:has(input[type="datetime-local"]) {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .radio-group.inline {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .radio-group.two-col {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .selected-tags {
+    gap: 8px;
+  }
+
+  .tag {
+    font-size: 0.95rem;
+    padding: 6px 10px;
+  }
+
+  .dropdown-list {
+    max-height: 200px;
+    font-size: 0.95rem;
+  }
+
+  /* Step 1 actions - only Next button */
+  .step-1-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 20px 0 30px;
+    padding: 0 0 20px 0;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .step-1-actions .back-btn {
+    display: none !important; /* Ensure back button is hidden */
+  }
+
+  /* Step 2 actions - both buttons */
+  .step-2-actions.active {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 20px 0 30px;
+    padding: 0 0 20px 0;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .step-2-actions.active .back-btn,
+  .step-2-actions.active .create-btn {
+    display: block;
+    width: 100%;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    width: 100%;
+    font-size: 1rem;
+    padding: 14px 20px;
+    min-width: 100%;
+  }
+
+  .main {
+    overflow-y: auto;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+}
+
+/* Small Mobile: < 480px */
+@media (max-width: 480px) {
+  .ce-topbar {
+    gap: 8px;
+  }
+
+  .ce-topbar .title-wrap h1 {
+    font-size: 18px;
+  }
+
+  .ce-topbar .title-wrap p {
+    font-size: 11px;
+  }
+
+  .acc-title {
+    font-size: 1rem;
+  }
+
+  .acc-sub {
+    font-size: 0.8rem;
+  }
+
+  .field-title {
+    font-size: 1rem;
+  }
+
+  .hint {
+    font-size: 0.85rem;
+  }
+
+  input,
+  textarea,
+  select,
+  .multi-input,
+  input[type="datetime-local"] {
+    font-size: 16px;
     padding: 12px;
-    border-radius: 14px;
-    background: var(--burgundy);
-    box-shadow: 0 18px 40px rgba(0,0,0,.25);
-    border: 1px solid rgba(255,255,255,.12);
+    width: 100%;
+    box-sizing: border-box;
   }
 
-  .navbar .navlinks a{
-    display:block;
-    padding: 10px 12px;
-    border-radius: 10px;
+  .tag {
+    font-size: 0.9rem;
+    padding: 5px 8px;
   }
 
-  .navbar .navlinks a:hover{
-    background: rgba(255,255,255,.08);
-    text-decoration: none;
+  .primary-btn,
+  .secondary-btn {
+    font-size: 0.95rem;
+    padding: 12px 16px;
+    min-height: 48px;
   }
 
-  /* open state */
-  .navbar.nav-open .navlinks{
-    display:flex;
-    animation: navDrop .18s ease;
+  .acc-head {
+    padding: 14px 12px;
   }
 
-  @keyframes navDrop{
-    from{ opacity:0; transform: translateY(-8px); }
-    to{ opacity:1; transform: translateY(0); }
+  .acc-body {
+    padding: 0 12px 16px;
   }
 
-  /* hamburger -> X when open */
-  .navbar.nav-open .hamburger span:nth-child(1){
-    transform: translateY(7px) rotate(45deg);
+  .field {
+    margin: 0.8em 0 0.6em;
   }
-  .navbar.nav-open .hamburger span:nth-child(2){
-    opacity: 0;
+
+  .step-1-actions,
+  .step-2-actions.active {
+    margin: 15px 0 40px;
+    padding-bottom: 20px;
   }
-  .navbar.nav-open .hamburger span:nth-child(3){
-    transform: translateY(-7px) rotate(-45deg);
+
+  .form-row {
+    gap: 1rem;
+  }
+}
+
+/* Landscape mobile fix */
+@media (max-width: 900px) and (orientation: landscape) {
+  .ce-topbar {
+    padding: 12px 0;
+  }
+
+  .acc-head {
+    padding: 12px 14px;
+  }
+
+  .field {
+    margin: 0.6em 0;
+  }
+}
+
+/* Touch improvements */
+@media (hover: none) and (pointer: coarse) {
+  .acc-head {
+    padding: 18px 14px;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    min-height: 48px;
+  }
+
+  input[type="radio"] {
+    width: 20px;
+    height: 20px;
+  }
+
+  .tag span {
+    padding: 4px;
+    min-width: 24px;
+    min-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dropdown-list div {
+    padding: 12px 10px;
+    font-size: 1rem;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 360px) {
+  .ce-topbar .title-wrap h1 {
+    font-size: 16px;
+  }
+  
+  .ce-topbar .title-wrap p {
+    font-size: 10px;
+  }
+  
+  .primary-btn,
+  .secondary-btn {
+    padding: 12px 10px;
+    font-size: 0.9rem;
   }
 }
