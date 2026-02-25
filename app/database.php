@@ -60,6 +60,7 @@ try {
     CREATE TABLE IF NOT EXISTS calendar_entries (
         entry_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
+        event_id INT NULL,
         title VARCHAR(255) NOT NULL,
         start_datetime DATETIME NOT NULL,
         end_datetime DATETIME NULL,
@@ -68,7 +69,8 @@ try {
         updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_user_start (user_id, start_datetime),
         INDEX idx_user_end (user_id, end_datetime),
-        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ";
 

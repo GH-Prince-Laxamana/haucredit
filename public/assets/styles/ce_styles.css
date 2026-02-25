@@ -193,7 +193,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 .long-field textarea {
   padding: 0.5em;
   height: 30px;
-  max-width: 935px;
+  width: 100%;
+  max-width: 100%;
 }
 
 label:has(input[type="radio"]) {
