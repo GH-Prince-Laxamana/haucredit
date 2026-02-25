@@ -97,11 +97,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <body>
   <div class="app">
-
+  <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
     <?php include 'assets/includes/general_nav.php' ?>
 
     <main class="main">
       <header class="topbar ce-topbar">
+        <button class="hamburger" id="menuBtn" type="button">☰</button>
+       
         <div class="title-wrap">
           <h1>Create Event</h1>
           <p>Fill out the form below to create a new event.</p>
@@ -514,7 +516,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       <?php include 'assets/includes/footer.php' ?>
     </main>
   </div>
-
+  <script src="assets/script/layout.js?v=1"></script>                 
   <script src="../app/script/create_event.js"></script>
 </body>
 
