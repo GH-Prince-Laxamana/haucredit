@@ -331,3 +331,96 @@ button:disabled {
   cursor: not-allowed;
   background: #747474;
 }
+/* =========================
+   NAV HAMBURGER (MOBILE)
+   - shows hamburger on small screens
+   - collapses .navlinks into a dropdown panel
+   - toggle: add/remove .nav-open on .navbar
+   ========================= */
+
+/* default: desktop */
+.hamburger{
+  display:none;
+  width:44px;
+  height:44px;
+  border:1px solid rgba(255,255,255,.18);
+  background: transparent;
+  border-radius: 12px;
+  cursor:pointer;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  padding:0;
+}
+
+.hamburger span{
+  display:block;
+  width:20px;
+  height:2px;
+  background: #fff;
+  border-radius: 2px;
+  transition: transform .2s ease, opacity .2s ease, background .2s ease;
+}
+
+/* mobile behavior */
+@media (max-width: 900px){
+  .navbar{
+    position: sticky;
+    top:0;
+    z-index: 50;
+  }
+
+  .hamburger{
+    display:flex;
+    margin-left:auto; /* pushes hamburger to the right */
+  }
+
+  /* collapse links into dropdown */
+  .navbar .navlinks{
+    position:absolute;
+    left: 12px;
+    right: 12px;
+    top: calc(100% + 10px);
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--burgundy);
+    box-shadow: 0 18px 40px rgba(0,0,0,.25);
+    border: 1px solid rgba(255,255,255,.12);
+  }
+
+  .navbar .navlinks a{
+    display:block;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  .navbar .navlinks a:hover{
+    background: rgba(255,255,255,.08);
+    text-decoration: none;
+  }
+
+  /* open state */
+  .navbar.nav-open .navlinks{
+    display:flex;
+    animation: navDrop .18s ease;
+  }
+
+  @keyframes navDrop{
+    from{ opacity:0; transform: translateY(-8px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+
+  /* hamburger -> X when open */
+  .navbar.nav-open .hamburger span:nth-child(1){
+    transform: translateY(7px) rotate(45deg);
+  }
+  .navbar.nav-open .hamburger span:nth-child(2){
+    opacity: 0;
+  }
+  .navbar.nav-open .hamburger span:nth-child(3){
+    transform: translateY(-7px) rotate(-45deg);
+  }
+}

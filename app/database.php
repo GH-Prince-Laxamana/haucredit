@@ -1,6 +1,5 @@
 <?php
-// MAIN DATABASE SETUP AND CONNECTION, Please access localhost/phymyadmin to see database (haucredit_db)
-
+// MAIN DATABASE SETUP AND CONNECTION
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $db_server = "localhost";
@@ -12,7 +11,6 @@ try {
     $conn = mysqli_connect($db_server, $db_user, $db_pass);
 
     mysqli_query($conn, "CREATE DATABASE IF NOT EXISTS `$db_name`");
-
     mysqli_select_db($conn, $db_name);
 
     $sql = "
@@ -55,27 +53,38 @@ try {
         participant_range VARCHAR(50) NULL,
         overnight TINYINT(1) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(user_id)
-            ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+    /* ✅ Calendar entries table (NEW) */
+    CREATE TABLE IF NOT EXISTS calendar_entries (
+        entry_id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        start_datetime DATETIME NOT NULL,
+        end_datetime DATETIME NULL,
+        notes TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_user_start (user_id, start_datetime),
+        INDEX idx_user_end (user_id, end_datetime),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ";
 
     mysqli_multi_query($conn, $sql);
-    while (mysqli_more_results($conn) && mysqli_next_result($conn))
-        ;
+    while (mysqli_more_results($conn) && mysqli_next_result($conn)) {}
 
+    // Default admin
     $checkAdmin = mysqli_query($conn, "SELECT 1 FROM users WHERE user_id=1 LIMIT 1");
-
     if (!mysqli_fetch_assoc($checkAdmin)) {
         $adminPass = password_hash("203", PASSWORD_DEFAULT);
-
         $insert = "
-                INSERT INTO users
-                (user_name, user_password, user_email, stud_num, org_body, user_reg_date)
-                VALUES
-                ('admin', '$adminPass', 'admin@hau.edu.ph', '203', 'SOC', NOW())
-                ";
-
+            INSERT INTO users
+            (user_name, user_password, user_email, stud_num, org_body, user_reg_date)
+            VALUES
+            ('admin', '$adminPass', 'admin@hau.edu.ph', '203', 'SOC', NOW())
+        ";
         mysqli_query($conn, $insert);
     }
 
