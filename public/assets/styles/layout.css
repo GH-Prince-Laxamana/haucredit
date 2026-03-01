@@ -200,7 +200,6 @@ footer{
   justify-content: center;
 }
 
-/* Overlay (hidden by default; shown when sidebar-open) */
 .sidebar-overlay{
   position: fixed;
   inset: 0;
@@ -210,7 +209,6 @@ footer{
 }
 body.sidebar-open .sidebar-overlay{ display: block; }
 
-/* Sidebar close button (optional, if you inject it via JS) */
 .sidebar-close{
   display: none;
   width: 40px;
