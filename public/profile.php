@@ -1,4 +1,13 @@
 <?php
+session_start();
+require_once "../app/database.php";
+require_once "../app/security_headers.php";
+send_security_headers();
+
+if (!isset($_SESSION["user_id"])) {
+    header("Location: index.php");
+    exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -17,25 +26,7 @@
 
   <div class="app">
 
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="avatar" aria-hidden="true"></div>
-      </div>
-
-      <nav class="nav">
-        <a href="home.php" class="nav-item">Dashboard</a>
-        <a href="calendar.php" class="nav-item">Calendar</a>
-        <a href="create_event.php" class="nav-item">Create Event</a>
-        <a href="about.php" class="nav-item">About</a>
-      </nav>
-
-      <div class="account">
-        <button class="account-btn" type="button">
-          <span class="user-dot" aria-hidden="true"></span>
-          <span>Account Name</span>
-        </button>
-      </div>
-    </aside>
+    <?php include 'assets/includes/general_nav.php' ?>
 
     <!-- MAIN -->
     <main class="main">

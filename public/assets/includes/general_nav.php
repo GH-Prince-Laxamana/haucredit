@@ -61,10 +61,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
                             <span style="text-align: center; margin: auto;"> Please Sign In to Continue </span>
                         </button>';
                 } else {
-                    echo '<button class="account-btn" type="button">
+                    echo '<a class="account-btn" href="profile.php">
                             <span class="user-dot" aria-hidden="true"></span>
                             <span>' . $username . '</span>
-                        </button>';
+                        </a>';
                 }
             ?>
 
