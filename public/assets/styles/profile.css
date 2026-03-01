@@ -1,0 +1,331 @@
+/* =========================
+   PROFILE SETTINGS PAGE
+   ========================= */
+
+.profile-page{
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 22px;
+  max-width: 1120px;
+  align-items: stretch;
+}
+
+/* LEFT: Profile Card */
+.profile-card{
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 520px;
+}
+
+.profile-avatar-wrap{
+  position: relative;
+  width: 190px;
+  height: 190px;
+  margin-top: 10px;
+}
+
+.profile-avatar{
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(75,0,20,.10);
+  border: 2px solid rgba(194,161,77,.35);
+}
+
+.camera-btn{
+  position: absolute;
+  right: 12px;
+  bottom: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(194,161,77,.55);
+  background: var(--surface);
+  box-shadow: 0 10px 22px rgba(0,0,0,.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .08s ease, filter .15s ease, background .15s ease;
+}
+
+.camera-btn:hover{
+  background: #fff;
+  filter: brightness(1.02);
+}
+
+.camera-btn:active{
+  transform: scale(.98);
+}
+
+.camera-icon{
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+.profile-meta{
+  margin-top: 18px;
+  text-align: center;
+}
+
+.profile-name{
+  font-weight: 800;
+  letter-spacing: .6px;
+  color: rgba(0,0,0,.55);
+  text-transform: uppercase;
+}
+
+.profile-org{
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(0,0,0,.45);
+}
+
+/* RIGHT: Panel */
+.profile-panel{
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 16px 18px;
+  min-height: 520px;
+}
+
+/* Tabs */
+.tabs{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(194,161,77,.25);
+}
+
+.tab{
+  border: 1px solid rgba(194,161,77,.35);
+  background: rgba(75,0,20,.07);
+  color: rgba(75,0,20,.75);
+  font-weight: 800;
+  padding: 8px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform .08s ease, filter .15s ease;
+}
+
+.tab:hover{ filter: brightness(1.05); }
+.tab:active{ transform: scale(.99); }
+
+.tab.active{
+  background: var(--burgundy);
+  color: var(--offwhite);
+  border-color: rgba(194,161,77,.70);
+}
+
+/* Form */
+.profile-form{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.grid-2{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.form-field label{
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .4px;
+  color: rgba(0,0,0,.50);
+  margin-bottom: 6px;
+}
+
+.form-field input{
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border-fields);
+  background: #fff;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.form-field input:focus{
+  outline: none;
+  border-color: rgba(194,161,77,.75);
+  box-shadow: 0 0 0 3px rgba(194,161,77,.18);
+}
+
+.form-field.full{
+  grid-column: 1 / -1;
+}
+
+/* Responsive */
+@media (max-width: 980px){
+  .profile-page{
+    grid-template-columns: 1fr;
+  }
+  .profile-card,
+  .profile-panel{
+    min-height: auto;
+  }
+}
+
+@media (max-width: 700px){
+  .grid-2{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   PROFILE - CHANGE PASSWORD TAB
+   ========================= */
+
+.pw-box{
+  margin-top: 6px;
+}
+
+.pw-subtext{
+  font-size: 13px;
+  color: rgba(0,0,0,.45);
+  margin-bottom: 12px;
+}
+
+.pw-form{
+  display:flex;
+  flex-direction:column;
+  gap: 12px;
+}
+
+.pw-field label{
+  display:block;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .4px;
+  color: rgba(0,0,0,.55);
+  margin-bottom: 6px;
+}
+
+.pw-input{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  background:#fff;
+  border: 1px solid var(--border-fields);
+  border-radius: 10px;
+  padding: 0 10px;
+  height: 42px;
+}
+
+.pw-input input{
+  border:none;
+  outline:none;
+  height: 100%;
+  flex:1;
+  font-size: 13px;
+  background: transparent;
+}
+
+.pw-input:focus-within{
+  border-color: rgba(194,161,77,.75);
+  box-shadow: 0 0 0 3px rgba(194,161,77,.18);
+}
+
+.eye-btn{
+  border:none;
+  background: transparent;
+  cursor:pointer;
+  font-size: 16px;
+  opacity: .6;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.eye-btn:hover{
+  background: rgba(0,0,0,.05);
+  opacity: .85;
+}
+
+/* requirements box */
+.pw-req{
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(75,0,20,.05);
+  border: 1px solid rgba(194,161,77,.22);
+}
+
+.pw-req-title{
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(75,0,20,.70);
+  margin-bottom: 8px;
+}
+
+.pw-req-list{
+  list-style:none;
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(0,0,0,.50);
+}
+
+.pw-req-list li.ok{
+  color: rgba(40,140,70,.85);
+  font-weight: 700;
+}
+
+.pw-req-list li.bad{
+  color: rgba(0,0,0,.45);
+  font-weight: 700;
+}
+
+/* action buttons */
+.pw-actions{
+  display:flex;
+  justify-content:space-between;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.pw-btn{
+  flex:1;
+  height: 40px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor:pointer;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  color: rgba(0,0,0,.55);
+}
+
+.pw-btn.ghost{
+  background: rgba(255,255,255,.75);
+}
+
+.pw-btn.primary{
+  background: var(--burgundy);
+  border-color: rgba(194,161,77,.75);
+  color: var(--offwhite);
+}
+
+.pw-btn.primary:hover{
+  filter: brightness(1.05);
+}
+
+/* Tab contents show/hide */
+.tab-content{ display:none; }
+.tab-content.active{ display:block; }
