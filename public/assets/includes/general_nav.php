@@ -34,6 +34,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <span>Create Event</span>
         </a>
 
+        <!-- My Events — active on both my_events.php and view_event.php -->
+        <a class="nav-item <?= in_array($current_page, ['my_events.php', 'view_event.php']) ? 'active' : '' ?>" href="my_events.php">
+            <span class="icon" aria-hidden="true">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            </span>
+            <span>My Events</span>
+        </a>
+
         <a class="nav-item <?= ($current_page == 'calendar.php') ? 'active' : '' ?>" href="calendar.php">
             <span class="icon" aria-hidden="true">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
