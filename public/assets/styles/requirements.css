@@ -1,0 +1,93 @@
+/* =========================
+   REQUIREMENTS CHECKLIST
+   ========================= */
+
+.req-page{
+  max-width: 980px;
+}
+
+.req-group{
+  margin-bottom: 22px;
+}
+
+.req-head h2{
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(0,0,0,.75);
+}
+
+.req-head p{
+  font-size: 12px;
+  color: rgba(0,0,0,.45);
+  margin-top: 2px;
+}
+
+/* Card */
+.req-card{
+  margin-top: 10px;
+  display:flex;
+  align-items:center;
+  gap: 14px;
+  padding: 16px 16px;
+  border-radius: var(--radius);
+  background: rgba(75,0,20,.08);
+  border: 1px solid rgba(194,161,77,.22);
+  box-shadow: var(--shadow);
+  cursor:pointer;
+  transition: transform .08s ease;
+}
+
+.req-card:hover{
+  transform: scale(.995);
+}
+
+/* Hide default checkbox */
+.req-checkbox{
+  display:none;
+}
+
+/* Custom checkbox */
+.checkmark{
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid rgba(194,161,77,.6);
+  background: var(--offwhite);
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Checked state */
+.req-checkbox:checked + .checkmark{
+  background: var(--burgundy);
+  border-color: var(--gold);
+}
+
+.req-checkbox:checked + .checkmark::after{
+  content: "✓";
+  position:absolute;
+  color: var(--offwhite);
+  font-size: 14px;
+  font-weight: 900;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+}
+
+/* Text */
+.req-title{
+  font-weight: 900;
+  color: rgba(0,0,0,.70);
+}
+
+.req-sub{
+  font-size: 12px;
+  color: rgba(0,0,0,.45);
+  margin-top: 2px;
+}
+
+/* Completed style */
+.req-checkbox:checked ~ .req-text .req-title{
+  text-decoration: line-through;
+  opacity:.6;
+}
