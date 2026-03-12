@@ -68,11 +68,10 @@
   flex-shrink: 0;
 }
 
-/* checked checkbox */
-
+/* Checked state */
 .req-checkbox:checked + .checkmark{
-  background: #4b0014;
-  border-color: #c2a14d;
+  background: var(--burgundy);
+  border-color: var(--gold);
 }
 
 .req-checkbox:checked + .checkmark::after{
