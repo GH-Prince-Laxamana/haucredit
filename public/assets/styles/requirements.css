@@ -6,6 +6,8 @@
   max-width: 980px;
 }
 
+/* GROUP HEADER */
+
 .req-group{
   margin-bottom: 22px;
 }
@@ -22,18 +24,21 @@
   margin-top: 2px;
 }
 
-/* Card */
+/* =========================
+   REQUIREMENT CARD
+   ========================= */
+
 .req-card{
   margin-top: 10px;
-  display:flex;
-  align-items:center;
+  display: flex;
+  align-items: center;
   gap: 14px;
-  padding: 16px 16px;
-  border-radius: var(--radius);
+  padding: 16px;
+  border-radius: 14px;
   background: rgba(75,0,20,.08);
   border: 1px solid rgba(194,161,77,.22);
-  box-shadow: var(--shadow);
-  cursor:pointer;
+  box-shadow: 0 10px 25px rgba(0,0,0,.08);
+  cursor: pointer;
   transition: transform .08s ease;
 }
 
@@ -41,18 +46,24 @@
   transform: scale(.995);
 }
 
-/* Hide default checkbox */
+/* =========================
+   CHECKBOX
+   ========================= */
+
+/* hide default checkbox */
+
 .req-checkbox{
-  display:none;
+  display: none;
 }
 
-/* Custom checkbox */
+/* custom checkbox */
+
 .checkmark{
   width: 22px;
   height: 22px;
   border-radius: 6px;
   border: 2px solid rgba(194,161,77,.6);
-  background: var(--offwhite);
+  background: #fff;
   position: relative;
   flex-shrink: 0;
 }
@@ -65,8 +76,8 @@
 
 .req-checkbox:checked + .checkmark::after{
   content: "✓";
-  position:absolute;
-  color: var(--offwhite);
+  position: absolute;
+  color: #fff;
   font-size: 14px;
   font-weight: 900;
   top: 50%;
@@ -74,7 +85,10 @@
   transform: translate(-50%,-50%);
 }
 
-/* Text */
+/* =========================
+   TEXT
+   ========================= */
+
 .req-title{
   font-weight: 900;
   color: rgba(0,0,0,.70);
@@ -86,8 +100,189 @@
   margin-top: 2px;
 }
 
-/* Completed style */
+/* completed requirement */
+
 .req-checkbox:checked ~ .req-text .req-title{
   text-decoration: line-through;
+  opacity: .6;
+}
+
+/* =========================
+   PROGRESS TRACKER
+   ========================= */
+
+.progress-card{
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.08);
+}
+
+.progress-bar{
+  width: 100%;
+  height: 10px;
+  background: #eee;
+  border-radius: 20px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-fill{
+  height: 100%;
+  width: 0%;
+  background: #4b0014;
+  transition: width .3s ease;
+}
+
+.progress-text{
+  font-size: 13px;
+  margin-top: 6px;
+  color: #444;
+}
+/* =========================
+   PAGE LAYOUT
+   ========================= */
+
+.req-page{
+  max-width: 900px;
+  margin-top: 10px;
+}
+
+/* =========================
+   PROGRESS CARD
+   ========================= */
+
+.progress-card{
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+  border:1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.progress-card h3{
+  font-size:16px;
+  font-weight:700;
+  margin-bottom:6px;
+}
+
+.progress-bar{
+  height:10px;
+  background:#e5e5e5;
+  border-radius:20px;
+  overflow:hidden;
+  margin:8px 0 6px 0;
+}
+
+.progress-fill{
+  height:100%;
+  background:var(--burgundy);
+  transition:width .3s ease;
+}
+
+/* =========================
+   GROUP SECTION
+   ========================= */
+
+.req-group{
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding:18px;
+  box-shadow: var(--shadow);
+  border:1px solid var(--border);
+  margin-bottom:18px;
+}
+
+.req-head{
+  margin-bottom:8px;
+}
+
+.req-head h2{
+  font-size:15px;
+  font-weight:800;
+  color:rgba(0,0,0,.80);
+}
+
+.req-head p{
+  font-size:12px;
+  color:rgba(0,0,0,.45);
+}
+
+/* =========================
+   REQUIREMENT ITEM
+   ========================= */
+
+.req-card{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,.05);
+  background:#fafafa;
+  margin-top:8px;
+  cursor:pointer;
+  transition:.15s ease;
+}
+
+.req-card:hover{
+  background:#f1f1f1;
+}
+
+/* checkbox */
+
+.req-checkbox{
+  display:none;
+}
+
+.checkmark{
+  width:20px;
+  height:20px;
+  border-radius:5px;
+  border:2px solid var(--gold);
+  background:white;
+  position:relative;
+}
+
+.req-checkbox:checked + .checkmark{
+  background:var(--burgundy);
+}
+
+.req-checkbox:checked + .checkmark::after{
+  content:"✓";
+  position:absolute;
+  color:white;
+  font-size:13px;
+  font-weight:900;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+}
+
+/* text */
+
+.req-title{
+  font-weight:700;
+  font-size:14px;
+}
+
+.req-sub{
+  font-size:12px;
+  color:#777;
+}
+
+/* completed */
+
+.req-checkbox:checked ~ .req-text .req-title{
+  text-decoration:line-through;
   opacity:.6;
+}
+
+/* empty message */
+
+.req-group p{
+  font-size:12px;
+  color:#888;
 }

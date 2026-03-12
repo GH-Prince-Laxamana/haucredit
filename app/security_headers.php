@@ -1,4 +1,5 @@
 <?php
+
 function send_security_headers(): void
 {
     $csp = implode("; ", [
@@ -7,8 +8,8 @@ function send_security_headers(): void
         "object-src 'none'",
         "frame-ancestors 'self'",
         "img-src 'self' data:",
-        "style-src 'self' 'unsafe-inline'",
-        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+        "script-src 'self' https://cdnjs.cloudflare.com",
         "connect-src 'self'",
         "form-action 'self'",
         "upgrade-insecure-requests"
@@ -20,4 +21,3 @@ function send_security_headers(): void
     header("X-Frame-Options: SAMEORIGIN");
     header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
 }
-?>

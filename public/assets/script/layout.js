@@ -1,5 +1,6 @@
 (() => {
   document.addEventListener("DOMContentLoaded", () => {
+
     const body = document.body;
     const sidebar = document.querySelector(".sidebar");
     const menuBtn = document.getElementById("menuBtn");
@@ -7,8 +8,12 @@
 
     if (!sidebar || !menuBtn || !overlay) return;
 
-    // Inject close button inside sidebar (✕) if not present
+    /* ===============================
+       SIDEBAR
+    =============================== */
+
     if (!sidebar.querySelector(".sidebar-close")) {
+
       const closeBtn = document.createElement("button");
       closeBtn.type = "button";
       closeBtn.className = "sidebar-close";
@@ -16,24 +21,23 @@
       closeBtn.textContent = "✕";
       closeBtn.setAttribute("aria-label", "Close menu");
 
-      // Put close button at very top of sidebar
       sidebar.insertBefore(closeBtn, sidebar.firstChild);
 
       closeBtn.addEventListener("click", () => closeMenu());
     }
 
     function openMenu() {
-    body.classList.add("sidebar-open");
-    overlay.hidden = false;
-    overlay.classList.add("active");
-    body.style.overflow = "hidden";
+      body.classList.add("sidebar-open");
+      overlay.hidden = false;
+      overlay.classList.add("active");
+      body.style.overflow = "hidden";
     }
 
     function closeMenu() {
-    body.classList.remove("sidebar-open");
-    overlay.classList.remove("active");
-    overlay.hidden = true;
-    body.style.overflow = "";
+      body.classList.remove("sidebar-open");
+      overlay.classList.remove("active");
+      overlay.hidden = true;
+      body.style.overflow = "";
     }
 
     menuBtn.addEventListener("click", () => {
@@ -47,12 +51,68 @@
       if (e.key === "Escape" && body.classList.contains("sidebar-open")) closeMenu();
     });
 
-    // If user rotates / resizes to desktop, auto-close overlay
     window.addEventListener("resize", () => {
       if (window.innerWidth > 640) {
         body.classList.remove("sidebar-open");
         overlay.hidden = true;
       }
     });
+
+    /* ===============================
+       CREATE EVENT BUTTON
+    =============================== */
+
+    const createBtn = document.querySelector(".home-primary-btn");
+
+    if (createBtn) {
+      createBtn.addEventListener("click", () => {
+        window.location.href = "create_event.php";
+      });
+    }
+
+    /* ===============================
+       NOTIFICATION DROPDOWN
+    =============================== */
+
+    const notifBtn = document.getElementById("notifBtn");
+    const notifDropdown = document.getElementById("notifDropdown");
+
+    if (notifBtn && notifDropdown) {
+
+      notifBtn.addEventListener("click", (e) => {
+
+        e.stopPropagation();
+        notifDropdown.classList.toggle("show");
+
+      });
+
+      document.addEventListener("click", () => {
+        notifDropdown.classList.remove("show");
+      });
+
+    }
+
+    /* ===============================
+       CLICKABLE EVENT ROW
+    =============================== */
+
+    const eventRows = document.querySelectorAll(".home-event-row");
+
+    eventRows.forEach(row => {
+
+      row.addEventListener("click", (e) => {
+
+        if (e.target.closest(".home-btn-view")) return;
+
+        const viewBtn = row.querySelector(".home-btn-view");
+
+        if (viewBtn) {
+          window.location.href = viewBtn.href;
+        }
+
+      });
+
+    });
+
   });
 })();
