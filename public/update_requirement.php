@@ -1,7 +1,7 @@
 <?php
 
 /* DATABASE CONNECTION */
-require_once dirname(__DIR__,2) . "/app/script/database.php";
+require_once dirname(__DIR__, 2) . "/app/script/database.php";
 
 /* CHECK REQUEST METHOD */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -6,6 +6,7 @@ send_security_headers();
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,6 +14,7 @@ send_security_headers();
   <link rel="stylesheet" href="assets/styles/layout.css" />
   <link rel="stylesheet" href="assets/styles/about_styles.css" />
 </head>
+
 <body>
   <div class="app">
     <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
@@ -47,10 +49,14 @@ send_security_headers();
         <section class="about-section">
           <h2>Key Features</h2>
           <ul class="feature-list">
-            <li><strong>Smart Event Classification</strong> - Automatically determines required documents based on activity type</li>
-            <li><strong>Dynamic Forms</strong> - Shows only relevant fields for your specific event (on-campus, virtual, off-campus, community service)</li>
-            <li><strong>Template Library</strong> - Direct access to official HAU OSA form templates via tinyurl links</li>
-            <li><strong>Compliance Checklist</strong> - Auto-generates requirements list based on your event details</li>
+            <li><strong>Smart Event Classification</strong> - Automatically determines required documents based on
+              activity type</li>
+            <li><strong>Dynamic Forms</strong> - Shows only relevant fields for your specific event (on-campus, virtual,
+              off-campus, community service)</li>
+            <li><strong>Template Library</strong> - Direct access to official HAU OSA form templates via tinyurl links
+            </li>
+            <li><strong>Compliance Checklist</strong> - Auto-generates requirements list based on your event details
+            </li>
             <li><strong>Calendar Integration</strong> - View all scheduled events with progress tracking</li>
             <li><strong>Session Management</strong> - Secure login system for student councils and organizations</li>
           </ul>
@@ -82,7 +88,8 @@ send_security_headers();
             </article>
 
             <article class="about-card">
-              <figure><img src="assets/images/team/dannah.jpg" alt="Dannah Mikayla M. Sanchez" class="about-img"></figure>
+              <figure><img src="assets/images/team/dannah.jpg" alt="Dannah Mikayla M. Sanchez" class="about-img">
+              </figure>
               <div class="about-body">
                 <h3>Dannah Mikayla M. Sanchez</h3>
                 <p class="role">Frontend Developer (Layout Architect)</p>
@@ -133,14 +140,16 @@ send_security_headers();
             <div class="contact-item">
               <h3>HAU OSA Resources</h3>
               <p><a href="https://tinyurl.com/HAUColStuHandbook2025Ed" target="_blank">College Student Handbook</a></p>
-              <p><a href="https://tinyurl.com/HAUStuActManual2025Edition" target="_blank">Student Activity Manual</a></p>
+              <p><a href="https://tinyurl.com/HAUStuActManual2025Edition" target="_blank">Student Activity Manual</a>
+              </p>
               <p><a href="https://tinyurl.com/allLinksHAUOSAStuAct" target="_blank">All OSA Forms & Templates</a></p>
             </div>
 
             <address class="contact-item">
               <h3>Office of Student Affairs</h3>
               <p>Email: <a href="mailto:studentactivities@hau.edu.ph">studentactivities@hau.edu.ph</a></p>
-              <p>Alt Email: <a href="mailto:studentactivities.hauosa@gmail.com">studentactivities.hauosa@gmail.com</a></p>
+              <p>Alt Email: <a href="mailto:studentactivities.hauosa@gmail.com">studentactivities.hauosa@gmail.com</a>
+              </p>
             </address>
           </div>
         </section>
@@ -152,4 +161,5 @@ send_security_headers();
 
   <script src="assets/script/layout.js?v=1"></script>
 </body>
+
 </html>
