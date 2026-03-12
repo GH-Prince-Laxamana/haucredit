@@ -53,7 +53,9 @@ $active_events = array_slice($events, 0, 3);
                 <p><?= $org_body ?></p>
             </div>
 
-            <div class="home-top-actions">
+           <div class="home-top-actions">
+
+            <a href="notifications.php">
                 <button class="home-icon-btn" type="button" aria-label="Notifications">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -61,10 +63,14 @@ $active_events = array_slice($events, 0, 3);
                     </svg>
                     <span class="home-notification-badge">3</span>
                 </button>
-                <button class="home-primary-btn" type="button">
-                    <span aria-hidden="true">+</span>
-                    Create Event
-                </button>
+            </a>
+                <a href="create_event.php">
+                    <button class="home-primary-btn" type="button">
+                        <span aria-hidden="true">+</span>
+                        Create Event
+                    </button>
+                </a>
+            
             </div>
         </header>
 

@@ -512,7 +512,6 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
   <div class="cal-modal__panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="cal-modal__top">
       <h3 id="modalTitle">Add Calendar Entry</h3>
-      <button class="cal-x" type="button" id="closeAddBtn" aria-label="Close">✕</button>
     </div>
 
     <form class="cal-form" method="post" action="calendar.php?y=<?php echo $year; ?>&m=<?php echo $month; ?>">

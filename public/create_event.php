@@ -74,6 +74,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $stmt->execute();
 
+    $event_id = $conn->insert_id;
+    $end = $_SESSION['end_datetime'] ?: null;
+    $notes = "Event created via Event Manager";
+
+    $cal_stmt = $conn->prepare("
+    INSERT INTO calendar_entries
+        (user_id, event_id, title, start_datetime, end_datetime, notes)
+    VALUES (?, ?, ?, ?, ?, ?)
+");
+
+    $cal_stmt->bind_param(
+      "iissss",
+      $_SESSION["user_id"],
+      $event_id,
+      $_SESSION['event_name'],
+      $_SESSION['start_datetime'],
+      $end,
+      $notes
+    );
+
+    $cal_stmt->execute();
+
     foreach ($ce_fields as $field) {
       unset($_SESSION[$field]);
     }
@@ -97,13 +119,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <body>
   <div class="app">
-  <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+    <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
     <?php include 'assets/includes/general_nav.php' ?>
 
     <main class="main">
       <header class="topbar ce-topbar">
         <button class="hamburger" id="menuBtn" type="button">☰</button>
-       
+
         <div class="title-wrap">
           <h1>Create Event</h1>
           <p>Fill out the form below to create a new event.</p>
@@ -442,7 +464,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 and invite either studentactivities@hau.edu.ph or studentactivities.hauosa@gmail.com
               </small>
 
-              <textarea name="venue_platform" id="venue_platform" required><?= htmlspecialchars($formData['venue_platform']) ?></textarea>
+              <textarea name="venue_platform" id="venue_platform"
+                required><?= htmlspecialchars($formData['venue_platform']) ?></textarea>
             </div>
 
             <fieldset class="field" id="offcampus-block"
@@ -516,7 +539,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       <?php include 'assets/includes/footer.php' ?>
     </main>
   </div>
-  <script src="assets/script/layout.js?v=1"></script>                 
+  <script src="assets/script/layout.js?v=1"></script>
   <script src="../app/script/create_event.js"></script>
 </body>
 
