@@ -43,25 +43,20 @@ $stmt_docs = $conn->prepare("
 $stmt_docs->bind_param("i", $event_id);
 $stmt_docs->execute();
 $res_docs = $stmt_docs->get_result();
-$required_docs = [];
 
 while ($row = $res_docs->fetch_assoc()) {
     $required_docs[] = $row;
 }
 
-// Progress calculation
-// Progress calculation
+$required_docs = array_map(function ($doc) {
+    $doc['doc_status'] = ($doc['doc_status'] === 'uploaded') ? 'Uploaded' : 'Pending';
+    return $doc;
+}, $required_docs);
+
 $total_docs = count($required_docs);
-
-$uploaded_docs = count(array_filter($required_docs, function ($doc) {
-    return in_array($doc['doc_status'], ['submitted', 'approved']);
-}));
-
+$uploaded_docs = count(array_filter($required_docs, fn($doc) => $doc['doc_status'] === 'Uploaded'));
 $pending_docs = $total_docs - $uploaded_docs;
-
-$progress_percentage = $total_docs
-    ? round(($uploaded_docs / $total_docs) * 100)
-    : 0;
+$progress_percentage = $total_docs ? round(($uploaded_docs / $total_docs) * 100) : 0;
 
 $doc_messages = [
     'Planned Budget' => 'Budget template is not available. Please contact the organizer.',
@@ -79,6 +74,7 @@ $doc_messages = [
     <title>View Event - HAUCREDIT</title>
     <link rel="stylesheet" href="assets/styles/layout.css" />
     <link rel="stylesheet" href="assets/styles/view_event.css" />
+    <script src="https://kit.fontawesome.com/1f718fe609.js" crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -106,7 +102,6 @@ $doc_messages = [
 
                 <!-- Status Banner (spans full width) -->
                 <div class="status-banner status-<?= strtolower(str_replace(' ', '-', $event['event_status'])) ?>">
-                    <div class="status-icon">ℹ</div>
                     <div class="status-content">
                         <h3>Event Status: <?= htmlspecialchars($event['event_status']) ?></h3>
                         <p>Your event is currently under review by the Office of Student Affairs</p>
@@ -119,7 +114,7 @@ $doc_messages = [
                     <!-- Event Classification -->
                     <section class="detail-card">
                         <div class="card-header">
-                            <h2>📋 Event Classification</h2>
+                            <h2><i class="fa-solid fa-magnifying-glass-chart"></i> Event Classification</h2>
                             <span class="badge badge-primary"><?= htmlspecialchars($event['activity_type']) ?></span>
                         </div>
                         <div class="card-body">
@@ -154,7 +149,7 @@ $doc_messages = [
                     <!-- Basic Information -->
                     <section class="detail-card">
                         <div class="card-header">
-                            <h2>📝 Basic Information</h2>
+                            <h2><i class="fa-solid fa-circle-info"></i> Basic Information</h2>
                         </div>
                         <div class="card-body">
                             <div class="detail-grid">
@@ -177,7 +172,7 @@ $doc_messages = [
                     <!-- Schedule & Logistics -->
                     <section class="detail-card">
                         <div class="card-header">
-                            <h2>📅 Schedule & Logistics</h2>
+                            <h2><i class="fa-solid fa-calendar-days"></i> Schedule & Logistics</h2>
                         </div>
                         <div class="card-body">
                             <div class="detail-grid">
@@ -223,7 +218,7 @@ $doc_messages = [
                     <!-- Document Checklist & Preview -->
                     <section class="detail-card">
                         <div class="card-header">
-                            <h2>📄 Required Documents</h2>
+                            <h2><i class="fa-solid fa-file-circle-question"></i> Required Documents</h2>
                             <span class="badge badge-success"><?= $uploaded_docs ?>/<?= $total_docs ?> Uploaded</span>
                         </div>
 
@@ -250,19 +245,10 @@ $doc_messages = [
                                     <div class="doc-item status-<?= strtolower($doc['doc_status']) ?>">
 
                                         <div class="doc-checkbox">
-
-                                            <?php if ($doc['doc_status'] === 'approved'): ?>
-
-                                                <span class="status-approved">✔</span>
-
-                                            <?php elseif ($doc['doc_status'] === 'submitted'): ?>
-
-                                                <span class="status-submitted">⏳</span>
-
+                                            <?php if ($doc['doc_status'] === 'Uploaded'): ?>
+                                                <i class="fa-solid fa-file-circle-check" class="status-uploaded"></i>
                                             <?php else: ?>
-
-                                                <span class="status-pending">•</span>
-
+                                                <i class="fa-solid fa-hourglass-half" class="status-pending"></i>
                                             <?php endif; ?>
 
                                         </div>
@@ -281,36 +267,20 @@ $doc_messages = [
 
                                             <!-- View Button -->
                                             <button class="btn-icon" onclick="previewDocument(
-        '<?= htmlspecialchars($has_upload ? $doc['file_path'] : $doc['template_url'], ENT_QUOTES) ?>',
-        '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
-        '<?= htmlspecialchars(!$has_upload && empty($doc['template_url']) ? 'No template available for this document.' : '', ENT_QUOTES) ?>'
-    )">
-                                                👁 View
+                                                    '<?= htmlspecialchars($has_upload ? $doc['file_path'] : $doc['template_url'], ENT_QUOTES) ?>',
+                                                    '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
+                                                    '<?= htmlspecialchars(!$has_upload && empty($doc['template_url']) ? 'No template available for this document.' : '', ENT_QUOTES) ?>'
+                                                )">
+                                                View
                                             </button>
 
-                                            <!-- Download Uploaded File -->
-                                            <?php if ($has_upload): ?>
-                                                <a href="<?= htmlspecialchars($doc['file_path'], ENT_QUOTES) ?>"
-                                                    class="btn-icon" target="_blank">
-                                                    ⬇ Download Uploaded
-                                                </a>
-                                            <?php endif; ?>
-
-                                            <!-- Download Template -->
-                                            <?php if (!empty($doc['template_url'])): ?>
-                                                <a href="<?= htmlspecialchars($doc['template_url'], ENT_QUOTES) ?>"
-                                                    class="btn-icon" target="_blank">
-                                                    📄 Template
-                                                </a>
-                                            <?php endif; ?>
-
                                             <!-- Upload / Replace -->
-                                            <?php if ($doc['doc_status'] !== 'approved'): ?>
+                                            <?php if ($doc['doc_status'] !== 'Uploaded'): ?>
                                                 <form action="create_requirement.php" method="POST"
                                                     enctype="multipart/form-data" class="upload-form">
                                                     <input type="hidden" name="req_id" value="<?= $doc['req_id'] ?>">
-                                                    <label class="btn-upload">
-                                                        ⬆ Upload
+                                                    <label class="btn-icon">
+                                                        Upload
                                                         <input type="file" name="document" hidden required
                                                             onchange="this.form.submit()">
                                                     </label>
@@ -322,7 +292,7 @@ $doc_messages = [
                                                 <form action="delete_requirement.php" method="POST"
                                                     onsubmit="return confirm('Remove uploaded document?');">
                                                     <input type="hidden" name="req_id" value="<?= $doc['req_id'] ?>">
-                                                    <button class="btn-danger-small">🗑 Remove</button>
+                                                    <button class="btn-danger">Remove</button>
                                                 </form>
                                             <?php endif; ?>
 
@@ -344,7 +314,7 @@ $doc_messages = [
                         <div class="ring" style="--progress: <?= $progress_percentage ?>;">
                             <div class="ring-inner"
                                 style="display: flex; align-items: center; justify-content: center;">
-                                <span
+                                <span id="progressNumber"
                                     style="font-size: 28px; font-weight: bold; color: #4b0014;"><?= $progress_percentage ?>%</span>
                             </div>
                         </div>
@@ -436,6 +406,14 @@ $doc_messages = [
                 closePreview();
             }
         });
+
+        const progressNum = document.getElementById('progressNumber');
+        if (<?= $progress_percentage ?> === 100) {
+            progressNum.style.color = 'var(--green)';
+        } else {
+            progressNum.style.color = '#4b0014'; // default burgundy
+        }
+
     </script>
 </body>
 

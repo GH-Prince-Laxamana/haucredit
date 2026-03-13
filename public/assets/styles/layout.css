@@ -19,6 +19,8 @@
 
   --surface: #ffffff;
   --surface-2: #fbfaf9;
+
+  --green: rgba(0, 128, 0, 0.625);
 }
 
 /* Reset */

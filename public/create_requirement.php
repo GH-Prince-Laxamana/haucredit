@@ -41,7 +41,7 @@ if (!move_uploaded_file($file['tmp_name'],$path)) {
 
 $stmt = $conn->prepare("
 UPDATE requirements
-SET file_path = ?, doc_status = 'submitted', submitted_at = NOW()
+SET file_path = ?, doc_status = 'uploaded', uploaded_at = NOW()
 WHERE req_id = ?
 ");
 
