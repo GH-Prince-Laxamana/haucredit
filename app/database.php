@@ -72,10 +72,11 @@ try {
         distance VARCHAR(100) NULL,
         participant_range VARCHAR(50) NULL,
         overnight TINYINT(1) NULL,
-        event_status ENUM('Draft','Pending Review','Approved','Rejected') NOT NULL DEFAULT 'Draft',
+        event_status ENUM('Draft','Pending Review','Completed') NOT NULL DEFAULT 'Draft',
         docs_total INT DEFAULT 0,
         docs_uploaded INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        archived_at DATETIME NULL,
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 

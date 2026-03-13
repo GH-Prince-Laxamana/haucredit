@@ -28,10 +28,29 @@ $ce_fields = [
   'overnight'
 ];
 
+$event_id = $_GET['id'] ?? null;
+$editing = !empty($event_id);
+
 $formData = [];
 
-foreach ($ce_fields as $field) {
-  $formData[$field] = $_SESSION[$field] ?? '';
+if ($event_id) {
+  $stmt = $conn->prepare("SELECT * FROM events WHERE event_id = ? AND user_id = ? LIMIT 1 AND archived_at IS NULL");
+  $stmt->bind_param("ii", $event_id, $_SESSION["user_id"]);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $existing_event = $result->fetch_assoc();
+
+  if ($existing_event) {
+    foreach ($ce_fields as $field) {
+      $formData[$field] = $existing_event[$field] ?? '';
+    }
+  } else {
+    die("Event not found or you don't have permission to edit it.");
+  }
+} else {
+  foreach ($ce_fields as $field) {
+    $formData[$field] = $_SESSION[$field] ?? '';
+  }
 }
 
 $requirements_map = [
@@ -61,27 +80,94 @@ $requirements_map = [
   ]
 ];
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
+if (isset($_POST['create_event'])) {
+
   foreach ($ce_fields as $field) {
     $_SESSION[$field] = $_POST[$field] ?? null;
   }
 
-  if (isset($_POST['create_event'])) {
+  $organizing_body_json = isset($_SESSION['organizing_body'])
+    ? json_encode($_SESSION['organizing_body'])
+    : null;
+
+  $event_status = "Pending Review";
+
+  /* =========================
+     UPDATE EVENT
+  ========================= */
+
+  if ($editing) {
 
     $stmt = $conn->prepare("
-        INSERT INTO events (
-            user_id, organizing_body, background, activity_type, series,
-            nature, event_name, start_datetime, end_datetime,
-            participants, venue_platform, extraneous, collect_payments, target_metric,
-            distance, participant_range, overnight, event_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      UPDATE events SET
+        organizing_body = ?, background = ?, activity_type = ?, series = ?, nature = ?,
+        event_name = ?, start_datetime = ?, end_datetime = ?, participants = ?,
+        venue_platform = ?, extraneous = ?, collect_payments = ?, target_metric = ?,
+        distance = ?, participant_range = ?, overnight = ?
+      WHERE event_id = ? AND user_id = ?
     ");
 
-    $organizing_body_json = isset($_SESSION['organizing_body'])
-      ? json_encode($_SESSION['organizing_body'])
-      : null;
+    $stmt->bind_param(
+      "sssssssssssssssiis",
+      $organizing_body_json,
+      $_SESSION['background'],
+      $_SESSION['activity_type'],
+      $_SESSION['series'],
+      $_SESSION['nature'],
+      $_SESSION['event_name'],
+      $_SESSION['start_datetime'],
+      $_SESSION['end_datetime'],
+      $_SESSION['participants'],
+      $_SESSION['venue_platform'],
+      $_SESSION['extraneous'],
+      $_SESSION['collect_payments'],
+      $_SESSION['target_metric'],
+      $_SESSION['distance'],
+      $_SESSION['participant_range'],
+      $_SESSION['overnight'],
+      $event_id,
+      $_SESSION["user_id"]
+    );
 
-    $event_status = "Pending Review";
+    $stmt->execute();
+
+    /* UPDATE CALENDAR */
+
+    $end = $_SESSION['end_datetime'] ?: null;
+    $notes = "Event updated via Event Manager";
+
+    $cal_stmt = $conn->prepare("
+      UPDATE calendar_entries
+      SET title=?, start_datetime=?, end_datetime=?, notes=?
+      WHERE event_id=? AND user_id=?
+    ");
+
+    $cal_stmt->bind_param(
+      "ssssii",
+      $_SESSION['event_name'],
+      $_SESSION['start_datetime'],
+      $end,
+      $notes,
+      $event_id,
+      $_SESSION['user_id']
+    );
+
+    $cal_stmt->execute();
+
+  }
+
+  /* =========================
+     CREATE EVENT
+  ========================= */ else {
+
+    $stmt = $conn->prepare("
+      INSERT INTO events (
+        user_id, organizing_body, background, activity_type, series,
+        nature, event_name, start_datetime, end_datetime,
+        participants, venue_platform, extraneous, collect_payments, target_metric,
+        distance, participant_range, overnight, event_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
 
     $stmt->bind_param(
       "isssssssssssssssis",
@@ -106,49 +192,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     );
 
     $stmt->execute();
+    $event_id = $stmt->insert_id;
 
-    $event_id = $conn->insert_id;
-
-    $background = $_SESSION['background'];
-    $activity_type = $_SESSION['activity_type'];
-
-    $requirements_templates = [
-      'Approval Letter from Dean' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit?tab=t.0',
-      'Program Flow and/or Itinerary' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit?tab=t.0',
-      'Parental Consent' => 'https://docs.google.com/document/d/1rCQbqIH1YFUxekaTCkIYTx3wxUnEKoHUxofG5c7K_1s/edit?tab=t.0',
-      'Letter of Undertaking' => 'https://docs.google.com/document/d/1vNsUTnyTeYo9sF_p6nvJCOOouWt7O7Du8m9OxbC4LZc/edit?tab=t.0',
-      'Planned Budget' => '',
-      'List of Participants' => '',
-      'CHEd Certificate of Compliance' => 'https://docs.google.com/document/d/1gdHMH0iFZpS3OFwoG8w1r8DZoMh_oeXB4nN22kQt21o/edit?tab=t.0',
-      'OCES Annex A Form' => ''
-    ];
-
-    $checklist = $requirements_map[$background][$activity_type] ?? [];
-
-    if (!empty($checklist)) {
-      $req_stmt = $conn->prepare("
-        INSERT INTO requirements (event_id, req_name, template_url)
-        VALUES (?, ?, ?)
-    ");
-
-      foreach ($checklist as $req_name) {
-        $template_url = $requirements_templates[$req_name] ?? null;
-        $req_stmt->bind_param("iss", $event_id, $req_name, $template_url);
-        $req_stmt->execute();
-      }
-    }
-
-    $docs_total = count($checklist);
-    $conn->query("UPDATE events SET docs_total = $docs_total WHERE event_id = $event_id");
+    /* INSERT CALENDAR ENTRY */
 
     $end = $_SESSION['end_datetime'] ?: null;
     $notes = "Event created via Event Manager";
 
     $cal_stmt = $conn->prepare("
-    INSERT INTO calendar_entries
-        (user_id, event_id, title, start_datetime, end_datetime, notes)
-    VALUES (?, ?, ?, ?, ?, ?)
-");
+      INSERT INTO calendar_entries
+      (user_id,event_id,title,start_datetime,end_datetime,notes)
+      VALUES (?,?,?,?,?,?)
+    ");
 
     $cal_stmt->bind_param(
       "iissss",
@@ -161,16 +216,109 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     );
 
     $cal_stmt->execute();
-
-    foreach ($ce_fields as $field) {
-      unset($_SESSION[$field]);
-    }
-
-    header("Location: home.php");
-    exit();
   }
-}
 
+  /* =========================
+     REQUIREMENTS SYNC
+  ========================= */
+
+  $background = $_SESSION['background'];
+  $activity_type = $_SESSION['activity_type'];
+
+  $requirements_templates = [
+    'Approval Letter from Dean' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit',
+    'Program Flow and/or Itinerary' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit',
+    'Parental Consent' => 'https://docs.google.com/document/d/1rCQbqIH1YFUxekaTCkIYTx3wxUnEKoHUxofG5c7K_1s/edit',
+    'Letter of Undertaking' => 'https://docs.google.com/document/d/1vNsUTnyTeYo9sF_p6nvJCOOouWt7O7Du8m9OxbC4LZc/edit',
+    'Planned Budget' => '',
+    'List of Participants' => '',
+    'CHEd Certificate of Compliance' => 'https://docs.google.com/document/d/1gdHMH0iFZpS3OFwoG8w1r8DZoMh_oeXB4nN22kQt21o/edit',
+    'OCES Annex A Form' => ''
+  ];
+
+  $checklist = $requirements_map[$background][$activity_type] ?? [];
+
+  $current_reqs = [];
+
+  $stmt = $conn->prepare("SELECT req_name FROM requirements WHERE event_id=?");
+  $stmt->bind_param("i", $event_id);
+  $stmt->execute();
+  $res = $stmt->get_result();
+
+  while ($row = $res->fetch_assoc()) {
+    $current_reqs[] = $row['req_name'];
+  }
+
+  $to_add = array_diff($checklist, $current_reqs);
+  $to_remove = array_diff($current_reqs, $checklist);
+
+  /* REMOVE OLD */
+
+  if (!empty($to_remove)) {
+
+    $stmt = $conn->prepare(
+      "DELETE FROM requirements WHERE event_id=? AND req_name=?"
+    );
+
+    foreach ($to_remove as $req) {
+      $stmt->bind_param("is", $event_id, $req);
+      $stmt->execute();
+    }
+  }
+
+  /* ADD NEW */
+
+  if (!empty($to_add)) {
+
+    $stmt = $conn->prepare(
+      "INSERT INTO requirements (event_id,req_name,template_url)
+       VALUES (?,?,?)"
+    );
+
+    foreach ($to_add as $req) {
+
+      $template = $requirements_templates[$req] ?? null;
+
+      $stmt->bind_param("iss", $event_id, $req, $template);
+      $stmt->execute();
+    }
+  }
+
+  /* UPDATE DOC COUNT */
+
+  $stmt = $conn->prepare(
+    "SELECT COUNT(*) AS total FROM requirements WHERE event_id=?"
+  );
+  $stmt->bind_param("i", $event_id);
+  $stmt->execute();
+
+  $res = $stmt->get_result();
+  $docs_total = $res->fetch_assoc()['total'] ?? 0;
+
+  $stmt->close();
+
+  $stmt = $conn->prepare(
+    "UPDATE events SET docs_total=? WHERE event_id=?"
+  );
+  $stmt->bind_param("ii", $docs_total, $event_id);
+  $stmt->execute();
+
+  /* CLEAR SESSION */
+
+  foreach ($ce_fields as $field) {
+    unset($_SESSION[$field]);
+  }
+
+  /* REDIRECT */
+
+  if ($editing) {
+    header("Location: view_event.php?id=$event_id");
+  } else {
+    header("Location: home.php");
+  }
+
+  exit();
+}
 
 ?>
 
@@ -303,6 +451,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 ];
 
                 foreach ($org_options as $org) {
+                  $organizing_body = [];
+                  if (!empty($formData['organizing_body'])) {
+                    $organizing_body = json_decode($formData['organizing_body'], true);
+                    if (!is_array($organizing_body))
+                      $organizing_body = [];
+                  }
+
                   $selected = (isset($organizing_body) && is_array($organizing_body) && in_array($org, $organizing_body)) ? 'selected' : '';
 
                   echo "<option value=\"$org\" $selected>$org</option>";
@@ -600,7 +755,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <div class="step-actions step-2-actions">
           <button type="button" class="secondary-btn back-btn">Back</button>
-          <button type="submit" name="create_event" class="primary-btn create-btn" disabled>Create Event</button>
+          <button type="submit" name="create_event" class="primary-btn create-btn" disabled>
+            <?= $editing ? 'Update Event' : 'Create Event' ?>
+          </button>
         </div>
       </form>
 

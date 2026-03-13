@@ -21,7 +21,7 @@ if (!$event_id) {
 $stmt = $conn->prepare("
     SELECT *
     FROM events
-    WHERE event_id = ? AND user_id = ?
+    WHERE event_id = ? AND user_id = ? AND archived_at IS NULL
     LIMIT 1
 ");
 $stmt->bind_param("ii", $event_id, $user_id);
@@ -93,8 +93,18 @@ $doc_messages = [
                 </div>
 
                 <div class="action-btns">
-                    <a href="create_event.php?id=<?= $event['event_id'] ?>" class="btn-secondary">Edit Event</a>
-                    <button class="btn-danger" onclick="confirmDelete()">Delete</button>
+                    <a href="create_event.php?id=<?= $event['event_id'] ?>" class="btn-secondary">
+                        Edit Event
+                    </a>
+
+                    <form method="POST" action="archive_event.php" class="inline-form">
+                        <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
+
+                        <button type="submit" name="archive_event" class="btn-danger"
+                            onclick="return confirm('Archive this event? You can restore it for 30 days.')">
+                            Archive Event
+                        </button>
+                    </form>
                 </div>
             </header>
 

@@ -25,7 +25,7 @@ $stmt = $conn->prepare("
         docs_uploaded,
         created_at
     FROM events
-    WHERE user_id = ?
+    WHERE user_id = ? AND archived_at IS NULL
     ORDER BY created_at DESC
 ");
 
