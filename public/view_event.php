@@ -1,60 +1,74 @@
 <?php
 session_start();
-
+require_once "../app/database.php";
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
 }
 
+$user_id = $_SESSION["user_id"];
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
-// PLACEHOLDER DATA (Replace with actual database query)
-$event = [
-    'event_id' => 1,
-    'organizing_body' => 'HAUSG CSC-SAS',
-    'background' => 'Student-Initiated Activity',
-    'activity_type' => 'Off-Campus Activity',
-    'series' => '',
-    'event_scope' => 'university',
-    'expected_participants' => 150,
-    'event_name' => 'SAS Leadership Summit 2026',
-    'event_description' => 'A comprehensive leadership training program for SAS student leaders focusing on organizational management, event planning, and community engagement.',
-    'contact_person' => 'Juan Dela Cruz',
-    'contact_email' => 'juan.delacruz@student.hau.edu.ph',
-    'nature' => 'Seminar-Workshop',
-    'activity_name' => 'SAS Leadership Summit 2026: Building Tomorrow\'s Leaders',
-    'start_date' => '2026-03-15',
-    'start_time' => '08:00',
-    'end_date' => '2026-03-15',
-    'end_time' => '17:00',
-    'collect_payments' => 'Yes',
-    'num_participants' => '25 student leaders, 5 officers, 3 guest speakers',
-    'venue_platform' => 'Baguio Country Club, Baguio City',
-    'distance' => 'Rest of PH or Overseas',
-    'participant_range' => '25 or more',
-    'duration' => '0',
-    'target_metric' => '85% Satisfaction Rating, 90% Attendance Rate',
-    'is_extraneous' => 'No',
-    'status' => 'Pending Review',
-    'created_at' => '2026-02-15 10:30:00'
-];
+// Get event ID from query string
+$event_id = $_GET['id'] ?? null;
 
-// Document checklist based on activity type
-$required_docs = [
-    ['name' => 'Approval Letter from Dean', 'code' => 'FM-SSA-SAO-8004.1', 'status' => 'Uploaded', 'url' => 'https://tinyurl.com/HAUStuActApprovalLetter'],
-    ['name' => 'Program Flow/Itinerary', 'code' => 'FM-SSA-SAO-8004', 'status' => 'Uploaded', 'url' => 'https://tinyurl.com/HAUStudentActivityForm'],
-    ['name' => 'Parental Consents', 'code' => 'FM-SSA-SAO-8004.8', 'status' => 'Pending', 'url' => 'https://tinyurl.com/HAUParentalConsentFormat'],
-    ['name' => 'Letter of Undertaking', 'code' => 'FM-SSA-SAO-8004.10', 'status' => 'Uploaded', 'url' => 'https://tinyurl.com/formatUndertakingLetter'],
-    ['name' => 'Planned Budget', 'code' => '', 'status' => 'Uploaded', 'url' => '#'],
-    ['name' => 'List of Participants', 'code' => 'FM-SSA-SAO-8004.6', 'status' => 'Pending', 'url' => 'https://tinyurl.com/HAUStuActVisitorsList'],
-    ['name' => 'CHEd Compliance Certificate', 'code' => 'FM-SSA-SAO-8004.9', 'status' => 'Pending', 'url' => 'https://tinyurl.com/CHEdComplianceCertFormat'],
-];
+if (!$event_id) {
+    die("Invalid event ID.");
+}
+
+// Fetch the event info
+$stmt = $conn->prepare("
+    SELECT *
+    FROM events
+    WHERE event_id = ? AND user_id = ?
+    LIMIT 1
+");
+$stmt->bind_param("ii", $event_id, $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$event = $result->fetch_assoc();
+
+if (!$event) {
+    die("Event not found or you don't have permission to view it.");
+}
+
+// Fetch required documents for this event
+$stmt_docs = $conn->prepare("
+    SELECT req_id, req_name, req_desc, file_path, template_url, doc_status
+    FROM requirements
+    WHERE event_id = ?
+    ORDER BY created_at ASC
+");
+$stmt_docs->bind_param("i", $event_id);
+$stmt_docs->execute();
+$res_docs = $stmt_docs->get_result();
+$required_docs = [];
+
+while ($row = $res_docs->fetch_assoc()) {
+    $required_docs[] = $row;
+}
 
 // Progress calculation
+// Progress calculation
 $total_docs = count($required_docs);
-$uploaded_docs = count(array_filter($required_docs, fn($doc) => $doc['status'] === 'Uploaded'));
-$progress_percentage = round(($uploaded_docs / $total_docs) * 100);
+
+$uploaded_docs = count(array_filter($required_docs, function ($doc) {
+    return in_array($doc['doc_status'], ['submitted', 'approved']);
+}));
+
+$pending_docs = $total_docs - $uploaded_docs;
+
+$progress_percentage = $total_docs
+    ? round(($uploaded_docs / $total_docs) * 100)
+    : 0;
+
+$doc_messages = [
+    'Planned Budget' => 'Budget template is not available. Please contact the organizer.',
+    'List of Participants' => 'No participant list template yet.',
+    'OCES Annex A Form' => 'Form will be provided upon request.'
+];
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -91,10 +105,10 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
             <section class="content view-event-page">
 
                 <!-- Status Banner (spans full width) -->
-                <div class="status-banner status-<?= strtolower(str_replace(' ', '-', $event['status'])) ?>">
+                <div class="status-banner status-<?= strtolower(str_replace(' ', '-', $event['event_status'])) ?>">
                     <div class="status-icon">ℹ</div>
                     <div class="status-content">
-                        <h3>Event Status: <?= htmlspecialchars($event['status']) ?></h3>
+                        <h3>Event Status: <?= htmlspecialchars($event['event_status']) ?></h3>
                         <p>Your event is currently under review by the Office of Student Affairs</p>
                     </div>
                 </div>
@@ -112,26 +126,27 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
                             <div class="detail-grid">
                                 <div class="detail-item">
                                     <label>Organizing Body</label>
-                                    <p><?= htmlspecialchars($event['organizing_body']) ?></p>
+                                    <p><?= htmlspecialchars(is_array(json_decode($event['organizing_body'])) ? implode(", ", json_decode($event['organizing_body'])) : $event['organizing_body']) ?>
+                                    </p>
                                 </div>
                                 <div class="detail-item">
                                     <label>Background</label>
                                     <p><?= htmlspecialchars($event['background']) ?></p>
                                 </div>
                                 <div class="detail-item">
-                                    <label>Event Scope</label>
-                                    <p><?= ucfirst($event['event_scope']) ?></p>
+                                    <label>Nature of Activity</label>
+                                    <p><?= htmlspecialchars($event['nature']) ?></p>
                                 </div>
-                                <div class="detail-item">
-                                    <label>Expected Participants</label>
-                                    <p><?= htmlspecialchars($event['expected_participants']) ?> attendees</p>
-                                </div>
-                                <?php if ($event['series']): ?>
+                                <?php if (!empty($event['series'])): ?>
                                     <div class="detail-item">
                                         <label>Series</label>
                                         <p><?= htmlspecialchars($event['series']) ?></p>
                                     </div>
                                 <?php endif; ?>
+                                <div class="detail-item">
+                                    <label>Expected Participants</label>
+                                    <p><?= htmlspecialchars($event['participants']) ?> attendees</p>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -144,22 +159,8 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
                         <div class="card-body">
                             <div class="detail-grid">
                                 <div class="detail-item full-width">
-                                    <label>Event Description</label>
-                                    <p><?= htmlspecialchars($event['event_description']) ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Contact Person</label>
-                                    <p><?= htmlspecialchars($event['contact_person']) ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Contact Email</label>
-                                    <p><a
-                                            href="mailto:<?= htmlspecialchars($event['contact_email']) ?>"><?= htmlspecialchars($event['contact_email']) ?></a>
-                                    </p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Nature of Activity</label>
-                                    <p><?= htmlspecialchars($event['nature']) ?></p>
+                                    <label>Event Name</label>
+                                    <p><?= htmlspecialchars($event['event_name']) ?></p>
                                 </div>
                                 <div class="detail-item">
                                     <label>Target Metric</label>
@@ -167,7 +168,7 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
                                 </div>
                                 <div class="detail-item">
                                     <label>Extraneous Activity</label>
-                                    <p><?= htmlspecialchars($event['is_extraneous']) ?></p>
+                                    <p><?= htmlspecialchars($event['extraneous']) ?></p>
                                 </div>
                             </div>
                         </div>
@@ -182,21 +183,19 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
                             <div class="detail-grid">
                                 <div class="detail-item">
                                     <label>Start Date & Time</label>
-                                    <p><?= date('F j, Y', strtotime($event['start_date'])) ?> at
-                                        <?= date('g:i A', strtotime($event['start_time'])) ?></p>
+                                    <p><?= date('F j, Y g:i A', strtotime($event['start_datetime'])) ?></p>
                                 </div>
                                 <div class="detail-item">
                                     <label>End Date & Time</label>
-                                    <p><?= date('F j, Y', strtotime($event['end_date'])) ?> at
-                                        <?= date('g:i A', strtotime($event['end_time'])) ?></p>
+                                    <p><?= date('F j, Y g:i A', strtotime($event['end_datetime'])) ?></p>
                                 </div>
                                 <div class="detail-item full-width">
-                                    <label>Venue/Platform</label>
+                                    <label>Venue / Platform</label>
                                     <p><?= htmlspecialchars($event['venue_platform']) ?></p>
                                 </div>
                                 <div class="detail-item full-width">
                                     <label>Participants</label>
-                                    <p><?= htmlspecialchars($event['num_participants']) ?></p>
+                                    <p><?= htmlspecialchars($event['participants']) ?></p>
                                 </div>
                                 <div class="detail-item">
                                     <label>Payment Collection</label>
@@ -213,8 +212,8 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
                                         <p><?= htmlspecialchars($event['participant_range']) ?></p>
                                     </div>
                                     <div class="detail-item">
-                                        <label>Duration (>12 hours)</label>
-                                        <p><?= $event['duration'] == 1 ? 'Yes' : 'No' ?></p>
+                                        <label>Overnight / Duration &gt;12 hours</label>
+                                        <p><?= $event['overnight'] == 1 ? 'Yes' : 'No' ?></p>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -227,41 +226,106 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
                             <h2>📄 Required Documents</h2>
                             <span class="badge badge-success"><?= $uploaded_docs ?>/<?= $total_docs ?> Uploaded</span>
                         </div>
+
                         <div class="card-body">
                             <div class="doc-checklist">
-                                <?php foreach ($required_docs as $doc): ?>
-                                    <div class="doc-item status-<?= strtolower($doc['status']) ?>">
+                                <p class="doc-help">
+                                    Upload the required documents. If no file is uploaded, you may preview or download
+                                    the
+                                    template.
+                                </p>
+                                <?php foreach ($required_docs as $doc):
+                                    $has_upload = !empty($doc['file_path']);
+                                    $view_url = $has_upload ? $doc['file_path'] : $doc['template_url'];
+
+                                    // Convert Google Docs template link to exportable PDF (only if no uploaded file)
+                                    if (!$has_upload && !empty($doc['template_url']) && str_contains($doc['template_url'], 'docs.google.com')) {
+                                        if (preg_match('/\/d\/([a-zA-Z0-9-_]+)/', $doc['template_url'], $matches)) {
+                                            $doc_id = $matches[1];
+                                            $view_url = "https://docs.google.com/document/d/$doc_id/export?format=pdf";
+                                        }
+                                    }
+
+                                    ?>
+                                    <div class="doc-item status-<?= strtolower($doc['doc_status']) ?>">
+
                                         <div class="doc-checkbox">
-                                            <?php if ($doc['status'] === 'Uploaded'): ?>
-                                                <span class="check">✓</span>
-                                            <?php elseif ($doc['status'] === 'Pending'): ?>
-                                                <span class="pending">○</span>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="doc-info">
-                                            <h4><?= htmlspecialchars($doc['name']) ?></h4>
-                                            <?php if ($doc['code']): ?>
-                                                <span class="doc-code"><?= htmlspecialchars($doc['code']) ?></span>
-                                            <?php endif; ?>
-                                            <span class="doc-status"><?= htmlspecialchars($doc['status']) ?></span>
-                                        </div>
-                                        <div class="doc-actions">
-                                            <?php if ($doc['status'] === 'Uploaded'): ?>
-                                                <button class="btn-icon"
-                                                    onclick="previewDocument('<?= htmlspecialchars($doc['url']) ?>', '<?= htmlspecialchars($doc['name']) ?>')"
-                                                    title="Preview">
-                                                    👁️
-                                                </button>
-                                                <a href="<?= htmlspecialchars($doc['url']) ?>" class="btn-icon" download
-                                                    title="Download">
-                                                    ⬇️
-                                                </a>
+
+                                            <?php if ($doc['doc_status'] === 'approved'): ?>
+
+                                                <span class="status-approved">✔</span>
+
+                                            <?php elseif ($doc['doc_status'] === 'submitted'): ?>
+
+                                                <span class="status-submitted">⏳</span>
+
                                             <?php else: ?>
-                                                <a href="<?= htmlspecialchars($doc['url']) ?>" class="btn-icon" target="_blank"
-                                                    title="Download Template">
-                                                    📄
+
+                                                <span class="status-pending">•</span>
+
+                                            <?php endif; ?>
+
+                                        </div>
+
+                                        <div class="doc-info">
+                                            <h4><?= htmlspecialchars($doc['req_name']) ?></h4>
+
+                                            <?php if (!empty($doc['req_desc'])): ?>
+                                                <span class="doc-code"><?= htmlspecialchars($doc['req_desc']) ?></span>
+                                            <?php endif; ?>
+
+                                            <span class="doc-status"><?= ucfirst($doc['doc_status']) ?></span>
+                                        </div>
+
+                                        <div class="doc-actions">
+
+                                            <!-- View Button -->
+                                            <button class="btn-icon" onclick="previewDocument(
+        '<?= htmlspecialchars($has_upload ? $doc['file_path'] : $doc['template_url'], ENT_QUOTES) ?>',
+        '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
+        '<?= htmlspecialchars(!$has_upload && empty($doc['template_url']) ? 'No template available for this document.' : '', ENT_QUOTES) ?>'
+    )">
+                                                👁 View
+                                            </button>
+
+                                            <!-- Download Uploaded File -->
+                                            <?php if ($has_upload): ?>
+                                                <a href="<?= htmlspecialchars($doc['file_path'], ENT_QUOTES) ?>"
+                                                    class="btn-icon" target="_blank">
+                                                    ⬇ Download Uploaded
                                                 </a>
                                             <?php endif; ?>
+
+                                            <!-- Download Template -->
+                                            <?php if (!empty($doc['template_url'])): ?>
+                                                <a href="<?= htmlspecialchars($doc['template_url'], ENT_QUOTES) ?>"
+                                                    class="btn-icon" target="_blank">
+                                                    📄 Template
+                                                </a>
+                                            <?php endif; ?>
+
+                                            <!-- Upload / Replace -->
+                                            <?php if ($doc['doc_status'] !== 'approved'): ?>
+                                                <form action="create_requirement.php" method="POST"
+                                                    enctype="multipart/form-data" class="upload-form">
+                                                    <input type="hidden" name="req_id" value="<?= $doc['req_id'] ?>">
+                                                    <label class="btn-upload">
+                                                        ⬆ Upload
+                                                        <input type="file" name="document" hidden required
+                                                            onchange="this.form.submit()">
+                                                    </label>
+                                                </form>
+                                            <?php endif; ?>
+
+                                            <!-- Delete Uploaded File -->
+                                            <?php if ($has_upload): ?>
+                                                <form action="delete_requirement.php" method="POST"
+                                                    onsubmit="return confirm('Remove uploaded document?');">
+                                                    <input type="hidden" name="req_id" value="<?= $doc['req_id'] ?>">
+                                                    <button class="btn-danger-small">🗑 Remove</button>
+                                                </form>
+                                            <?php endif; ?>
+
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
@@ -270,7 +334,6 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
                     </section>
 
                 </div>
-                <!-- END LEFT COLUMN -->
 
                 <!-- RIGHT COLUMN -->
                 <div class="col-right">
@@ -278,7 +341,7 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
                     <!-- Progress Tracker -->
                     <aside class="tracker-card">
                         <h2>Progress Tracker</h2>
-                        <div class="ring">
+                        <div class="ring" style="--progress: <?= $progress_percentage ?>;">
                             <div class="ring-inner"
                                 style="display: flex; align-items: center; justify-content: center;">
                                 <span
@@ -290,8 +353,8 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
                                     class="t-score"><?= $total_docs ?></span></div>
                             <div class="t-row"><span>Uploaded</span><span class="t-score"><?= $uploaded_docs ?></span>
                             </div>
-                            <div class="t-row"><span>Pending</span><span
-                                    class="t-score"><?= $total_docs - $uploaded_docs ?></span></div>
+                            <div class="t-row"><span>Pending</span><span class="t-score"><?= $pending_docs ?></span>
+                            </div>
                             <div class="t-row"><span>Completion</span><span
                                     class="t-score"><?= $progress_percentage ?>%</span></div>
                         </div>
@@ -322,43 +385,54 @@ $progress_percentage = round(($uploaded_docs / $total_docs) * 100);
 
     <script src="assets/script/layout.js?v=1"></script>
     <script>
-        function previewDocument(url, name) {
+        function previewDocument(url, name, noTemplateMsg = '') {
             const modal = document.getElementById('docPreviewModal');
             const frame = document.getElementById('docFrame');
             const title = document.getElementById('modalTitle');
 
             title.textContent = name;
 
-            // Use Google Docs Viewer for better PDF preview
-            if (url.endsWith('.pdf') || url.includes('tinyurl')) {
-                frame.src = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+
+            if (!url || noTemplateMsg) {
+                frame.style.display = 'none';
+
+                let msgEl = document.getElementById('modalMessage');
+                if (!msgEl) {
+                    msgEl = document.createElement('p');
+                    msgEl.id = 'modalMessage';
+                    msgEl.style.padding = '1rem';
+                    msgEl.style.textAlign = 'center';
+                    msgEl.style.color = '#555';
+                    document.querySelector('#docPreviewModal .modal-body').appendChild(msgEl);
+                }
+                msgEl.textContent = noTemplateMsg;
+
             } else {
+                frame.style.display = 'block';
+                let msgEl = document.getElementById('modalMessage');
+                if (msgEl) msgEl.textContent = '';
+
+                frame.style.display = 'block';
                 frame.src = url;
             }
 
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
+            modal.classList.add("active");
         }
 
         function closePreview() {
+
             const modal = document.getElementById('docPreviewModal');
             const frame = document.getElementById('docFrame');
 
             modal.classList.remove('active');
-            frame.src = '';
-            document.body.style.overflow = '';
+
+            // stop document from continuing to load
+            frame.src = "";
+
         }
 
-        function confirmDelete() {
-            if (confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
-                alert('Event deleted successfully! (This is a placeholder)');
-                window.location.href = 'home.php';
-            }
-        }
-
-        // Close modal on Escape key
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") {
                 closePreview();
             }
         });

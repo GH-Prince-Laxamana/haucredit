@@ -110,6 +110,7 @@ try {
         req_name VARCHAR(255) NOT NULL,
         req_desc TEXT NULL,
         file_path VARCHAR(255) NULL,
+        template_url VARCHAR(255) NULL,
         doc_status ENUM('pending','submitted','approved','rejected') DEFAULT 'pending',
         submitted_at DATETIME NULL,
         reviewed_at DATETIME NULL,

@@ -21,6 +21,8 @@ $stmt = $conn->prepare("
         end_datetime,
         participants,
         event_status,
+        docs_total,
+        docs_uploaded,
         created_at
     FROM events
     WHERE user_id = ?

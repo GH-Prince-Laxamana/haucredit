@@ -40,24 +40,24 @@ $requirements_map = [
     'Virtual Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary'],
     'Community Service - On-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'OCES Annex A Form'],
     'Community Service - Virtual Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'OCES Annex A Form'],
-    'Off-Campus' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
-    'Community Service - Off-Campus' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+    'Off-Campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+    'Community Service - Off-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
   ],
   'Student-Initiated Activity' => [
     'On-campus Activity' => ['Program Flow and/or Itinerary', 'Planned Budget'],
     'Virtual Activity' => ['Program Flow and/or Itinerary', 'Planned Budget'],
     'Community Service - On-campus Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'OCES Annex A Form'],
     'Community Service - Virtual Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'OCES Annex A Form'],
-    'Off-Campus' => ['Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
-    'Community Service - Off-Campus' => ['Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+    'Off-Campus Activity' => ['Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+    'Community Service - Off-campus Activity' => ['Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
   ],
   'Participation' => [
     'On-campus Activity' => [],
     'Virtual Activity' => [],
     'Community Service - On-campus Activity' => ['OCES Annex A Form'],
     'Community Service - Virtual Activity' => ['OCES Annex A Form'],
-    'Off-Campus' => ['Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance'],
-    'Community Service - Off-Campus' => ['Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+    'Off-Campus Activity' => ['Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance'],
+    'Community Service - Off-campus Activity' => ['Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
   ]
 ];
 
@@ -112,16 +112,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $background = $_SESSION['background'];
     $activity_type = $_SESSION['activity_type'];
 
+    $requirements_templates = [
+      'Approval Letter from Dean' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit?tab=t.0',
+      'Program Flow and/or Itinerary' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit?tab=t.0',
+      'Parental Consent' => 'https://docs.google.com/document/d/1rCQbqIH1YFUxekaTCkIYTx3wxUnEKoHUxofG5c7K_1s/edit?tab=t.0',
+      'Letter of Undertaking' => 'https://docs.google.com/document/d/1vNsUTnyTeYo9sF_p6nvJCOOouWt7O7Du8m9OxbC4LZc/edit?tab=t.0',
+      'Planned Budget' => '',
+      'List of Participants' => '',
+      'CHEd Certificate of Compliance' => 'https://docs.google.com/document/d/1gdHMH0iFZpS3OFwoG8w1r8DZoMh_oeXB4nN22kQt21o/edit?tab=t.0',
+      'OCES Annex A Form' => ''
+    ];
+
     $checklist = $requirements_map[$background][$activity_type] ?? [];
 
     if (!empty($checklist)) {
       $req_stmt = $conn->prepare("
-        INSERT INTO requirements (event_id, req_name)
-        VALUES (?, ?)
+        INSERT INTO requirements (event_id, req_name, template_url)
+        VALUES (?, ?, ?)
     ");
 
       foreach ($checklist as $req_name) {
-        $req_stmt->bind_param("is", $event_id, $req_name);
+        $template_url = $requirements_templates[$req_name] ?? null;
+        $req_stmt->bind_param("iss", $event_id, $req_name, $template_url);
         $req_stmt->execute();
       }
     }
