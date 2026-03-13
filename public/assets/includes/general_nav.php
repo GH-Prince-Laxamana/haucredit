@@ -4,7 +4,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
 <aside class="sidebar">
-    <img class="avatar" src="assets/images/avatar.jpg" alt="HAUCREDIT mark">
+    <img class="avatar" src="assets/profiles/<?= htmlspecialchars($_SESSION['profile_pic'] ?? 'default.png') ?>" alt="<?= $username ?>">
 
     <div class="brand">
         <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">

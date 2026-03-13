@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-
+// delete later maybe
     const checkboxes = document.querySelectorAll(".req-checkbox");
     const progressFill = document.querySelector(".progress-fill");
     const progressText = document.querySelector(".progress-text");

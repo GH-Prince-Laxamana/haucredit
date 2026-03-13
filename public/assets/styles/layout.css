@@ -77,8 +77,10 @@ body {
   width: 65px;
   height: 65px;
   border-radius: 50%;
-  background: rgba(249, 243, 234, .35);
-  border: 2px solid rgba(194, 161, 77, .55);
+  object-fit: cover; 
+  background: rgba(249, 243, 234, 0.35);
+  border: 1px solid rgba(194, 161, 77, 0.55);
+  display: block; 
   margin: 10px auto;
 }
 

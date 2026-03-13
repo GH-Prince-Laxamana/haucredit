@@ -7,9 +7,9 @@ require_once dirname(__DIR__, 2) . "/app/script/database.php";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $id = $_POST['id'] ?? null;
-    $status = $_POST['status'] ?? null;
+    $event_status = $_POST['event_status'] ?? null;
 
-    if ($id !== null && $status !== null) {
+    if ($id !== null && $event_status !== null) {
 
         $stmt = $conn->prepare("
         UPDATE requirements
@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         WHERE req_id = ?
         ");
 
-        $stmt->bind_param("ii", $status, $id);
+        $stmt->bind_param("ii", $event_status, $id);
         $stmt->execute();
 
         echo "success";

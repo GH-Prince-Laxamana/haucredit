@@ -51,10 +51,10 @@ if (isset($_POST["upload_photo"])) {
         if (move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $target)) {
 
             $stmt = $conn->prepare("
-UPDATE users
-SET profile_pic=?
-WHERE user_id=?
-");
+                                    UPDATE users
+                                    SET profile_pic=?
+                                    WHERE user_id=?
+                                    ");
 
             $stmt->bind_param("si", $newName, $user_id);
             $stmt->execute();
@@ -97,10 +97,10 @@ if (isset($_POST["change_password"])) {
     $hash = password_hash($new, PASSWORD_DEFAULT);
 
     $stmt = $conn->prepare("
-UPDATE users
-SET user_password=?
-WHERE user_id=?
-");
+                            UPDATE users
+                            SET user_password=?
+                            WHERE user_id=?
+                            ");
 
     $stmt->bind_param("si", $hash, $user_id);
     $stmt->execute();

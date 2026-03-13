@@ -4,9 +4,9 @@
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $db_server = "localhost";
-$db_user   = "root";
-$db_pass   = "";
-$db_name   = "haucredit_db";
+$db_user = "root";
+$db_pass = "";
+$db_name = "haucredit_db";
 
 try {
 
@@ -78,6 +78,9 @@ try {
         distance VARCHAR(100) NULL,
         participant_range VARCHAR(50) NULL,
         overnight TINYINT(1) NULL,
+        event_status ENUM('Draft','Pending Review','Approved','Rejected') NOT NULL DEFAULT 'Draft',
+        docs_total INT DEFAULT 0,
+        docs_uploaded INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -101,38 +104,19 @@ try {
 
 
     /* ================= REQUIREMENTS ================= */
-
     CREATE TABLE IF NOT EXISTS requirements (
         req_id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
         event_id INT NOT NULL,
         req_name VARCHAR(255) NOT NULL,
         req_desc TEXT NULL,
-        req_date DATE NOT NULL,
-        req_done TINYINT(1) DEFAULT 0,
+        file_path VARCHAR(255) NULL,
+        doc_status ENUM('pending','submitted','approved','rejected') DEFAULT 'pending',
+        submitted_at DATETIME NULL,
+        reviewed_at DATETIME NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
         INDEX idx_event (event_id),
-        INDEX idx_user (user_id),
-
-        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
         FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-
-    /* ================= EVENT PROGRESS ================= */
-
-    CREATE TABLE IF NOT EXISTS event_progress (
-        progress_id INT AUTO_INCREMENT PRIMARY KEY,
-        event_id INT NOT NULL,
-        req_id INT NOT NULL,
-        status ENUM('pending','submitted','approved','rejected') DEFAULT 'pending',
-        file_path VARCHAR(255) NULL,
-        submitted_at DATETIME NULL,
-        reviewed_at DATETIME NULL,
-
-        FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
-        FOREIGN KEY (req_id) REFERENCES requirements(req_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -165,7 +149,8 @@ try {
 
     /* ================= CLEAR MULTI QUERY RESULTS ================= */
 
-    while ($conn->more_results() && $conn->next_result()) {}
+    while ($conn->more_results() && $conn->next_result()) {
+    }
 
     /* ================= CREATE DEFAULT ADMIN ================= */
 

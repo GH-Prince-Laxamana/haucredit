@@ -34,25 +34,57 @@ foreach ($ce_fields as $field) {
   $formData[$field] = $_SESSION[$field] ?? '';
 }
 
+$requirements_map = [
+  'OSA-Initiated Activity' => [
+    'On-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary'],
+    'Virtual Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary'],
+    'Community Service - On-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'OCES Annex A Form'],
+    'Community Service - Virtual Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'OCES Annex A Form'],
+    'Off-Campus' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+    'Community Service - Off-Campus' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+  ],
+  'Student-Initiated Activity' => [
+    'On-campus Activity' => ['Program Flow and/or Itinerary', 'Planned Budget'],
+    'Virtual Activity' => ['Program Flow and/or Itinerary', 'Planned Budget'],
+    'Community Service - On-campus Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'OCES Annex A Form'],
+    'Community Service - Virtual Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'OCES Annex A Form'],
+    'Off-Campus' => ['Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+    'Community Service - Off-Campus' => ['Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+  ],
+  'Participation' => [
+    'On-campus Activity' => [],
+    'Virtual Activity' => [],
+    'Community Service - On-campus Activity' => ['OCES Annex A Form'],
+    'Community Service - Virtual Activity' => ['OCES Annex A Form'],
+    'Off-Campus' => ['Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance'],
+    'Community Service - Off-Campus' => ['Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+  ]
+];
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
   foreach ($ce_fields as $field) {
     $_SESSION[$field] = $_POST[$field] ?? null;
   }
 
   if (isset($_POST['create_event'])) {
-    $stmt = $conn->prepare("
-            INSERT INTO events (
-                user_id, organizing_body, background, activity_type, series,
-                nature, event_name, start_datetime, end_datetime,
-                participants, venue_platform, extraneous, collect_payments, target_metric,
-                distance, participant_range, overnight
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
 
-    $organizing_body_json = isset($_SESSION['organizing_body']) ? json_encode($_SESSION['organizing_body']) : null;
+    $stmt = $conn->prepare("
+        INSERT INTO events (
+            user_id, organizing_body, background, activity_type, series,
+            nature, event_name, start_datetime, end_datetime,
+            participants, venue_platform, extraneous, collect_payments, target_metric,
+            distance, participant_range, overnight, event_status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+
+    $organizing_body_json = isset($_SESSION['organizing_body'])
+      ? json_encode($_SESSION['organizing_body'])
+      : null;
+
+    $event_status = "Pending Review";
 
     $stmt->bind_param(
-      "issssssssisssssss",
+      "isssssssssssssssis",
       $_SESSION["user_id"],
       $organizing_body_json,
       $_SESSION['background'],
@@ -69,12 +101,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $_SESSION['target_metric'],
       $_SESSION['distance'],
       $_SESSION['participant_range'],
-      $_SESSION['overnight']
+      $_SESSION['overnight'],
+      $event_status
     );
 
     $stmt->execute();
 
     $event_id = $conn->insert_id;
+
+    $background = $_SESSION['background'];
+    $activity_type = $_SESSION['activity_type'];
+
+    $checklist = $requirements_map[$background][$activity_type] ?? [];
+
+    if (!empty($checklist)) {
+      $req_stmt = $conn->prepare("
+        INSERT INTO requirements (event_id, req_name)
+        VALUES (?, ?)
+    ");
+
+      foreach ($checklist as $req_name) {
+        $req_stmt->bind_param("is", $event_id, $req_name);
+        $req_stmt->execute();
+      }
+    }
+
+    $docs_total = count($checklist);
+    $conn->query("UPDATE events SET docs_total = $docs_total WHERE event_id = $event_id");
+
     $end = $_SESSION['end_datetime'] ?: null;
     $notes = "Event created via Event Manager";
 
@@ -104,6 +158,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     exit();
   }
 }
+
+
 ?>
 
 <!DOCTYPE html>
