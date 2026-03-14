@@ -4,7 +4,12 @@ require_once "../app/database.php";
 
 date_default_timezone_set('Asia/Manila');
 
-$user_id = $_SESSION['user_id'] ?? 1;
+if (!isset($_SESSION["user_id"])) {
+    header("Location: index.php");
+    exit();
+}
+
+$user_id = $_SESSION["user_id"];
 
 /* ================= GET FILTER ================= */
 $event_filter = $_GET['event_id'] ?? null;
@@ -16,6 +21,7 @@ SELECT r.req_id, r.req_name, r.req_desc, r.file_path, r.doc_status, r.created_at
 FROM requirements r
 JOIN events e ON r.event_id = e.event_id
 WHERE e.user_id = ?
+AND e.archived_at IS NULL
 ";
 
 if ($event_filter) {
@@ -36,9 +42,31 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 $requirements = [];
-$events_map = []; // to store event info for links
+/* ================= LOAD EVENTS FOR FILTER ================= */
+
+$events_map = [];
+
+$ev_stmt = $conn->prepare("
+    SELECT event_id, event_name, start_datetime
+    FROM events
+    WHERE user_id = ?
+    AND archived_at IS NULL
+    ORDER BY start_datetime ASC
+");
+
+$ev_stmt->bind_param("i", $user_id);
+$ev_stmt->execute();
+$ev_res = $ev_stmt->get_result();
+
+while ($row = $ev_res->fetch_assoc()) {
+    $events_map[$row['event_id']] = [
+        'name' => $row['event_name'],
+        'start' => $row['start_datetime']
+    ];
+}
 
 while ($row = $result->fetch_assoc()) {
+
     $requirements[] = [
         'id' => $row['req_id'],
         'name' => $row['req_name'],
@@ -50,21 +78,35 @@ while ($row = $result->fetch_assoc()) {
         'event_name' => $row['event_name'],
         'event_start' => $row['start_datetime'],
     ];
-
-    $events_map[$row['event_id']] = [
-        'name' => $row['event_name'],
-        'start' => $row['start_datetime']
-    ];
 }
 
 /* ================= DATE GROUPING ================= */
+
 $today = new DateTime('today');
 $yesterday = (clone $today)->modify('-1 day');
 $tomorrow = (clone $today)->modify('+1 day');
 
 function eventsForDate($requirements, $date)
 {
-    return array_values(array_filter($requirements, fn($r) => substr($r['event_start'], 0, 10) === $date));
+    $filtered = array_filter($requirements, fn($r) => substr($r['event_start'], 0, 10) === $date);
+
+    $events = [];
+
+    foreach ($filtered as $r) {
+        $eventId = $r['event_id'];
+
+        if (!isset($events[$eventId])) {
+            $events[$eventId] = [
+                'event_name' => $r['event_name'],
+                'event_id' => $eventId,
+                'requirements' => []
+            ];
+        }
+
+        $events[$eventId]['requirements'][] = $r;
+    }
+
+    return $events;
 }
 
 $groups = [
@@ -86,9 +128,13 @@ $groups = [
 ];
 
 /* ================= PROGRESS CALCULATION ================= */
+
 $total = count($requirements);
-$completed = count(array_filter($requirements, fn($r) => $r['status'] === 'approved'));
-$percent = $total ? round(($completed / $total) * 100) : 0;
+
+$uploaded = count(array_filter($requirements, fn($r) => $r['status'] === 'uploaded'));
+
+$percent = $total ? round(($uploaded / $total) * 100) : 0;
+
 ?>
 
 <!DOCTYPE html>
@@ -98,15 +144,19 @@ $percent = $total ? round(($completed / $total) * 100) : 0;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Requirements</title>
+
     <link rel="stylesheet" href="assets/styles/layout.css">
     <link rel="stylesheet" href="assets/styles/requirements.css">
 </head>
 
 <body>
+
     <div class="app">
+
         <?php include "assets/includes/general_nav.php"; ?>
 
         <main class="main">
+
             <header class="topbar">
                 <div class="title-wrap">
                     <h1>Requirements</h1>
@@ -114,35 +164,59 @@ $percent = $total ? round(($completed / $total) * 100) : 0;
                 </div>
             </header>
 
-            <!-- ================= PROGRESS TRACKER ================= -->
+            <!-- PROGRESS TRACKER -->
+
             <div class="progress-card">
+
                 <h3>Completion Progress</h3>
-                <p><?= $completed ?> / <?= $total ?> Completed</p>
+
+                <p><?= $uploaded ?> / <?= $total ?> Uploaded</p>
+
                 <div class="progress-bar">
                     <div class="progress-fill" style="width:<?= $percent ?>%"></div>
+                    <p><?= $percent ?>%</p>
                 </div>
-                <p><?= $percent ?>%</p>
+
+
+
             </div>
 
-            <!-- ================= EVENT FILTER ================= -->
+
+            <!-- EVENT FILTER -->
+
             <div class="filter-bar">
+
                 <form method="GET">
+
                     <label>Filter by Event:</label>
+
                     <select name="event_id" onchange="this.form.submit()">
+
                         <option value="">-- All Events --</option>
+
                         <?php foreach ($events_map as $id => $ev): ?>
+
                             <option value="<?= $id ?>" <?= ($event_filter == $id) ? 'selected' : '' ?>>
+
                                 <?= htmlspecialchars($ev['name']) ?> (<?= date('M j, Y', strtotime($ev['start'])) ?>)
+
                             </option>
+
                         <?php endforeach; ?>
+
                     </select>
+
                 </form>
+
             </div>
 
-            <!-- ================= REQUIREMENTS LIST ================= -->
+
+            <!-- REQUIREMENTS LIST -->
+
             <section class="content req-page">
 
                 <?php foreach ($groups as $group): ?>
+
                     <div class="req-group">
 
                         <div class="req-head">
@@ -154,36 +228,63 @@ $percent = $total ? round(($completed / $total) * 100) : 0;
                             <p class="empty-msg">No requirements for this day.</p>
                         <?php endif; ?>
 
-                        <?php foreach ($group['items'] as $req): ?>
-                            <div class="req-card <?= $req['status'] === 'approved' ? 'completed' : '' ?>">
-                                <div class="req-text">
-                                    <div class="req-title">
-                                        <?= htmlspecialchars($req['name']) ?>
-                                    </div>
-                                    <div class="req-sub"><?= htmlspecialchars($req['desc']) ?></div>
-                                    <div class="req-meta">
-                                        <span class="status <?= $req['status'] ?>"><?= ucfirst($req['status']) ?></span>
-                                        <span class="event-link">
-                                            <a href="view_event.php?event_id=<?= $req['event_id'] ?>">View Event</a>
-                                        </span>
-                                    </div>
-                                    <?php if ($req['file_path']): ?>
-                                        <div class="req-file">
-                                            <a href="<?= htmlspecialchars($req['file_path']) ?>" target="_blank">View File</a>
-                                        </div>
-                                    <?php endif; ?>
+                        <?php foreach ($group['items'] as $event):
+                            usort($event['requirements'], function ($a, $b) {
+                                return ($a['status'] === 'uploaded') <=> ($b['status'] === 'uploaded');
+                            }); ?>
+
+
+                            <div class="event-block">
+
+                                <div class="event-header">
+                                    <h3><?= htmlspecialchars($event['event_name']) ?></h3>
+
+                                    <a class="btn-secondary" href="view_event.php?id=<?= $event['event_id'] ?>">
+                                        View Event
+                                    </a>
                                 </div>
+
+                                <?php foreach ($event['requirements'] as $req):
+
+                                    $status = ($req['status'] === 'uploaded') ? 'Uploaded' : 'Pending';
+
+                                    ?>
+                                    <a class="req-card" href="view_event.php?id=<?= $event['event_id'] ?>">
+
+                                        <div>
+                                            <div class="req-title">
+                                                <?= htmlspecialchars($req['name']) ?>
+                                            </div>
+
+                                            <div class="req-sub">
+                                                <?= htmlspecialchars($req['desc']) ?>
+                                            </div>
+                                        </div>
+
+                                        <span class="status <?= strtolower($status) ?>">
+                                            <?= $status ?>
+                                        </span>
+
+                                    </a>
+
+                                <?php endforeach; ?>
+
                             </div>
+
                         <?php endforeach; ?>
 
                     </div>
+
                 <?php endforeach; ?>
 
             </section>
+
         </main>
+
     </div>
 
     <script src="assets/js/requirements.js"></script>
+
 </body>
 
 </html>

@@ -109,11 +109,10 @@ $doc_messages = [
 
             <section class="content view-event-page">
                 <div class="action-btns">
-                    <a href="my_events.php" class="btn-secondary">
+                    <button type="button" class="btn-secondary" onclick="history.back()">
                         Back
-                    </a>
+                    </button>
                 </div>
-                
                 <!-- Status Banner (spans full width) -->
                 <div class="status-banner status-<?= strtolower(str_replace(' ', '-', $event['event_status'])) ?>">
                     <div class="status-content">
