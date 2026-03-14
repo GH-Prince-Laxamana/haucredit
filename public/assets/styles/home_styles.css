@@ -310,24 +310,7 @@
 
   padding: 16px 15px;
   border-radius: 12px;
-  margin-bottom: 12px;
-
-  border: 1px solid var(--border);
-  transition: all .2s ease;
-}
-
-/* .event-card:hover {
-  background: var(--offwhite);
-} */
-.event-card {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
-  gap: 16px;
-
-  padding: 16px 15px;
-  border-radius: 12px;
-  background: var(--surface-2);
+  background: none;
   margin-bottom: 12px;
   border: 1px solid var(--border);
   transition: all 0.2s ease;
