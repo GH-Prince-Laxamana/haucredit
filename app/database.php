@@ -116,17 +116,6 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
 
-        /* ================= ARCHIVED EVENTS ================= */
-
-        "CREATE TABLE IF NOT EXISTS archived_events (
-        archive_id INT AUTO_INCREMENT PRIMARY KEY,
-        event_id INT NOT NULL,
-        archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-        FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-
         /* ================= NOTIFICATIONS ================= */
 
         "CREATE TABLE IF NOT EXISTS notifications (
