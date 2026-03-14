@@ -241,6 +241,24 @@ if (isset($_POST['create_event'])) {
     'OCES Annex A Form' => ''
   ];
 
+  $requirements_descs = [
+    'Approval Letter from Dean' => "Submit this program flow with the adviser's noting signature and approval of your College/School Dean. For Uniwide Institutions, address it to Ms. Iris Ann Castro (OSA Director) through Mr. Paul Ernest D. Carreon (Student Activities Coordinator), and submit it without their signature. There is no need to place the names of Mr. Carreon and Ms. Castro on the approval.",
+
+    'Program Flow and/or Itinerary' => 'If the program is spontaneous (meaning that it does not have a program flow), discuss in outline the guidelines of the event. For Off-Campus Activities, include the Travel Itinerary with the stopovers and indicate the places where you assemble, stop, and arrive (this is different from the event program flow/guidelines)',
+
+    'Parental Consent' => 'Upload as one PDF File. Shall be individually notarized.',
+
+    'Letter of Undertaking' => 'Shall be signed by the adviser. The Person-in-Charge shall always be an employee of the university.',
+
+    'Planned Budget' => 'Discuss the source of budget, projected spending for all resources needed for the activity.',
+
+    'List of Participants' => 'List and sort all students, employees, and guests to attend with their roles to the activity.',
+
+    'CHEd Certificate of Compliance' => 'Shall be notarized. Please view template provided.',
+
+    'OCES Annex A Form' => 'Form required by the Office of Community Extension Services.'
+  ];
+
   $checklist = $requirements_map[$background][$activity_type] ?? [];
 
   $current_reqs = [];
@@ -276,15 +294,15 @@ if (isset($_POST['create_event'])) {
   if (!empty($to_add)) {
 
     $stmt = $conn->prepare(
-      "INSERT INTO requirements (event_id,req_name,template_url)
-       VALUES (?,?,?)"
+      "INSERT INTO requirements (event_id, req_name, template_url, req_desc)
+       VALUES (?, ?, ?, ?)"
     );
 
     foreach ($to_add as $req) {
 
       $template = $requirements_templates[$req] ?? null;
-
-      $stmt->bind_param("iss", $event_id, $req, $template);
+      $desc = $requirements_descs[$req] ?? '';
+      $stmt->bind_param("isss", $event_id, $req, $template, $desc);
       $stmt->execute();
     }
   }

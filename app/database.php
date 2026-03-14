@@ -199,19 +199,26 @@ try {
             "Program Flow and/or Itinerary"
         ];
 
+        $default_requirements_descs = [
+            'Approval Letter from Dean' => "Submit this program flow with the adviser's noting signature and approval of your College/School Dean. For Uniwide Institutions, address it to Ms. Iris Ann Castro (OSA Director) through Mr. Paul Ernest D. Carreon (Student Activities Coordinator), and submit it without their signature. There is no need to place the names of Mr. Carreon and Ms. Castro on the approval.",
+
+            'Program Flow and/or Itinerary' => 'If the program is spontaneous (meaning that it does not have a program flow), discuss in outline the guidelines of the event. For Off-Campus Activities, include the Travel Itinerary with the stopovers and indicate the places where you assemble, stop, and arrive (this is different from the event program flow/guidelines)'
+        ];
+
         $requirements_templates = [
             'Approval Letter from Dean' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit?tab=t.0',
             'Program Flow and/or Itinerary' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit?tab=t.0'
         ];
 
         $req_stmt = $conn->prepare("
-        INSERT INTO requirements (event_id, req_name, template_url, doc_status, created_at)
-        VALUES (?, ?, ?, 'pending', NOW())
-    ");
+            INSERT INTO requirements (event_id, req_name, req_desc, template_url, doc_status, created_at)
+            VALUES (?, ?, ?, ?, 'pending', NOW())
+        ");
 
         foreach ($default_requirements as $req_name) {
+            $req_desc = $default_requirements_descs[$req_name] ?? null;
             $template_url = $requirements_templates[$req_name] ?? null;
-            $req_stmt->bind_param("iss", $event_id, $req_name, $template_url);
+            $req_stmt->bind_param("isss", $event_id, $req_name, $req_desc, $template_url);
             $req_stmt->execute();
         }
 

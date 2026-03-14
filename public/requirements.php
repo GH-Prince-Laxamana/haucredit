@@ -176,40 +176,23 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                     <div class="progress-fill" style="width:<?= $percent ?>%"></div>
                     <p><?= $percent ?>%</p>
                 </div>
-
-
-
             </div>
-
 
             <!-- EVENT FILTER -->
 
-            <div class="filter-bar">
-
+            <div class="filter-bar" id="req-deadlines">
                 <form method="GET">
-
                     <label>Filter by Event:</label>
-
                     <select name="event_id" onchange="this.form.submit()">
-
                         <option value="">-- All Events --</option>
-
                         <?php foreach ($events_map as $id => $ev): ?>
-
                             <option value="<?= $id ?>" <?= ($event_filter == $id) ? 'selected' : '' ?>>
-
                                 <?= htmlspecialchars($ev['name']) ?> (<?= date('M j, Y', strtotime($ev['start'])) ?>)
-
                             </option>
-
                         <?php endforeach; ?>
-
                     </select>
-
                 </form>
-
             </div>
-
 
             <!-- REQUIREMENTS LIST -->
 
@@ -229,76 +212,60 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                         <?php endif; ?>
 
                         <?php foreach ($group['items'] as $event):
-                            usort($event['requirements'], function ($a, $b) {
-                                return ($a['status'] === 'uploaded') <=> ($b['status'] === 'uploaded');
-                            }); ?>
 
+                            usort($event['requirements'], function ($a, $b) {
+
+                                $a_uploaded = ($a['status'] === 'uploaded');
+                                $b_uploaded = ($b['status'] === 'uploaded');
+
+                                if ($a_uploaded !== $b_uploaded) {
+                                    return $a_uploaded <=> $b_uploaded;
+                                }
+
+                                $a_deadline = strtotime($a['deadline'] ?? $a['event_start']);
+                                $b_deadline = strtotime($b['deadline'] ?? $b['event_start']);
+
+                                return $a_deadline <=> $b_deadline;
+                            });
+
+                            ?>
 
                             <div class="event-block">
-                                <?php
-                                $deadlines = array_map(fn($r) => strtotime($r['deadline'] ?? $r['event_start']), $event['requirements']);
-                                $earliest = !empty($deadlines) ? min($deadlines) : strtotime($event['event_start']);
-
-                                $diff = $earliest - time();
-                                $days = floor($diff / 86400);
-                                $hours = floor(($diff % 86400) / 3600);
-
-                                $time_left = [];
-                                if ($days > 0)
-                                    $time_left[] = "$days " . ($days == 1 ? "day" : "days");
-                                if ($hours > 0)
-                                    $time_left[] = "$hours " . ($hours == 1 ? "hour" : "hours");
-
-                                $time_left_str = !empty($time_left) ? implode(", ", $time_left) . " left" : "Due soon";
-                                ?>
-
-                                <div class="event-header">
-
-                                    <h3>
-                                        <?= htmlspecialchars($event['event_name']) ?>:
-                                        <span class="deadline-text">
-                                            <time datetime="<?= date('c', $earliest) ?>">
-                                                 <?= date("g:i A", $earliest) ?>
-                                            </time>
-                                        </span>
-                                    </h3>
-
-                                    <a class="btn-secondary" href="view_event.php?id=<?= $event['event_id'] ?>">
-                                        View Event
-                                    </a>
-                                </div>
-
-
 
                                 <?php foreach ($event['requirements'] as $req):
 
                                     $status = ($req['status'] === 'uploaded') ? 'Uploaded' : 'Pending';
-                                    $deadline = strtotime($req['deadline'] ?? $req['event_start']); // fallback to event_start if no specific deadline
-                                    $diff = $deadline - time();
-
-                                    $days = floor($diff / 86400);
-                                    $hours = floor(($diff % 86400) / 3600);
-
-                                    $time_left = [];
-                                    if ($days > 0)
-                                        $time_left[] = "$days " . ($days == 1 ? "day" : "days");
-                                    if ($hours > 0)
-                                        $time_left[] = "$hours " . ($hours == 1 ? "hour" : "hours");
-
-                                    $time_left_str = !empty($time_left) ? implode(", ", $time_left) . " left" : "Due soon";
+                                    $deadline = strtotime($req['deadline'] ?? $req['event_start']);
 
                                     ?>
 
                                     <a class="req-card" href="view_event.php?id=<?= $event['event_id'] ?>">
 
-                                        <div>
+                                        <div class="req-item">
+
                                             <div class="req-title">
                                                 <?= htmlspecialchars($req['name']) ?>
+
+                                                <?php if (!empty($req['desc'])): ?>
+                                                    <span class="tooltip-icon">
+                                                        <i class="fa-regular fa-circle-question"></i>
+                                                        <span class="tooltip-text">
+                                                            <?= htmlspecialchars($req['desc']) ?>
+                                                        </span>
+                                                    </span>
+                                                <?php endif; ?>
                                             </div>
 
                                             <div class="req-sub">
-                                                <?= htmlspecialchars($req['desc']) ?>
+                                                From <?= htmlspecialchars($event['event_name']) ?>:
+                                                <strong>
+                                                    <time
+                                                        datetime="<?= htmlspecialchars($req['deadline'] ?? $req['event_start']) ?>">
+                                                        <?= date("g:i A", $deadline) ?>
+                                                    </time>
+                                                </strong>
                                             </div>
+
                                         </div>
 
                                         <span class="status <?= strtolower($status) ?>">
@@ -316,15 +283,10 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                     </div>
 
                 <?php endforeach; ?>
-
             </section>
-
         </main>
-
     </div>
-
     <script src="assets/js/requirements.js"></script>
-
 </body>
 
 </html>

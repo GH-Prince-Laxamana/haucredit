@@ -124,7 +124,7 @@
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
   margin-bottom: 14px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .card-header {

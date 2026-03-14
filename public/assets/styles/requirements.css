@@ -111,12 +111,6 @@
   color: var(--text-primary);
 }
 
-.req-sub {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-}
-
 /* =========================
    STATUS
 ========================= */

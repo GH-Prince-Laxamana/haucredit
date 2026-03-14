@@ -267,11 +267,17 @@ $doc_messages = [
                                         </div>
 
                                         <div class="doc-info">
-                                            <h4><?= htmlspecialchars($doc['req_name']) ?></h4>
-
-                                            <?php if (!empty($doc['req_desc'])): ?>
-                                                <span class="doc-code"><?= htmlspecialchars($doc['req_desc']) ?></span>
-                                            <?php endif; ?>
+                                            <h4>
+                                                <?= htmlspecialchars($doc['req_name'] ?? '') ?>
+                                                <?php if (!empty($doc['req_desc'])): ?>
+                                                    <span class="tooltip-icon">
+                                                        <i class="fa-regular fa-circle-question"></i>
+                                                        <span class="tooltip-text">
+                                                            <?= htmlspecialchars($doc['req_desc']) ?>
+                                                        </span>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </h4>
 
                                             <span class="doc-status"><?= ucfirst($doc['doc_status']) ?></span>
                                         </div>

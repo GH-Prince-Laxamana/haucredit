@@ -58,6 +58,11 @@
   color: white;
 }
 
+.home-stats-grid a {
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .home-stat-card {
   background: white;
   border-radius: var(--radius);
@@ -290,6 +295,103 @@
 .home-deadline-date span {
   font-size: 12px;
   color: #64748b;
+}
+
+.event-card-container {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.event-card {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 16px;
+
+  padding: 16px 15px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+
+  border: 1px solid var(--border);
+  transition: all .2s ease;
+}
+
+/* .event-card:hover {
+  background: var(--offwhite);
+} */
+.event-card {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 16px;
+
+  padding: 16px 15px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.event-card:hover {
+  background: var(--offwhite);
+}
+.event-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0; /* needed for text ellipsis */
+}
+
+.event-info {
+  display: flex;
+  flex-direction: column;
+  width: 350px; /* fixed width for title + subtitle */
+  min-width: 0; /* ensures text truncates */
+}
+
+.event-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-sub {
+  font-size: 13px;
+  color: var(--gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 8px 0;
+}
+
+.event-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1; /* takes remaining space */
+  min-width: 0; /* ensures bar shrinks properly */
+}
+
+.home-progress-bar-mini {
+  flex: 1;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.home-progress-fill-mini {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.3s ease;
+}
+
+.req-card {
+  background: none;
 }
 
 @media (max-width: 900px) {
