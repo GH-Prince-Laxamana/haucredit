@@ -113,20 +113,7 @@ try {
 
         INDEX idx_event (event_id),
         FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
-
-
-        /* ================= NOTIFICATIONS ================= */
-
-        "CREATE TABLE IF NOT EXISTS notifications (
-        notification_id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        message TEXT NOT NULL,
-        is_read TINYINT(1) DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
     ];
 
     foreach ($tables as $table) {
