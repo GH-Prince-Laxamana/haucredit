@@ -72,6 +72,7 @@ try {
         distance VARCHAR(100) NULL,
         participant_range VARCHAR(50) NULL,
         overnight TINYINT(1) NULL,
+        has_visitors ENUM('Yes','No') NULL,
         event_status ENUM('Draft','Pending Review','Completed') NOT NULL DEFAULT 'Draft',
         docs_total INT DEFAULT 0,
         docs_uploaded INT DEFAULT 0,

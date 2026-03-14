@@ -25,7 +25,8 @@ $ce_fields = [
   'target_metric',
   'distance',
   'participant_range',
-  'overnight'
+  'overnight',
+  'has_visitors'
 ];
 
 $event_id = $_GET['id'] ?? null;
@@ -108,12 +109,12 @@ if (isset($_POST['create_event'])) {
         organizing_body = ?, background = ?, activity_type = ?, series = ?, nature = ?,
         event_name = ?, start_datetime = ?, end_datetime = ?, participants = ?,
         venue_platform = ?, extraneous = ?, collect_payments = ?, target_metric = ?,
-        distance = ?, participant_range = ?, overnight = ?
+        distance = ?, participant_range = ?, overnight = ?, has_visitors = ?
       WHERE event_id = ? AND user_id = ?
     ");
 
     $stmt->bind_param(
-      "sssssssssssssssiis",
+      "sssssssssssssssisis",
       $organizing_body_json,
       $_SESSION['background'],
       $_SESSION['activity_type'],
@@ -130,6 +131,7 @@ if (isset($_POST['create_event'])) {
       $_SESSION['distance'],
       $_SESSION['participant_range'],
       $_SESSION['overnight'],
+      $_SESSION['has_visitors'],
       $event_id,
       $_SESSION["user_id"]
     );
@@ -170,12 +172,12 @@ if (isset($_POST['create_event'])) {
         user_id, organizing_body, background, activity_type, series,
         nature, event_name, start_datetime, end_datetime,
         participants, venue_platform, extraneous, collect_payments, target_metric,
-        distance, participant_range, overnight, event_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        distance, participant_range, overnight, has_visitors, event_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
     $stmt->bind_param(
-      "isssssssssssssssis",
+      "issssssssssssssssis",
       $_SESSION["user_id"],
       $organizing_body_json,
       $_SESSION['background'],
@@ -193,6 +195,7 @@ if (isset($_POST['create_event'])) {
       $_SESSION['distance'],
       $_SESSION['participant_range'],
       $_SESSION['overnight'],
+      $_SESSION['has_visitors'],
       $event_status
     );
 
@@ -230,6 +233,10 @@ if (isset($_POST['create_event'])) {
   $background = $_SESSION['background'];
   $activity_type = $_SESSION['activity_type'];
 
+  $collect_payments = $_SESSION['collect_payments'] ?? null;
+  $extraneous = $_SESSION['extraneous'] ?? null;
+  $overnight = $_SESSION['overnight'] ?? null;
+
   $requirements_templates = [
     'Approval Letter from Dean' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit',
     'Program Flow and/or Itinerary' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit',
@@ -238,7 +245,11 @@ if (isset($_POST['create_event'])) {
     'Planned Budget' => '',
     'List of Participants' => '',
     'CHEd Certificate of Compliance' => 'https://docs.google.com/document/d/1gdHMH0iFZpS3OFwoG8w1r8DZoMh_oeXB4nN22kQt21o/edit',
-    'OCES Annex A Form' => ''
+    'OCES Annex A Form' => '',
+    'Request Letter for Collection/Selling' => 'https://docs.google.com/document/d/1uA5CrIyGeVlrcw8dBQCpKN2XzyvSOtHU81FmY4XZ6ic/edit',
+    'Medical Clearance of Participants' => '',
+    'Risk Assessment Plan with Emergency Contacts and Emergency Map' => '',
+    'Visitors and Vehicle Lists' => 'https://docs.google.com/document/d/12GynKf48JzB1hPn-xelzkDNYMfDXw3LLqwYkNlavRog/edit'
   ];
 
   $requirements_descs = [
@@ -256,10 +267,44 @@ if (isset($_POST['create_event'])) {
 
     'CHEd Certificate of Compliance' => 'Shall be notarized. Please view template provided.',
 
-    'OCES Annex A Form' => 'Form required by the Office of Community Extension Services.'
+    'OCES Annex A Form' => 'Form required by the Office of Community Extension Services.',
+
+    'Request Letter for Collection/Selling' => 'A letter approved by the College/School Dean should be uploaded here. If you are a uniwide student group, address it to Ms. Iris Ann Castro (OSA Director) through Mr. Paul Ernest D. Carreon (Student Activities Coordinator) submit it without their signature. No need to place our names on the approval.',
+
+    'Medical Clearance of Participants' => 'Medical clearance issued by a licensed physician confirming participants are fit for the activity.',
+
+    'Risk Assessment Plan with Emergency Contacts and Emergency Map' => 'Provide a risk assessment plan including emergency contacts and a map showing the nearest police station, hospital, and LGU units.',
+
+    'Visitors and Vehicle Lists' => 'List of visitors and vehicles entering the campus including names and plate numbers.'
   ];
 
   $checklist = $requirements_map[$background][$activity_type] ?? [];
+
+  if ($collect_payments === 'Yes') {
+    $checklist[] = 'Request Letter for Collection/Selling';
+  }
+
+  /* EXTRANEOUS ACTIVITY */
+
+  if ($extraneous === 'Yes') {
+    $checklist[] = 'Medical Clearance of Participants';
+  }
+
+  /* OVERNIGHT STAY (ONLY OFF-CAMPUS) */
+
+  if ($overnight == 1 && strpos($activity_type, 'Off-Campus') !== false) {
+    $checklist[] = 'Risk Assessment Plan with Emergency Contacts and Emergency Map';
+  }
+
+  /* VISITORS LIST (ONLY ON-CAMPUS) */
+
+  if (strpos($activity_type, 'On-campus') !== false) {
+    if (!empty($_SESSION['has_visitors']) && $_SESSION['has_visitors'] === 'Yes') {
+      $checklist[] = 'Visitors and Vehicle Lists';
+    }
+  }
+
+  $checklist = array_unique($checklist);
 
   $current_reqs = [];
 
@@ -713,6 +758,24 @@ if (isset($_POST['create_event'])) {
               <textarea name="venue_platform" id="venue_platform"
                 required><?= htmlspecialchars($formData['venue_platform']) ?></textarea>
             </div>
+
+            <fieldset class="field"
+              style="display:<?= (strpos($formData['activity_type'], 'On-campus') !== false) ? 'flex' : 'none' ?>;">
+              <label for="has_visitors" class="field-title">Will there be visitors entering the campus?</label>
+              <small class="hint"></small>
+
+              <div class="radio-group inline">
+                <label>
+                  <input type="radio" name="has_visitors" value="Yes" <?= ($formData['has_visitors'] ?? '') === 'Yes' ? 'checked' : '' ?>>
+                  Yes
+                </label>
+
+                <label>
+                  <input type="radio" name="has_visitors" value="No" <?= ($formData['has_visitors'] ?? '') === 'No' ? 'checked' : '' ?>>
+                  No
+                </label>
+              </div>
+            </fieldset>
 
             <fieldset class="field" id="offcampus-block"
               style="display:<?= (strpos($formData['activity_type'], 'Off-Campus') !== false) ? 'block' : 'none' ?>;">
