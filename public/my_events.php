@@ -73,27 +73,6 @@ foreach ($events as $e) {
     elseif ($e['event_phase'] === 'completed')
         $completed++;
 }
-
-// Status helpers
-function status_class(string $event_status): string
-{
-    return match ($event_status) {
-        'Approved' => 'approved',
-        'Pending Review' => 'pending',
-        'Draft' => 'draft',
-        default => 'draft',
-    };
-}
-
-function status_icon(string $event_status): string
-{
-    return match ($event_status) {
-        'Approved' => '✓',
-        'Pending Review' => '⏳',
-        'Draft' => '✏',
-        default => '•',
-    };
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -171,9 +150,20 @@ function status_icon(string $event_status): string
                         $pct = $event['docs_total'] > 0
                             ? round(($event['docs_uploaded'] / $event['docs_total']) * 100)
                             : 0;
+
+                        $search_blob = strtolower(
+                            $event['event_name'] . ' ' .
+                            $event['activity_type'] . ' ' .
+                            $event['nature'] . ' ' .
+                            $event['organizing_body'] . ' ' .
+                            $event['venue_platform'] . ' ' .
+                            date('M j Y', strtotime($event['start_datetime'])) . ' ' .
+                            date('M j Y', strtotime($event['end_datetime']))
+                        );
                         ?>
+
                         <article class="event-card" data-status="<?= $event['event_phase'] ?>"
-                            data-name="<?= strtolower(htmlspecialchars($event['event_name'])) ?>">
+                            data-search="<?= htmlspecialchars($search_blob) ?>">
                             <!-- Card Top Bar -->
                             <div class="event-card-top">
                                 <span class="event-type-tag"><?= htmlspecialchars($event['activity_type']) ?></span>
@@ -220,7 +210,7 @@ function status_icon(string $event_status): string
                                         <span>Documents</span>
                                         <span><?= $event['docs_uploaded'] ?>/<?= $event['docs_total'] ?> uploaded</span>
                                     </div>
-                                    <div class="progress-bar <?= $progress_class ?>">
+                                    <div class="progress-bar">
                                         <?php
                                         $progress_class = '';
                                         if ($pct == 100) {
@@ -290,18 +280,21 @@ function status_icon(string $event_status): string
             let visible = 0;
 
             cards.forEach(card => {
-                const matchFilter = currentFilter === 'all' || card.dataset.status === currentFilter;
-                const matchSearch = card.dataset.name.includes(query);
+                const status = card.dataset.status;
+                const text = card.dataset.search || "";
+
+                const matchFilter = currentFilter === 'all' || status === currentFilter;
+                const matchSearch = text.includes(query);
 
                 if (matchFilter && matchSearch) {
-                    card.style.display = '';
+                    card.style.display = "block"; // force visible
                     visible++;
                 } else {
-                    card.style.display = 'none';
+                    card.style.display = "none"; // hide
                 }
             });
 
-            document.getElementById('emptyState').hidden = visible > 0;
+            document.getElementById('emptyState').hidden = visible !== 0;
         }
     </script>
 </body>

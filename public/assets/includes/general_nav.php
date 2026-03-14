@@ -39,68 +39,33 @@ if ($user_id) {
 
         <!-- Dashboard -->
         <a class="nav-item <?= ($current_page == 'home.php') ? 'active' : '' ?>" href="home.php">
-            <span class="icon">
-                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                    <path
-                        d="M3 13h1v7c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2v-7h1a1 1 0 0 0 .707-1.707l-9-9a.999.999 0 0 0-1.414 0l-9 9A1 1 0 0 0 3 13zm7 7v-5h4v5h-4zm2-15.586 6 6V15l.001 5H16v-5c0-1.103-.897-2-2-2h-4c-1.103 0-2 .897-2 2v5H6v-9.586l6-6z" />
-                </svg>
-            </span>
-            <span>Dashboard</span>
+            <span><i class="fa-regular fa-house"></i> Dashboard</span>
         </a>
 
         <!-- Create Event -->
         <a class="nav-item <?= ($current_page == 'create_event.php') ? 'active' : '' ?>" href="create_event.php">
-            <span class="icon">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-            </span>
-            <span>Create Event</span>
+            <span><i class="fa-solid fa-plus"></i> Create Event</span>
         </a>
 
         <!-- My Events — active on both my_events.php and view_event.php -->
         <a class="nav-item <?= in_array($current_page, ['my_events.php', 'view_event.php']) ? 'active' : '' ?>"
             href="my_events.php">
-            <span class="icon" aria-hidden="true">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-            </span>
-            <span>My Events</span>
+            <span><i class="fa-regular fa-clipboard"></i> My Events</span>
         </a>
 
         <!-- Calendar -->
         <a class="nav-item <?= ($current_page == 'calendar.php') ? 'active' : '' ?>" href="calendar.php">
-            <span class="icon">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-            </span>
-            <span>Calendar</span>
+            <span><i class="fa-regular fa-calendar"></i> Calendar</span>
         </a>
 
         <!-- Requirements -->
         <a class="nav-item <?= ($current_page == 'requirements.php') ? 'active' : '' ?>" href="requirements.php">
-            <span class="icon">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4M7 4h10a2 2 0 012 2v14l-7-3-7 3V6a2 2 0 012-2z" />
-                </svg>
-            </span>
-            <span>Requirements</span>
+            <span><i class="fa-solid fa-list-check"></i> Requirements</span>
         </a>
 
         <!-- About -->
         <a class="nav-item <?= ($current_page == 'about.php') ? 'active' : '' ?>" href="about.php">
-            <span class="icon">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </span>
-            <span>About Us</span>
+            <span><i class="fa-regular fa-circle-question"></i> About Us</span>
         </a>
 
         <!-- Account -->

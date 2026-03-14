@@ -114,12 +114,8 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                 </div>
 
                 <div class="home-top-actions">
-                    <a class="home-primary-btn" href="notifications.php">
-                        <i class="fa-regular fa-bell"></i>
-                    </a>
-
                     <a class="home-primary-btn" href="create_event.php">
-                        <span aria-hidden="true">+</span>
+                        <span aria-hidden="true"><i class="fa-solid fa-plus"></i></span>
                         Create Event
                     </a>
                 </div>

@@ -157,7 +157,7 @@ try {
         $distance = null;
         $participant_range = null;
         $overnight = 0;
-        $event_status = "Pending";
+        $event_status = "Pending Review";
 
         $stmt = $conn->prepare("
         INSERT INTO events (
