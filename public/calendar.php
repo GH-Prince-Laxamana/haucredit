@@ -366,13 +366,11 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
         <div class="topbar-left">
           <!-- keep same id used by layout.js -->
           <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
-          <h1 class="mobile-title">Calendar</h1>
-        </div>
-
-        <div class="title-wrap">
-          <!-- desktop shows both h1 + p, mobile shows only p here -->
-          <h1 class="desktop-title">Calendar</h1>
-          <p>Plan and track your entries.</p>
+          <!-- <h1 class="mobile-title">Calendar</h1> -->
+          <div class="title-wrap">
+            <h1 class="desktop-title">Calendar</h1>
+            <p>Plan and track your entries.</p>
+          </div>
         </div>
       </header>
 
@@ -508,7 +506,7 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
           </div>
         </div>
 
-        <aside class="tracker">
+        <!-- <aside class="tracker">
           <h2>Progress<br>Tracker</h2>
           <div class="ring" aria-hidden="true">
             <div class="ring-inner"></div>
@@ -522,7 +520,7 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
             <div class="t-row"><span>Upcoming this month</span><span class="t-score"
                 id="tUpcoming"><?php echo (int) $s["upcoming"]; ?></span></div>
           </div>
-        </aside>
+        </aside> -->
       </section>
 
       <?php include 'assets/includes/footer.php' ?>

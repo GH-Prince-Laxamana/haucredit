@@ -113,15 +113,15 @@ foreach ($events as $e) {
                         <span class="summary-num"><?= $total_events ?></span>
                         <span class="summary-label">Total Events</span>
                     </div>
-                    <div class="summary-card summary-active">
+                    <div class="summary-card">
                         <span class="summary-num"><?= $active ?></span>
                         <span class="summary-label">Active</span>
                     </div>
-                    <div class="summary-card summary-pending">
+                    <div class="summary-card">
                         <span class="summary-num"><?= $pending ?></span>
                         <span class="summary-label">Pending Review</span>
                     </div>
-                    <div class="summary-card summary-completed">
+                    <div class="summary-card">
                         <span class="summary-num"><?= $completed ?></span>
                         <span class="summary-label">Completed</span>
                     </div>

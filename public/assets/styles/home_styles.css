@@ -219,17 +219,17 @@
 
 .home-status-badge.active {
   background: rgba(5, 150, 105, 0.1);
-  color: #059669;
+  color: var(--blue);
 }
 
 .home-status-badge.pending {
   background: rgba(217, 119, 6, 0.1);
-  color: #d97706;
+  color: var(--orange);
 }
 
-.home-status-badge.upcoming {
+.home-status-badge.completed {
   background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  color: var(--green);
 }
 
 .home-btn-view {
