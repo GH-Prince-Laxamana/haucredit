@@ -8,9 +8,10 @@ function send_security_headers(): void
         "object-src 'none'",
         "frame-ancestors 'self'",
         "img-src 'self' data:",
-        "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
-        "script-src 'self' https://cdnjs.cloudflare.com",
-        "connect-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "script-src 'self' https://kit.fontawesome.com",
+        "font-src 'self' https://ka-f.fontawesome.com",
+        "connect-src 'self' https://ka-f.fontawesome.com https://kit.fontawesome.com",
         "form-action 'self'",
         "upgrade-insecure-requests"
     ]);

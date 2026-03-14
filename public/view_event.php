@@ -74,7 +74,6 @@ $doc_messages = [
     <title>View Event - HAUCREDIT</title>
     <link rel="stylesheet" href="assets/styles/layout.css" />
     <link rel="stylesheet" href="assets/styles/view_event.css" />
-    <script src="https://kit.fontawesome.com/1f718fe609.js" crossorigin="anonymous"></script>
 </head>
 
 <body>

@@ -3,6 +3,26 @@ session_start();
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
 send_security_headers();
+
+$profile_pic = "default.jpg";
+
+if (isset($_SESSION["user_id"])) {
+
+    $user_id = $_SESSION["user_id"];
+
+    $profile_stmt = $conn->prepare("
+        SELECT profile_pic
+        FROM users
+        WHERE user_id=?
+    ");
+
+    $profile_stmt->bind_param("i", $user_id);
+    $profile_stmt->execute();
+    $user_profile = $profile_stmt->get_result()->fetch_assoc();
+
+    $profile_pic = $user_profile['profile_pic'] ?? "default.jpg";
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

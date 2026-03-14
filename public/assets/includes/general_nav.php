@@ -1,10 +1,30 @@
 <?php
+$user_id = $_SESSION["user_id"] ?? null;
 $username = htmlspecialchars((string) ($_SESSION["username"] ?? ""), ENT_QUOTES, "UTF-8");
 $current_page = basename($_SERVER['PHP_SELF']);
+
+$profile_pic = "default.jpg";
+if ($user_id) {
+    $profile_stmt = $conn->prepare("
+        SELECT profile_pic
+        FROM users
+        WHERE user_id=?
+    ");
+
+    $profile_stmt->bind_param("i", $user_id);
+    $profile_stmt->execute();
+    $user_profile = $profile_stmt->get_result()->fetch_assoc();
+
+    $profile_pic = $user_profile['profile_pic'] ?? "default.jpg";
+}
 ?>
 
+<head>
+    <script src="https://kit.fontawesome.com/1f718fe609.js" crossorigin="anonymous"></script>
+</head>
+
 <aside class="sidebar">
-    <img class="avatar" src="assets/profiles/<?= htmlspecialchars($_SESSION['profile_pic'] ?? 'default.png') ?>" alt="<?= $username ?>">
+    <img class="avatar" src="assets/profiles/<?= $profile_pic ?>" alt="<?= $username ?>">
 
     <div class="brand">
         <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
@@ -93,8 +113,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         </button>';
             } else {
                 echo '<a class="account-btn" href="profile.php">
-                            <span class="user-dot" aria-hidden="true"></span>
-                            <span>' . $username . '</span>
+                            <span>My Account</span>
                         </a>';
             }
             ?>

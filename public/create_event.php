@@ -34,7 +34,12 @@ $editing = !empty($event_id);
 $formData = [];
 
 if ($event_id) {
-  $stmt = $conn->prepare("SELECT * FROM events WHERE event_id = ? AND user_id = ? LIMIT 1 AND archived_at IS NULL");
+  $stmt = $conn->prepare("SELECT * 
+                          FROM events 
+                          WHERE event_id = ? 
+                          AND user_id = ? 
+                          AND archived_at IS NULL
+                          LIMIT 1");
   $stmt->bind_param("ii", $event_id, $_SESSION["user_id"]);
   $stmt->execute();
   $result = $stmt->get_result();

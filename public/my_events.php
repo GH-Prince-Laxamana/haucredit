@@ -10,23 +10,44 @@ if (!isset($_SESSION["user_id"])) {
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
 $stmt = $conn->prepare("
-    SELECT 
-        event_id,
-        event_name,
-        activity_type,
-        nature,
-        organizing_body,
-        venue_platform,
-        start_datetime,
-        end_datetime,
-        participants,
-        event_status,
-        docs_total,
-        docs_uploaded,
-        created_at
-    FROM events
-    WHERE user_id = ? AND archived_at IS NULL
-    ORDER BY created_at DESC
+SELECT 
+    e.event_id,
+    e.event_name,
+    e.activity_type,
+    e.nature,
+    e.organizing_body,
+    e.venue_platform,
+    e.start_datetime,
+    e.end_datetime,
+    e.participants,
+    e.event_status,
+    e.created_at,
+
+    COUNT(r.req_id) AS docs_total,
+    SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) AS docs_uploaded,
+
+    CASE
+        WHEN SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) < COUNT(r.req_id)
+            THEN 'pending'
+        WHEN e.end_datetime >= NOW()
+            THEN 'active'
+        ELSE 'completed'
+    END AS event_phase
+
+FROM events e
+LEFT JOIN requirements r ON e.event_id = r.event_id
+WHERE e.user_id = ? AND e.archived_at IS NULL
+GROUP BY e.event_id
+
+ORDER BY 
+CASE
+    WHEN SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) < COUNT(r.req_id)
+        THEN 1
+    WHEN e.end_datetime >= NOW()
+        THEN 2
+    ELSE 3
+END,
+e.start_datetime DESC
 ");
 
 $stmt->bind_param("i", $_SESSION["user_id"]);
@@ -42,17 +63,15 @@ while ($row = $result->fetch_assoc()) {
 
 // Summary counts
 $total_events = count($events);
-$approved = $pending = $drafts = 0;
+$active = $pending = $completed = 0;
 
 foreach ($events as $e) {
-    $event_status = $e['event_status'] ?? '';
-
-    if ($event_status === 'Approved')
-        $approved++;
-    elseif ($event_status === 'Pending Review')
+    if ($e['event_phase'] === 'active')
+        $active++;
+    elseif ($e['event_phase'] === 'pending')
         $pending++;
-    elseif ($event_status === 'Draft')
-        $drafts++;
+    elseif ($e['event_phase'] === 'completed')
+        $completed++;
 }
 
 // Status helpers
@@ -115,35 +134,32 @@ function status_icon(string $event_status): string
                         <span class="summary-num"><?= $total_events ?></span>
                         <span class="summary-label">Total Events</span>
                     </div>
-                    <div class="summary-card summary-approved">
-                        <span class="summary-num"><?= $approved ?></span>
-                        <span class="summary-label">Approved</span>
+                    <div class="summary-card summary-active">
+                        <span class="summary-num"><?= $active ?></span>
+                        <span class="summary-label">Active</span>
                     </div>
                     <div class="summary-card summary-pending">
                         <span class="summary-num"><?= $pending ?></span>
                         <span class="summary-label">Pending Review</span>
                     </div>
-                    <div class="summary-card summary-draft">
-                        <span class="summary-num"><?= $drafts ?></span>
-                        <span class="summary-label">Drafts</span>
+                    <div class="summary-card summary-completed">
+                        <span class="summary-num"><?= $completed ?></span>
+                        <span class="summary-label">Completed</span>
                     </div>
                 </div>
 
                 <!-- Filter & Search Bar -->
                 <div class="list-toolbar">
                     <div class="search-wrap">
-                        <span class="search-icon">🔍</span>
+                        <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
                         <input type="text" id="searchInput" class="search-input" placeholder="Search events..."
                             oninput="filterEvents()" />
                     </div>
                     <div class="filter-tabs" id="filterTabs">
-                        <button class="filter-tab active" data-filter="all"
-                            onclick="setFilter(this, 'all')">All</button>
-                        <button class="filter-tab" data-filter="approved"
-                            onclick="setFilter(this, 'approved')">Approved</button>
-                        <button class="filter-tab" data-filter="pending"
-                            onclick="setFilter(this, 'pending')">Pending</button>
-                        <button class="filter-tab" data-filter="draft" onclick="setFilter(this, 'draft')">Draft</button>
+                        <button class="filter-tab active" onclick="setFilter(this,'all')">All Events</button>
+                        <button class="filter-tab" onclick="setFilter(this,'active')">Active</button>
+                        <button class="filter-tab" onclick="setFilter(this,'pending')">Pending</button>
+                        <button class="filter-tab" onclick="setFilter(this,'completed')">Completed</button>
                     </div>
                 </div>
 
@@ -155,18 +171,15 @@ function status_icon(string $event_status): string
                         $pct = $event['docs_total'] > 0
                             ? round(($event['docs_uploaded'] / $event['docs_total']) * 100)
                             : 0;
-                        $sc = status_class($event['event_status']);
-                        $si = status_icon($event['event_status']);
-                        $days_left = (strtotime($event['start_datetime']) - time()) / 86400;
                         ?>
-                        <article class="event-card" data-status="<?= $sc ?>"
+                        <article class="event-card" data-status="<?= $event['event_phase'] ?>"
                             data-name="<?= strtolower(htmlspecialchars($event['event_name'])) ?>">
                             <!-- Card Top Bar -->
                             <div class="event-card-top">
                                 <span class="event-type-tag"><?= htmlspecialchars($event['activity_type']) ?></span>
-                                <span class="event-status status-<?= $sc ?>">
+                                <span class="event-status status-<?= $event['event_phase'] ?>">
                                     <span class="status-dot"></span>
-                                    <?= htmlspecialchars($event['event_status']) ?>
+                                    <span class="status-text"><?= ucfirst($event['event_phase']) ?></span>
                                 </span>
                             </div>
 
@@ -176,15 +189,22 @@ function status_icon(string $event_status): string
 
                                 <div class="event-meta">
                                     <div class="meta-row">
-                                        <span class="meta-icon">🏛️</span>
-                                        <span><?= htmlspecialchars($event['organizing_body']) ?></span>
+                                        <span class="meta-icon"><i class="fa-solid fa-building-columns"></i></span>
+                                        <span>
+                                            <?php
+                                            $org = $event['organizing_body'];
+                                            $org_clean = str_replace(['[', ']', '"', "'"], '', $org);
+                                            $org_clean = str_replace(',', ', ', $org_clean);
+                                            echo htmlspecialchars($org_clean);
+                                            ?>
+                                        </span>
                                     </div>
                                     <div class="meta-row">
-                                        <span class="meta-icon">📍</span>
+                                        <span class="meta-icon"><i class="fa-solid fa-location-dot"></i></span>
                                         <span><?= htmlspecialchars($event['venue_platform']) ?></span>
                                     </div>
                                     <div class="meta-row">
-                                        <span class="meta-icon">📅</span>
+                                        <span class="meta-icon"><i class="fa-solid fa-calendar"></i></span>
                                         <span>
                                             <?= date('M j, Y', strtotime($event['start_datetime'])) ?>
                                             <?php if ($event['start_datetime'] !== $event['end_datetime']): ?>
@@ -200,8 +220,17 @@ function status_icon(string $event_status): string
                                         <span>Documents</span>
                                         <span><?= $event['docs_uploaded'] ?>/<?= $event['docs_total'] ?> uploaded</span>
                                     </div>
-                                    <div class="progress-bar">
-                                        <div class="progress-fill progress-<?= $sc ?>" style="width: <?= $pct ?>%"></div>
+                                    <div class="progress-bar <?= $progress_class ?>">
+                                        <?php
+                                        $progress_class = '';
+                                        if ($pct == 100) {
+                                            $progress_class = 'progress-complete';
+                                        } elseif ($pct >= 50) {
+                                            $progress_class = 'progress-mid';
+                                        }
+                                        ;
+                                        ?>
+                                        <div class="progress-fill <?= $progress_class ?>" style="width: <?= $pct ?>%"></div>
                                     </div>
                                 </div>
                             </div>

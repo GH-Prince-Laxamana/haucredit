@@ -20,7 +20,9 @@
   --surface: #ffffff;
   --surface-2: #fbfaf9;
 
-  --green: rgba(0, 128, 0, 0.625);
+  --green: #16a34a;
+  --blue: #0b7aba;
+  --orange: #d97706;
 }
 
 /* Reset */

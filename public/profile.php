@@ -1,8 +1,6 @@
 <?php
 session_start();
 require_once "../app/database.php";
-require_once "../app/security_headers.php";
-send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
@@ -154,7 +152,7 @@ if (isset($_POST["change_password"])) {
                     <div class="profile-avatar-wrap">
 
                         <img class="profile-avatar"
-                            src="assets/profiles/<?php echo htmlspecialchars($user['profile_pic'] ?? 'default.png'); ?>"
+                            src="assets/profiles/<?php echo htmlspecialchars($user['profile_pic'] ?? 'default.jpg'); ?>"
                             alt="Profile Picture">
 
                         <button class="camera-btn" type="button">

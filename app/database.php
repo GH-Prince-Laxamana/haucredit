@@ -34,7 +34,7 @@ try {
         user_email VARCHAR(100) NOT NULL UNIQUE,
         stud_num VARCHAR(50) NOT NULL UNIQUE,
         org_body VARCHAR(200) NOT NULL,
-        profile_pic VARCHAR(255) DEFAULT 'default.png',
+        profile_pic VARCHAR(255) DEFAULT 'default.jpg',
         user_reg_date DATETIME NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
@@ -153,7 +153,7 @@ try {
         INSERT INTO users
         (user_name,user_password,user_email,stud_num,org_body,profile_pic,user_reg_date)
         VALUES
-        ('admin','$adminPass','admin@hau.edu.ph','203','SOC','default.png',NOW())
+        ('admin','$adminPass','admin@hau.edu.ph','203','SOC','default.jpg',NOW())
         ");
     }
 
@@ -181,7 +181,7 @@ try {
         $distance = null;
         $participant_range = null;
         $overnight = 0;
-        $event_status = "Draft";
+        $event_status = "Pending";
 
         $stmt = $conn->prepare("
         INSERT INTO events (

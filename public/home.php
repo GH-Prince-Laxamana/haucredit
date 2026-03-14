@@ -8,18 +8,32 @@ if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
 }
-
+/*remove comment in the future (to show only actual active events) AND NOW() BETWEEN start_datetime AND end_datetime */
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
 
 $user_id = $_SESSION['user_id'];
 
 $stmt = $conn->prepare("
-    SELECT event_id, event_name, start_datetime, end_datetime, venue_platform
-    FROM events
-    WHERE user_id = ?
-    /*remove comment in the future (to show only actual active events) AND NOW() BETWEEN start_datetime AND end_datetime */
-    LIMIT 4
+        SELECT 
+            e.event_id,
+            e.event_name,
+            e.start_datetime,
+            e.end_datetime,
+            e.venue_platform,
+
+            COUNT(r.req_id) AS total_docs,
+            SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) AS uploaded_docs
+
+        FROM events e
+        LEFT JOIN requirements r ON r.event_id = e.event_id
+
+        WHERE e.user_id = ? 
+        AND e.archived_at IS NULL
+
+        GROUP BY e.event_id
+        ORDER BY e.start_datetime ASC
+        LIMIT 4
 ");
 
 $stmt->bind_param("i", $user_id);
@@ -27,8 +41,51 @@ $stmt->execute();
 
 $events = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
+$total_docs_all = 0;
+$uploaded_docs_all = 0;
+
+foreach ($events as $e) {
+    $total_docs_all += $e['total_docs'];
+    $uploaded_docs_all += $e['uploaded_docs'];
+}
+
+$overall_progress = $total_docs_all
+    ? round(($uploaded_docs_all / $total_docs_all) * 100)
+    : 0;
+
 $show_view_all = count($events) > 3;
-$active_events = array_slice($events, 0, 3);
+$show_limit_events = array_slice($events, 0, 3);
+
+$deadline_stmt = $conn->prepare("
+    SELECT 
+        e.event_id,
+        r.req_name,
+        r.req_desc,
+        e.event_name,
+        c.start_datetime AS deadline
+    FROM requirements r
+    JOIN events e ON r.event_id = e.event_id
+    JOIN calendar_entries c ON c.event_id = e.event_id
+    WHERE e.user_id = ? AND e.archived_at IS NULL
+    AND r.doc_status = 'pending'
+    ORDER BY c.start_datetime ASC;
+");
+
+$deadline_stmt->bind_param("i", $user_id);
+$deadline_stmt->execute();
+
+$deadlines = $deadline_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$show_view_all_deadlines = count($deadlines) > 3;
+$show_limit_deadlines = array_slice($deadlines, 0, 3);
+
+$archived_stmt = $conn->prepare("
+    SELECT COUNT(*) as total
+    FROM events
+    WHERE user_id = ? AND archived_at IS NOT NULL
+");
+$archived_stmt->bind_param("i", $user_id);
+$archived_stmt->execute();
+$archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -57,23 +114,14 @@ $active_events = array_slice($events, 0, 3);
                 </div>
 
                 <div class="home-top-actions">
-
-                    <a href="notifications.php">
-                        <button class="home-icon-btn" type="button" aria-label="Notifications">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                            <span class="home-notification-badge">3</span>
-                        </button>
-                    </a>
-                    <a href="create_event.php">
-                        <button class="home-primary-btn" type="button">
-                            <span aria-hidden="true">+</span>
-                            Create Event
-                        </button>
+                    <a class="home-primary-btn" href="notifications.php">
+                        <i class="fa-regular fa-bell"></i>
                     </a>
 
+                    <a class="home-primary-btn" href="create_event.php">
+                        <span aria-hidden="true">+</span>
+                        Create Event
+                    </a>
                 </div>
             </header>
 
@@ -83,10 +131,7 @@ $active_events = array_slice($events, 0, 3);
                     <article class="home-stat-card">
                         <div class="home-stat-header">
                             <div class="home-stat-icon blue">
-                                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
-                                    <path
-                                        d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" />
-                                </svg>
+                                <i class="fa-regular fa-calendar-days"></i>
                             </div>
                         </div>
                         <p class="home-stat-value"><?= count($events) ?></p>
@@ -96,39 +141,30 @@ $active_events = array_slice($events, 0, 3);
                     <article class="home-stat-card">
                         <div class="home-stat-header">
                             <div class="home-stat-icon amber">
-                                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
-                                    <path
-                                        d="M12 5.99L19.53 19H4.47L12 5.99M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z" />
-                                </svg>
+                                <i class="fa-solid fa-list-check"></i>
                             </div>
                         </div>
-                        <p class="home-stat-value">3</p>
+                        <p class="home-stat-value"><?= count($deadlines) ?></p>
                         <p class="home-stat-label">Upcoming Deadlines</p>
                     </article>
 
                     <article class="home-stat-card">
                         <div class="home-stat-header">
                             <div class="home-stat-icon green">
-                                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
-                                    <path
-                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                                </svg>
+                                <i class="fa-solid fa-circle-check"></i>
                             </div>
                         </div>
-                        <p class="home-stat-value">82%</p>
+                        <p class="home-stat-value"><?= $overall_progress ?>%</p>
                         <p class="home-stat-label">Compliance Progress</p>
                     </article>
 
                     <article class="home-stat-card">
                         <div class="home-stat-header">
                             <div class="home-stat-icon purple">
-                                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
-                                    <path
-                                        d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z" />
-                                </svg>
+                                <i class="fa-regular fa-folder-open"></i>
                             </div>
                         </div>
-                        <p class="home-stat-value">24</p>
+                        <p class="home-stat-value"><?= $archived_events ?></p>
                         <p class="home-stat-label">Archived Events</p>
                     </article>
                 </section>
@@ -138,13 +174,23 @@ $active_events = array_slice($events, 0, 3);
                     <header class="home-section-header">
                         <h2 class="home-section-title">Active Events</h2>
                         <?php if ($show_view_all): ?>
-                            <a href="active_events.php" class="home-view-all">View All →</a>
+                            <a href="my_events.php" class="home-view-all">View All →</a>
                         <?php endif; ?>
                     </header>
 
                     <ul class="events-table">
-                        <?php if (!empty($active_events)): ?>
-                            <?php foreach ($active_events as $event): ?>
+                        <?php if (!empty($show_limit_events)): ?>
+                            <?php foreach ($show_limit_events as $event):
+                                $total = $event['total_docs'];
+                                $uploaded = $event['uploaded_docs'];
+                                $progress = $total ? round(($uploaded / $total) * 100) : 0;
+
+                                $progress_color = '#d32f2f';
+                                if ($progress >= 75)
+                                    $progress_color = '#2e7d32';
+                                elseif ($progress >= 40)
+                                    $progress_color = '#f9a825';
+                                ?>
                                 <li>
                                     <article class="home-event-row">
                                         <div>
@@ -159,9 +205,10 @@ $active_events = array_slice($events, 0, 3);
 
                                         <div class="home-event-progress">
                                             <div class="home-progress-bar-mini">
-                                                <div class="home-progress-fill-mini" style="width: 50%"></div>
+                                                <div class="home-progress-fill-mini"
+                                                    style="width: <?= $progress ?>%; background: <?= $progress_color ?>"></div>
                                             </div>
-                                            <span class="home-progress-text">50%</span>
+                                            <span class="home-progress-text"><?= $progress ?>%</span>
                                         </div>
 
                                         <span class="home-status-badge active">Active</span>
@@ -179,45 +226,56 @@ $active_events = array_slice($events, 0, 3);
                 <section class="home-section">
                     <header class="home-section-header">
                         <h2 class="home-section-title">Upcoming Deadlines</h2>
+                        <?php if ($show_view_all_deadlines): ?>
+                            <a href="requirements.php" class="home-view-all">View All →</a>
+                        <?php endif; ?>
                     </header>
 
                     <ul>
-                        <li>
-                            <article class="home-deadline-item">
-                                <div class="home-deadline-info">
-                                    <h3>Event Name - Requirement Name</h3>
-                                    <p>Form code description or requirement details</p>
-                                </div>
-                                <div class="home-deadline-date">
-                                    <strong><time datetime="2026-03-20">Month Day</time></strong>
-                                    <span>X days left</span>
-                                </div>
-                            </article>
-                        </li>
-                        <li>
-                            <article class="home-deadline-item">
-                                <div class="home-deadline-info">
-                                    <h3>Event Name - Requirement Name</h3>
-                                    <p>Form code description or requirement details</p>
-                                </div>
-                                <div class="home-deadline-date">
-                                    <strong><time datetime="2026-03-20">Month Day</time></strong>
-                                    <span>X days left</span>
-                                </div>
-                            </article>
-                        </li>
-                        <li>
-                            <article class="home-deadline-item">
-                                <div class="home-deadline-info">
-                                    <h3>Event Name - Requirement Name</h3>
-                                    <p>Form code description or requirement details</p>
-                                </div>
-                                <div class="home-deadline-date">
-                                    <strong><time datetime="2026-03-20">Month Day</time></strong>
-                                    <span>X days left</span>
-                                </div>
-                            </article>
-                        </li>
+                        <?php if (!empty($show_limit_deadlines)): ?>
+
+                            <?php foreach ($show_limit_deadlines as $d):
+
+                                $deadline = strtotime($d['deadline']);
+                                $days_left = ceil(($deadline - time()) / 86400);
+
+                                ?>
+
+                                <li>
+                                    <article class="home-deadline-item">
+
+                                        <div class="home-deadline-info">
+                                            <h3>
+                                                <?= htmlspecialchars($d['event_name']) ?> -
+                                                <?= htmlspecialchars($d['req_name']) ?>
+                                            </h3>
+                                            <p>
+                                                <?= htmlspecialchars($d['req_desc'] ?? 'Requirement submission') ?>
+                                            </p>
+                                        </div>
+
+                                        <div class="home-deadline-date">
+                                            <strong>
+                                                <time datetime="<?= htmlspecialchars($d['deadline']) ?>">
+                                                    <?= date("F j", $deadline) ?>
+                                                </time>
+                                            </strong>
+
+                                            <span>
+                                                <?= $days_left ?>         <?= $days_left == 1 ? 'day' : 'days' ?> left
+                                            </span>
+
+                                        </div>
+                                        <a href="view_event.php?id=<?= $d['event_id'] ?>" class="home-btn-view">View</a>
+                                    </article>
+                                </li>
+                            <?php endforeach; ?>
+
+                        <?php else: ?>
+
+                            <li>No upcoming deadlines.</li>
+
+                        <?php endif; ?>
                     </ul>
                 </section>
             </section>
