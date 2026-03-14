@@ -72,6 +72,10 @@
   color: black;
 }
 
+.deadline-text {
+  color: var(--orange);
+}
+
 /* =========================
    REQUIREMENT CARD ROW
 ========================= */
@@ -167,6 +171,7 @@
   color: #999;
   padding: 12px 0;
 }
+
 
 /* =========================
    PROGRESS CARD

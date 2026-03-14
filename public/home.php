@@ -126,7 +126,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                 <section class="home-stats-grid">
                     <article class="home-stat-card">
                         <div class="home-stat-header">
-                            <div class="home-stat-icon blue">
+                            <div class="home-stat-icon">
                                 <i class="fa-regular fa-calendar-days"></i>
                             </div>
                         </div>
@@ -136,7 +136,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
 
                     <article class="home-stat-card">
                         <div class="home-stat-header">
-                            <div class="home-stat-icon amber">
+                            <div class="home-stat-icon">
                                 <i class="fa-solid fa-list-check"></i>
                             </div>
                         </div>
@@ -146,7 +146,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
 
                     <article class="home-stat-card">
                         <div class="home-stat-header">
-                            <div class="home-stat-icon green">
+                            <div class="home-stat-icon">
                                 <i class="fa-solid fa-circle-check"></i>
                             </div>
                         </div>
@@ -156,7 +156,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
 
                     <article class="home-stat-card">
                         <div class="home-stat-header">
-                            <div class="home-stat-icon purple">
+                            <div class="home-stat-icon">
                                 <i class="fa-regular fa-folder-open"></i>
                             </div>
                         </div>
@@ -233,7 +233,18 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                             <?php foreach ($show_limit_deadlines as $d):
 
                                 $deadline = strtotime($d['deadline']);
-                                $days_left = ceil(($deadline - time()) / 86400);
+                                $diff = $deadline - time();
+
+                                $days = floor($diff / 86400);
+                                $hours = floor(($diff % 86400) / 3600);
+
+                                $time_left = [];
+                                if ($days > 0)
+                                    $time_left[] = "$days " . ($days == 1 ? "day" : "days");
+                                if ($hours > 0)
+                                    $time_left[] = "$hours " . ($hours == 1 ? "hour" : "hours");
+
+                                $time_left_str = implode(", ", $time_left) . " left";
 
                                 ?>
 
@@ -253,13 +264,11 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                                         <div class="home-deadline-date">
                                             <strong>
                                                 <time datetime="<?= htmlspecialchars($d['deadline']) ?>">
-                                                    <?= date("F j", $deadline) ?>
+                                                    <?= date("F j, g:i A", $deadline) ?>
                                                 </time>
                                             </strong>
 
-                                            <span>
-                                                <?= $days_left ?>         <?= $days_left == 1 ? 'day' : 'days' ?> left
-                                            </span>
+                                            <span><?= $time_left_str ?></span>
 
                                         </div>
                                         <a href="view_event.php?id=<?= $d['event_id'] ?>" class="home-btn-view">View</a>

@@ -235,20 +235,60 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
 
 
                             <div class="event-block">
+                                <?php
+                                $deadlines = array_map(fn($r) => strtotime($r['deadline'] ?? $r['event_start']), $event['requirements']);
+                                $earliest = !empty($deadlines) ? min($deadlines) : strtotime($event['event_start']);
+
+                                $diff = $earliest - time();
+                                $days = floor($diff / 86400);
+                                $hours = floor(($diff % 86400) / 3600);
+
+                                $time_left = [];
+                                if ($days > 0)
+                                    $time_left[] = "$days " . ($days == 1 ? "day" : "days");
+                                if ($hours > 0)
+                                    $time_left[] = "$hours " . ($hours == 1 ? "hour" : "hours");
+
+                                $time_left_str = !empty($time_left) ? implode(", ", $time_left) . " left" : "Due soon";
+                                ?>
 
                                 <div class="event-header">
-                                    <h3><?= htmlspecialchars($event['event_name']) ?></h3>
+
+                                    <h3>
+                                        <?= htmlspecialchars($event['event_name']) ?>:
+                                        <span class="deadline-text">
+                                            <time datetime="<?= date('c', $earliest) ?>">
+                                                 <?= date("g:i A", $earliest) ?>
+                                            </time>
+                                        </span>
+                                    </h3>
 
                                     <a class="btn-secondary" href="view_event.php?id=<?= $event['event_id'] ?>">
                                         View Event
                                     </a>
                                 </div>
 
+
+
                                 <?php foreach ($event['requirements'] as $req):
 
                                     $status = ($req['status'] === 'uploaded') ? 'Uploaded' : 'Pending';
+                                    $deadline = strtotime($req['deadline'] ?? $req['event_start']); // fallback to event_start if no specific deadline
+                                    $diff = $deadline - time();
+
+                                    $days = floor($diff / 86400);
+                                    $hours = floor(($diff % 86400) / 3600);
+
+                                    $time_left = [];
+                                    if ($days > 0)
+                                        $time_left[] = "$days " . ($days == 1 ? "day" : "days");
+                                    if ($hours > 0)
+                                        $time_left[] = "$hours " . ($hours == 1 ? "hour" : "hours");
+
+                                    $time_left_str = !empty($time_left) ? implode(", ", $time_left) . " left" : "Due soon";
 
                                     ?>
+
                                     <a class="req-card" href="view_event.php?id=<?= $event['event_id'] ?>">
 
                                         <div>
