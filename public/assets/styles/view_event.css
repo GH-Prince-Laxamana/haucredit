@@ -4,7 +4,7 @@
 .view-event-page {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 0;
+  gap: 1em;
   max-width: 1400px;
   margin: 0 auto;
   align-items: start;
