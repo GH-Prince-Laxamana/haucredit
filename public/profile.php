@@ -19,7 +19,7 @@ unset($_SESSION["success"], $_SESSION["error"]);
 /* GET USER */
 
 $stmt = $conn->prepare("
-SELECT user_name, user_email, org_body, profile_pic, user_password
+SELECT user_name, stud_num, user_email, org_body, profile_pic, user_password
 FROM users
 WHERE user_id=?
 ");
@@ -38,7 +38,14 @@ if (isset($_POST["upload_photo"])) {
         $ext = strtolower(pathinfo($_FILES["profile_pic"]["name"], PATHINFO_EXTENSION));
 
         if (!in_array($ext, $allowed)) {
-            $_SESSION["error"] = "Only JPG PNG WEBP allowed.";
+            $_SESSION["error"] = "Only .JPG, .PNG, .WEBP allowed.";
+            header("Location: profile.php");
+            exit();
+        }
+
+        $check = getimagesize($_FILES["profile_pic"]["tmp_name"]);
+        if ($check === false) {
+            $_SESSION["error"] = "Invalid image file.";
             header("Location: profile.php");
             exit();
         }
@@ -66,6 +73,103 @@ if (isset($_POST["upload_photo"])) {
     }
 }
 
+/* UPDATE PROFILE INFO */
+
+if (isset($_POST["update_profile"])) {
+
+    $username = trim($_POST["username"] ?? "");
+    $studnum = trim($_POST["stud_num"] ?? "");
+    $email = trim($_POST["email"] ?? "");
+    $org = trim($_POST["org_body"] ?? "");
+
+    /* REQUIRED FIELDS */
+
+    if ($username === "" || $studnum === "" || $email === "" || $org === "") {
+        $_SESSION["error"] = "All fields are required.";
+        header("Location: profile.php");
+        exit();
+    }
+
+    /* EMAIL FORMAT */
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION["error"] = "Invalid email format.";
+        header("Location: profile.php");
+        exit();
+    }
+
+    /* HAU STUDENT EMAIL ONLY */
+
+    if (!preg_match('/@(student\.hau\.edu\.ph)$/i', $email)) {
+        $_SESSION["error"] = "Email must be your HAU student email.";
+        header("Location: profile.php");
+        exit();
+    }
+
+    /* STUDENT NUMBER VALIDATION */
+
+    if (strlen($studnum) < 8) {
+        $_SESSION["error"] = "Invalid student number.";
+        header("Location: profile.php");
+        exit();
+    }
+
+    /* USERNAME LENGTH */
+
+    if (strlen($username) < 4) {
+        $_SESSION["error"] = "Username must be at least 4 characters.";
+        header("Location: profile.php");
+        exit();
+    }
+
+    /* CHECK UNIQUE CONSTRAINTS */
+
+    $stmt = $conn->prepare("
+        SELECT user_name, user_email, stud_num
+        FROM users
+        WHERE (user_name=? OR user_email=? OR stud_num=?)
+        AND user_id != ?
+        LIMIT 1
+    ");
+
+    $stmt->bind_param("sssi", $username, $email, $studnum, $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($row = $result->fetch_assoc()) {
+
+        if ($row["user_name"] === $username) {
+            $_SESSION["error"] = "Username already exists.";
+        } elseif ($row["user_email"] === $email) {
+            $_SESSION["error"] = "Email already exists.";
+        } elseif ($row["stud_num"] === $studnum) {
+            $_SESSION["error"] = "Student number already exists.";
+        }
+
+        header("Location: profile.php");
+        exit();
+    }
+
+    /* UPDATE PROFILE */
+
+    $stmt = $conn->prepare("
+        UPDATE users
+        SET user_name=?, stud_num=?, user_email=?, org_body=?
+        WHERE user_id=?
+    ");
+
+    $stmt->bind_param("ssssi", $username, $studnum, $email, $org, $user_id);
+
+    if ($stmt->execute()) {
+        $_SESSION["success"] = "Profile updated successfully.";
+    } else {
+        $_SESSION["error"] = "Unable to update profile.";
+    }
+
+    header("Location: profile.php");
+    exit();
+}
+
 /* PASSWORD CHANGE */
 
 if (isset($_POST["change_password"])) {
@@ -86,8 +190,13 @@ if (isset($_POST["change_password"])) {
         exit();
     }
 
-    if (strlen($new) < 8) {
-        $_SESSION["error"] = "Password must be at least 8 characters.";
+    if (
+        strlen($new) < 8 ||
+        !preg_match('/[A-Z]/', $new) ||
+        !preg_match('/[a-z]/', $new) ||
+        !preg_match('/[0-9]/', $new)
+    ) {
+        $_SESSION["error"] = "Password must be at least 8 characters including uppercase, lowercase, and numbers.";
         header("Location: profile.php");
         exit();
     }
@@ -214,11 +323,11 @@ if (isset($_POST["change_password"])) {
                 <section class="profile-panel">
 
                     <?php if ($success): ?>
-                        <div class="alert success">✔ <?php echo $success ?></div>
+                        <div class="alert success"><?php echo $success ?></div>
                     <?php endif; ?>
 
                     <?php if ($error): ?>
-                        <div class="alert error">⚠ <?php echo $error ?></div>
+                        <div class="alert error"><?php echo $error ?></div>
                     <?php endif; ?>
 
 
@@ -239,29 +348,20 @@ if (isset($_POST["change_password"])) {
 
                     <div id="editTab" class="tab-content active">
 
-                        <form class="profile-form">
+                        <form class="profile-form" method="post">
 
                             <div class="grid-2">
-
-                                <div class="form-field">
-                                    <label>FIRST NAME</label>
-                                    <input type="text" name="first_name">
-                                </div>
-
-                                <div class="form-field">
-                                    <label>LAST NAME</label>
-                                    <input type="text" name="last_name">
-                                </div>
-
-                                <div class="form-field">
-                                    <label>MIDDLE NAME</label>
-                                    <input type="text" name="middle_name">
-                                </div>
 
                                 <div class="form-field">
                                     <label>USERNAME</label>
                                     <input type="text" name="username"
                                         value="<?php echo htmlspecialchars($user['user_name']); ?>">
+                                </div>
+
+                                <div class="form-field">
+                                    <label>STUDENT NUMBER</label>
+                                    <input type="text" name="stud_num"
+                                        value="<?php echo htmlspecialchars($user['stud_num']); ?>">
                                 </div>
 
                             </div>
@@ -274,16 +374,106 @@ if (isset($_POST["change_password"])) {
 
                             <div class="form-field full">
                                 <label>ORGANIZING BODY</label>
-                                <input type="text" name="org_body"
-                                    value="<?php echo htmlspecialchars($user['org_body']); ?>">
+                                <input list="org_list" name="org_body"
+                                    value="<?php echo htmlspecialchars($user['org_body']); ?>"
+                                    placeholder="Search or select organization" required>
+                                <datalist id="org_list">
+                                    <!-- HAU OFFICE -->
+                                    <option value="HAU OSA">
+
+                                        <!-- UNIVERSITY STUDENT GOVERNMENT -->
+                                    <option value="HAUSG USC">
+                                    <option value="HAUSG HC">
+                                    <option value="HAUSG SEN">
+                                    <option value="HAUSG COMELEC">
+                                    <option value="HAUSG CSO">
+                                    <option value="HAUSG CFA">
+
+                                        <!-- COLLEGE STUDENT COUNCILS -->
+                                    <option value="HAUSG CSC-CCJEF">
+                                    <option value="HAUSG CSC-SAS">
+                                    <option value="HAUSG CSC-SBA">
+                                    <option value="HAUSG CSC-SoC">
+                                    <option value="HAUSG CSC-SEd">
+                                    <option value="HAUSG CSC-SEA">
+                                    <option value="HAUSG CSC-SHTM">
+                                    <option value="HAUSG CSC-SNAMS">
+
+                                        <!-- STUDENT PUBLICATIONS -->
+                                    <option value="HPC Angge">
+                                    <option value="HPC HQ">
+                                    <option value="HPC NX">
+                                    <option value="HPC Enteng">
+                                    <option value="HPC AP">
+                                    <option value="HPC Reple">
+                                    <option value="HPC Soln">
+                                    <option value="HPC CC">
+                                    <option value="HPC LL">
+
+                                        <!-- UNI-WIDE ORGANIZATIONS -->
+                                    <option value="Uniwide DC">
+                                    <option value="Uniwide JJC">
+                                    <option value="Uniwide JO">
+                                    <option value="Uniwide GDGoC">
+                                    <option value="Uniwide ADS">
+                                    <option value="Uniwide RCY">
+                                    <option value="Uniwide RAC">
+                                    <option value="Uniwide APLMS">
+                                    <option value="Uniwide SVE">
+                                    <option value="Uniwide 21CC">
+                                    <option value="Uniwide HPC">
+
+                                        <!-- SCHOOL ORGANIZATIONS -->
+                                    <option value="CCJEF COPS">
+                                    <option value="CCJEF SAFE">
+                                    <option value="SAS PsychSoc">
+                                    <option value="SAS CL">
+                                    <option value="SBA Mansoc">
+                                    <option value="SoC MAFIA">
+                                    <option value="SoC LOOP">
+                                    <option value="SoC CG">
+                                    <option value="SoC CSIA">
+                                    <option value="SEd KAS">
+                                    <option value="SEd KLDS">
+                                    <option value="SEA SAEP">
+                                    <option value="SEA UAPSA">
+                                    <option value="SEA PSME">
+                                    <option value="SEA PIIE">
+                                    <option value="SEA IIEE">
+                                    <option value="SEA PICE">
+                                    <option value="SEA IECEP">
+                                    <option value="SEA ICpEP">
+                                    <option value="SHTM HMAP">
+                                    <option value="SHTM LTSP">
+                                    <option value="SNAMS ARTS">
+                                    <option value="SNAMS PHISMETS">
+                                    <option value="SNAMS SANS">
+
+                                        <!-- POLITICAL PARTIES -->
+                                    <option value="PP Lualu">
+                                    <option value="PP Sulung">
+                                    <option value="PP Sulagpo">
+                                    <option value="PP Tindig">
+                                </datalist>
                             </div>
 
-                            <div class="form-field full">
-                                <label>PHONE NUMBER</label>
-                                <input type="tel" name="phone" placeholder="09XXXXXXXXX">
+                            <div class="pw-actions">
+
+                                <button class="pw-btn ghost" type="reset">
+                                    Discard Changes
+                                </button>
+
+                                <button class="pw-btn primary" type="submit" name="update_profile">
+                                    Apply Changes
+                                </button>
+
                             </div>
+
+
 
                         </form>
+
+
 
                     </div>
 
@@ -291,10 +481,6 @@ if (isset($_POST["change_password"])) {
                     <!-- CHANGE PASSWORD -->
 
                     <div id="passTab" class="tab-content">
-
-                        <p class="pw-subtext">
-                            Update password for enhanced account security.
-                        </p>
 
                         <form class="pw-form" method="post">
 
