@@ -144,6 +144,15 @@
   width: 100%;
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: none;
+  margin: 1.5em 0.5em 1em;
+  width: 100%;
+}
+
 .field-title,
 legend {
   font-size: 1.3rem;
@@ -328,18 +337,16 @@ details {
 
 .step-actions {
   display: flex;
-  gap: 2em;
+  gap: 1em;
   margin: 25px 0 40px;
   align-items: center;
   flex-wrap: wrap;
   width: 100%;
 }
 
-/* Step 1 actions - only Next button */
 .step-1-actions {
   display: flex;
   justify-content: flex-end;
-  /* Align Next button to the right if desired */
 }
 
 .step-1-actions .back-btn {
@@ -365,49 +372,6 @@ details {
 .step-2-actions.active .create-btn {
   display: inline-flex;
   /* Show both buttons */
-}
-
-.primary-btn {
-  padding: 12px 24px;
-  border-radius: 10px;
-  border: none;
-  background: var(--burgundy);
-  color: var(--offwhite);
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(75, 0, 20, .25);
-  min-width: 160px;
-}
-
-.primary-btn:hover:not(:disabled) {
-  background: var(--burgundy-light);
-  box-shadow: 0 6px 16px rgba(75, 0, 20, .35);
-}
-
-.primary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: #747474;
-}
-
-.secondary-btn {
-  padding: 12px 20px;
-  border-radius: 10px;
-  border: 2px solid var(--border);
-  background: white;
-  color: var(--burgundy);
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 100px;
-}
-
-.secondary-btn:hover {
-  border-color: var(--burgundy);
-  background: #fdfcfa;
 }
 
 /* Step actions info text */

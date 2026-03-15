@@ -103,26 +103,26 @@ $doc_messages = [
                 </div>
 
                 <div class="action-btns">
-                    <?php if (!$is_archived): ?>
-                        <a href="create_event.php?id=<?= $event['event_id'] ?>" class="btn-secondary">
-                            Edit Event
-                        </a>
-                    <?php endif; ?>
-
                     <form method="POST" action="archive_event.php" class="inline-form">
                         <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
 
                         <?php if ($is_archived): ?>
-                            <button type="submit" name="restore_event" class="btn-danger btn-restore">
+                            <button type="submit" name="restore_event" class="btn-primary btn-restore">
                                 Restore Event
                             </button>
                         <?php else: ?>
-                            <button type="submit" name="archive_event" class="btn-danger"
+                            <button type="submit" name="archive_event" class="btn-primary btn-danger"
                                 onclick="return confirm('Archive this event? You can restore it for 30 days.')">
                                 Archive Event
                             </button>
                         <?php endif; ?>
                     </form>
+
+                    <?php if (!$is_archived): ?>
+                        <a href="create_event.php?id=<?= $event['event_id'] ?>" class="btn-primary">
+                            Edit Event
+                        </a>
+                    <?php endif; ?>
                 </div>
             </header>
 
@@ -313,7 +313,7 @@ $doc_messages = [
                                         <div class="doc-actions">
 
                                             <!-- View Button -->
-                                            <button class="btn-icon" onclick="previewDocument(
+                                            <button class="btn-file" onclick="previewDocument(
                                                     '<?= htmlspecialchars($has_upload ? $doc['file_path'] : $doc['template_url'], ENT_QUOTES) ?>',
                                                     '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
                                                     '<?= htmlspecialchars(!$has_upload && empty($doc['template_url']) ? 'No template available for this document.' : '', ENT_QUOTES) ?>'
@@ -326,7 +326,7 @@ $doc_messages = [
                                                 <form action="create_requirement.php" method="POST"
                                                     enctype="multipart/form-data" class="upload-form">
                                                     <input type="hidden" name="req_id" value="<?= $doc['req_id'] ?>">
-                                                    <label class="btn-icon">
+                                                    <label class="btn-file">
                                                         Upload
                                                         <input type="file" name="document" hidden required
                                                             onchange="this.form.submit()">
@@ -339,7 +339,7 @@ $doc_messages = [
                                                 <form action="delete_requirement.php" method="POST"
                                                     onsubmit="return confirm('Remove uploaded document?');">
                                                     <input type="hidden" name="req_id" value="<?= $doc['req_id'] ?>">
-                                                    <button class="btn-danger">Remove</button>
+                                                    <button class="btn-file btn-danger">Remove</button>
                                                 </form>
                                             <?php endif; ?>
 
@@ -386,7 +386,7 @@ $doc_messages = [
 
                         <form method="POST" action="delete_event.php">
                             <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
-                            <button class="btn-danger"
+                            <button class="btn-primary btn-danger"
                                 onclick="return confirm('Permanently delete this event? This cannot be undone.')">
                                 Delete Permanently
                             </button>

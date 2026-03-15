@@ -614,7 +614,7 @@ if (isset($_POST['create_event'])) {
         </details>
 
         <div class="step-actions step1-actions">
-          <button type="button" class="primary-btn next-btn" disabled>Next</button>
+          <button type="button" class="btn-primary next-btn" disabled>Next</button>
         </div>
 
         <details class="step-2 acc">
@@ -737,7 +737,7 @@ if (isset($_POST['create_event'])) {
               </div>
             </div>
 
-            <div class="field long-field">
+            <div class="field long-field" style="margin-top: 0;">
               <label for="participants" class="field-title">Participants</label>
               <small class="hint">
                 Indicate number and group (ex. 8 members, 7 officers, 2 guest speakers, 40
@@ -759,10 +759,10 @@ if (isset($_POST['create_event'])) {
                 required><?= htmlspecialchars($formData['venue_platform']) ?></textarea>
             </div>
 
-            <fieldset class="field"
-              style="display:<?= (strpos($formData['activity_type'], 'On-campus') !== false) ? 'flex' : 'none' ?>;">
-              <label for="has_visitors" class="field-title">Will there be visitors entering the campus?</label>
-              <small class="hint"></small>
+            <fieldset class="field" id="visitors-block"
+              style="display:<?= (strpos($formData['activity_type'] ?? '', 'On-campus') !== false) ? 'flex' : 'none' ?>;">
+
+              <label class="field-title">Will there be visitors entering the campus?</label>
 
               <div class="radio-group inline">
                 <label>
@@ -775,13 +775,14 @@ if (isset($_POST['create_event'])) {
                   No
                 </label>
               </div>
+
             </fieldset>
 
             <fieldset class="field" id="offcampus-block"
               style="display:<?= (strpos($formData['activity_type'], 'Off-Campus') !== false) ? 'block' : 'none' ?>;">
 
               <div class="form-row">
-                <fieldset class="field">
+                <fieldset class="field" style="margin-top: 0;">
                   <label for="participant_range" class="field-title">Range of Total Number of Participants</label>
 
                   <div class="radio-group">
@@ -797,7 +798,7 @@ if (isset($_POST['create_event'])) {
                   </div>
                 </fieldset>
 
-                <fieldset class="field">
+                <fieldset class="field" style="margin-top: 0;">
                   <label for="distance" class="field-title">Distance</label>
 
                   <div class="radio-group">
@@ -817,7 +818,7 @@ if (isset($_POST['create_event'])) {
                 </fieldset>
               </div>
 
-              <div class="field">
+              <div class="field" style="margin-top: 0;">
                 <label for="participant_range" class="field-title">
                   Will the activity last more than 12 hours from arrival to departure?
                 </label>
@@ -840,8 +841,8 @@ if (isset($_POST['create_event'])) {
         </details>
 
         <div class="step-actions step-2-actions">
-          <button type="button" class="secondary-btn back-btn">Back</button>
-          <button type="submit" name="create_event" class="primary-btn create-btn" disabled>
+          <button type="button" class="btn-secondary back-btn">Back</button>
+          <button type="submit" name="create_event" class="btn-primary create-btn" disabled>
             <?= $editing ? 'Update Event' : 'Create Event' ?>
           </button>
         </div>

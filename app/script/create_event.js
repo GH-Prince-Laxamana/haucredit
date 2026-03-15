@@ -1,13 +1,17 @@
 function toggleBlocks() {
   const seriesBlock = document.getElementById("series-block");
   const offcampusBlock = document.getElementById("offcampus-block");
+  const visitorsBlock = document.getElementById("visitors-block");
 
   const background = document.querySelector(
     'input[name="background"]:checked',
   )?.value;
+
   const activity = document.querySelector(
     'input[name="activity_type"]:checked',
   )?.value;
+
+  /* SERIES */
 
   if (background === "Participation") {
     seriesBlock.style.display = "flex";
@@ -16,6 +20,8 @@ function toggleBlocks() {
     seriesBlock.style.display = "none";
     seriesBlock.querySelectorAll("input").forEach((i) => (i.required = false));
   }
+
+  /* OFF-CAMPUS */
 
   if (activity && activity.toLowerCase().includes("off-campus")) {
     offcampusBlock.style.display = "flex";
@@ -27,6 +33,19 @@ function toggleBlocks() {
     offcampusBlock
       .querySelectorAll("input")
       .forEach((i) => (i.required = false));
+  }
+
+  /* VISITORS (ON-CAMPUS ONLY) */
+
+  if (activity && activity.toLowerCase().includes("on-campus")) {
+    visitorsBlock.style.display = "flex";
+  } else {
+    visitorsBlock.style.display = "none";
+
+    // clear selection if hidden
+    visitorsBlock
+      .querySelectorAll('input[name="has_visitors"]')
+      .forEach((r) => (r.checked = false));
   }
 }
 
@@ -165,7 +184,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const tagsContainer = container.querySelector("#selectedTags");
-    if (tagsContainer && tagsContainer.querySelectorAll(".tag").length === 0) valid = false;
+    if (tagsContainer && tagsContainer.querySelectorAll(".tag").length === 0)
+      valid = false;
 
     return valid;
   }

@@ -102,7 +102,7 @@ foreach ($events as $e) {
 
                 <div class="action-btns">
                     <a href="archived_events.php" class="btn-secondary">Archived Events</a>
-                    <a href="create_event.php" class="btn-primary">+ New Event</a>
+                    <a href="create_event.php" class="btn-primary">Create Event</a>
                 </div>
             </header>
 
@@ -232,8 +232,8 @@ foreach ($events as $e) {
                                     Submitted <?= date('M j, Y', strtotime($event['created_at'])) ?>
                                 </span>
                                 <div class="card-actions">
-                                    <a href="view_event.php?id=<?= $event['event_id'] ?>" class="btn-view">View</a>
-                                    <a href="create_event.php?id=<?= $event['event_id'] ?>" class="btn-edit">Edit</a>
+                                    <a href="create_event.php?id=<?= $event['event_id'] ?>" class="btn-secondary btn-edit">Edit</a>
+                                    <a href="view_event.php?id=<?= $event['event_id'] ?>" class="btn-primary btn-view">View</a>
                                 </div>
                             </div>
                         </article>
@@ -244,17 +244,17 @@ foreach ($events as $e) {
                 <!-- Empty State (shown via JS when no results) -->
                 <?php if (empty($events)): ?>
                     <div class="empty-state" id="emptyState">
-                        <div class="empty-icon">📭</div>
+                        <div class="empty-icon"><i class="fa-solid fa-file-circle-xmark"></i></div>
                         <h3>No events found</h3>
                         <p>Try adjusting your search or filter, or create a new event.</p>
-                        <a href="create_event.php" class="btn-primary">+ New Event</a>
+                        <a href="create_event.php" class="btn-primary">Create Event</a>
                     </div>
                 <?php else: ?>
                     <div class="empty-state" id="emptyState" hidden>
-                        <div class="empty-icon">📭</div>
+                        <div class="empty-icon"><i class="fa-solid fa-file-circle-xmark"></i></div>
                         <h3>No events found</h3>
                         <p>Try adjusting your search or filter, or create a new event.</p>
-                        <a href="create_event.php" class="btn-primary">+ New Event</a>
+                        <a href="create_event.php" class="btn-primary">Create Event</a>
                     </div>
                 <?php endif; ?>
 

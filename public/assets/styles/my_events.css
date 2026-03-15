@@ -9,49 +9,6 @@
   padding-top: 20px;
 }
 
-/* ── Action Button ── */
-.btn-primary {
-  padding: 10px 20px;
-  border-radius: 10px;
-  border: none;
-  background: var(--burgundy);
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  text-decoration: none;
-  display: inline-block;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(75, 0, 20, 0.25);
-}
-
-.btn-primary:hover {
-  background: #3a0010;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(75, 0, 20, 0.35);
-}
-
-.btn-secondary {
-  padding: 8px 12px;
-  border-radius: 10px;
-  border-top: 1px solid var(--border);
-  background: white;
-  color: var(--burgundy);
-  font-weight: 600;
-  font-size: 14px;
-  text-decoration: none;
-  display: inline-block;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-right: 10px;
-  box-shadow: 0 4px 12px rgba(75, 0, 20, 0.25);
-}
-
-.btn-secondary:hover {
-  background: #fdfcfa;
-  transform: translateY(-2px);
-}
-
 /* ── Summary Strip ── */
 .summary-strip {
   display: grid;
@@ -379,35 +336,10 @@
 .btn-edit {
   padding: 7px 14px;
   border-radius: 8px;
+  height: 28px;
   font-size: 12px;
   font-weight: 700;
-  text-decoration: none;
-  transition: all 0.2s ease;
   cursor: pointer;
-}
-
-.btn-view {
-  background: var(--burgundy);
-  color: white;
-  border: none;
-  box-shadow: 0 2px 8px rgba(75, 0, 20, 0.2);
-}
-
-.btn-view:hover {
-  background: #3a0010;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(75, 0, 20, 0.3);
-}
-
-.btn-edit {
-  background: white;
-  color: var(--burgundy);
-  border: 1.5px solid var(--border);
-}
-
-.btn-edit:hover {
-  border-color: var(--burgundy);
-  background: #fdfcfa;
 }
 
 /* ── Empty State ── */
@@ -423,6 +355,7 @@
 .empty-icon {
   font-size: 56px;
   margin-bottom: 16px;
+  color: var(--burgundy);
 }
 
 .empty-state h3 {

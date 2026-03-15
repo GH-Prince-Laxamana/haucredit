@@ -194,6 +194,63 @@ body {
   transition: transform .15s ease, filter .15s ease;
 }
 
+/* ── Action Button ── */
+.btn-primary {
+  padding: 10px 17px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  background: var(--burgundy);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(75, 0, 20, 0.25);
+}
+
+.btn-primary:hover {
+  background: #3a0010;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(75, 0, 20, 0.35);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  transform: none;
+  cursor: not-allowed;
+  background: #747474;
+  box-shadow: 0 6px 18px rgba(75, 0, 20, 0.35);
+}
+
+.btn-secondary {
+  padding: 10px 17px;
+  border-radius: 10px;
+  height: 38px;
+  border-top: 1px solid var(--border);
+  background: white;
+  color: var(--burgundy);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 10px;
+  box-shadow: 0 4px 12px rgba(75, 0, 20, 0.25);
+}
+
+.btn-secondary:hover {
+  background: #fdfcfa;
+  transform: translateY(-2px);
+}
+
+button {
+  border: none;
+}
+
 /* Main */
 .main {
   flex: 1;

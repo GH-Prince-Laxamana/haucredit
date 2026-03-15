@@ -19,7 +19,7 @@ if (!$req_id || !isset($_FILES['document'])) {
 
 $file = $_FILES['document'];
 
-$allowed = ['pdf','doc','docx'];
+$allowed = ['pdf', 'doc', 'docx'];
 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
 $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -35,7 +35,7 @@ if (!in_array($mime, $allowed_mime)) {
     die("Invalid file type.");
 }
 
-if (!in_array($ext,$allowed)) {
+if (!in_array($ext, $allowed)) {
     die("Invalid file type.");
 }
 
@@ -43,23 +43,22 @@ if ($file['size'] > 100 * 1024 * 1024) {
     die("File too large. Max 100MB.");
 }
 
-$upload_dir = "../uploads/requirements/";
-
+$upload_dir = "../uploads/requirements/"; 
 if (!is_dir($upload_dir)) {
-    mkdir($upload_dir,0777,true);
+    mkdir($upload_dir, 0777, true);
 }
 
 $filename = uniqid("req_") . "." . $ext;
 
 $relative_path = "uploads/requirements/" . $filename;
-$full_path = "../" . $relative_path;
+$full_path = $upload_dir . $filename;
 
 if (!move_uploaded_file($file['tmp_name'], $full_path)) {
     die("Upload failed.");
 }
 
 $old = $conn->prepare("SELECT file_path FROM requirements WHERE req_id = ?");
-$old->bind_param("i",$req_id);
+$old->bind_param("i", $req_id);
 $old->execute();
 $res = $old->get_result()->fetch_assoc();
 

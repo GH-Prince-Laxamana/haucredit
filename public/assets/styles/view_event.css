@@ -29,35 +29,33 @@
   align-items: center;
 }
 
-.btn-secondary {
+.btn-file {
   padding: 8px 12px;
   border-radius: 8px;
-  border: 2px solid var(--border);
+  border: 1px solid var(--border);
   background: white;
-  color: var(--burgundy);
+  font-size: 13px;
   font-weight: 600;
-  font-size: 14px;
-  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all .2s ease;
+  text-decoration: none;
+  color: var(--burgundy);
 }
 
-.btn-secondary:hover {
-  border-color: var(--burgundy);
-  background: #fdfcfa;
+.btn-file:hover {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: white;
 }
 
 .btn-danger {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: none;
   background: #dc2626;
-  color: white;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(220, 38, 38, .25);
+  color: white;
+  border: none;
 }
 
 .btn-danger:hover {
@@ -317,28 +315,6 @@
   justify-content: flex-start;
 }
 
-.btn-icon {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: white;
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  transition: all .2s ease;
-  text-decoration: none;
-  color: var(--burgundy);
-}
-
-.btn-icon:hover {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: white;
-}
-
 
 /* Progress Tracker */
 .tracker-card {
@@ -526,35 +502,6 @@
   width: 100%;
   height: 100%;
   border: none;
-}
-
-/* Upload Button */
-.btn-upload {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--gold);
-  color: white;
-  font-weight: 600;
-  font-size: 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-}
-
-.btn-upload:hover {
-  background: #b38b00;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.btn-upload input[type="file"] {
-  display: none;
-}
-
-.upload-text {
-  pointer-events: none;
 }
 
 /* Danger Zone */
