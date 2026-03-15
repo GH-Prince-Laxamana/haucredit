@@ -2,7 +2,6 @@
 session_start();
 require_once "../app/database.php";
 
-
 if (!isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
@@ -23,12 +22,10 @@ $doc = $res->fetch_assoc();
 
 if ($doc && !empty($doc['file_path'])) {
 
-    $file = "../" . $doc['file_path']; // ensure correct path
+    $file = __DIR__ . "/../" . $doc['file_path'];
 
-    if (is_file($file) && file_exists($file)) {
-        if (!unlink($file)) {
-            error_log("Failed to delete file: $file");
-        }
+    if (is_file($file)) {
+        unlink($file);
     }
 
     // reset requirement

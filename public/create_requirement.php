@@ -43,14 +43,15 @@ if ($file['size'] > 100 * 1024 * 1024) {
     popup_error("File too large. Max 100MB.");
 }
 
-$upload_dir = "../uploads/requirements/"; 
+$upload_dir = __DIR__ . "/../uploads/requirements/";
+
 if (!is_dir($upload_dir)) {
     mkdir($upload_dir, 0777, true);
 }
 
 $filename = uniqid("req_") . "." . $ext;
 
-$relative_path = "../uploads/requirements/" . $filename;
+$relative_path = "uploads/requirements/" . $filename;
 $full_path = $upload_dir . $filename;
 
 if (!move_uploaded_file($file['tmp_name'], $full_path)) {
@@ -64,7 +65,7 @@ $res = $old->get_result()->fetch_assoc();
 
 if ($res && !empty($res['file_path'])) {
 
-    $old_file = "../" . $res['file_path'];
+    $old_file = __DIR__ . "/../" . $res['file_path'];
 
     if (file_exists($old_file)) {
         unlink($old_file);

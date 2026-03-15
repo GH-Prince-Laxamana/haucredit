@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-
   const overlay = document.getElementById("popup-overlay");
   const messageBox = document.getElementById("popup-message");
   const yesBtn = document.getElementById("popup-yes");
@@ -9,7 +8,6 @@ document.addEventListener("DOMContentLoaded", function () {
   let confirmed = false;
 
   document.addEventListener("submit", function (e) {
-
     const form = e.target;
 
     if (!form.matches("form[data-confirm]")) return;
@@ -23,28 +21,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
     currentForm = form;
 
-    messageBox.textContent = form.getAttribute("data-confirm") || "Are you sure?";
+    messageBox.textContent =
+      form.getAttribute("data-confirm") || "Are you sure?";
     overlay.style.display = "flex";
-
   });
 
   yesBtn.addEventListener("click", function () {
-
+    console.log("Submitting:", currentForm);
     overlay.style.display = "none";
 
     if (!currentForm) return;
 
     confirmed = true;
-    currentForm.requestSubmit(); // safer than form.submit()
+    currentForm.requestSubmit();
     currentForm = null;
-
   });
 
   noBtn.addEventListener("click", function () {
-
     overlay.style.display = "none";
     currentForm = null;
-
   });
-
 });

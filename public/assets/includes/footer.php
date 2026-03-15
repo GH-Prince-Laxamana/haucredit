@@ -9,7 +9,7 @@
     <div id="popup-message" class="popup-message"></div>
 
     <div class="popup-buttons">
-      <button type="button" id="popup-yes" class="btn-primary btn-smaller">Yes</button>
+      <button type="button" id="popup-yes" class="btn-primary btn-smaller" >Yes</button>
       <button type="button" id="popup-no" class="btn-secondary btn-smaller">Cancel</button>
     </div>
   </div>

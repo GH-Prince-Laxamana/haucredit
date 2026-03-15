@@ -320,7 +320,7 @@ $doc_messages = [
 
                                             <!-- View Button -->
                                             <button class="btn-file" onclick="previewDocument(
-                                                    '<?= htmlspecialchars($has_upload ? $doc['file_path'] : $doc['template_url'], ENT_QUOTES) ?>',
+                                                    '<?= htmlspecialchars($has_upload ? '../' . $doc['file_path'] : $doc['template_url'], ENT_QUOTES) ?>',
                                                     '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
                                                     '<?= htmlspecialchars(!$has_upload && empty($doc['template_url']) ? 'No template available for this document.' : '', ENT_QUOTES) ?>'
                                                 )">
@@ -345,7 +345,7 @@ $doc_messages = [
                                                 <form data-confirm="Remove uploaded document?" action="delete_requirement.php"
                                                     method="POST">
                                                     <input type="hidden" name="req_id" value="<?= $doc['req_id'] ?>">
-                                                    <button class="btn-file btn-danger">Remove</button>
+                                                    <button type="submit" class="btn-file btn-danger">Remove</button>
                                                 </form>
                                             <?php endif; ?>
 
