@@ -36,16 +36,20 @@ function toggleBlocks() {
   }
 
   /* VISITORS (ON-CAMPUS ONLY) */
-
   if (activity && activity.toLowerCase().includes("on-campus")) {
     visitorsBlock.style.display = "flex";
+    visitorsBlock
+      .querySelectorAll('input[name="has_visitors"]')
+      .forEach((r) => (r.required = true));
   } else {
     visitorsBlock.style.display = "none";
 
-    // clear selection if hidden
     visitorsBlock
       .querySelectorAll('input[name="has_visitors"]')
-      .forEach((r) => (r.checked = false));
+      .forEach((r) => {
+        r.required = false; // remove required
+        r.checked = false; // clear selection
+      });
   }
 }
 
