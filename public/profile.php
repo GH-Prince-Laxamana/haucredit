@@ -74,6 +74,23 @@ if (isset($_POST["upload_photo"])) {
     }
 }
 
+if (isset($_POST['remove_photo'])) {
+    // Only remove if not default
+    if (!empty($user['profile_pic']) && $user['profile_pic'] !== 'default.jpg') {
+        $oldPic = "assets/profiles/" . $user['profile_pic'];
+        if (file_exists($oldPic))
+            unlink($oldPic);
+
+        $stmt = $conn->prepare("UPDATE users SET profile_pic='default.jpg' WHERE user_id=?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+    }
+
+    $_SESSION['success'] = "Profile photo removed.";
+    header("Location: profile.php");
+    exit();
+}
+
 /* UPDATE PROFILE INFO */
 
 if (isset($_POST["update_profile"])) {
@@ -266,17 +283,27 @@ if (isset($_POST["change_password"])) {
                             src="assets/profiles/<?php echo htmlspecialchars($user['profile_pic'] ?? 'default.jpg'); ?>"
                             alt="Profile Picture">
 
-                        <button class="camera-btn" type="button">
-                            <img src="assets/images/camera.png" class="camera-icon">
+                        <!-- Pencil Button -->
+                        <button class="pencil-btn" type="button" id="editPhotoBtn">
+                            <img class="pencil-icon" src="assets/images/pencil.png" alt="Pencil">
                         </button>
 
+                        <!-- Hidden form for upload -->
                         <form method="post" enctype="multipart/form-data" id="photoForm">
-
                             <input type="file" name="profile_pic" id="photoInput" accept="image/*" hidden>
-
                             <button type="submit" name="upload_photo" hidden id="photoSubmit"></button>
-
                         </form>
+
+                        <!-- Hidden menu for choices -->
+                        <div class="photo-menu" id="photoMenu" style="display:none;">
+                            <button class="btn-secondary btn-smaller" type="button" id="uploadChoice">Upload
+                                Photo</button>
+
+                            <?php if (!empty($user['profile_pic']) && $user['profile_pic'] !== 'default.jpg'): ?>
+                                <button class="btn-secondary btn-smaller" type="button" id="removeChoice">Remove
+                                    Photo</button>
+                            <?php endif; ?>
+                        </div>
 
                     </div>
 

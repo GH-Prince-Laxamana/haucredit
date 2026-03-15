@@ -42,13 +42,13 @@
 
 /* CAMERA BUTTON */
 
-.camera-btn {
+.pencil-btn {
    position: absolute;
    right: 12px;
    bottom: 14px;
    width: 44px;
    height: 44px;
-   border-radius: 12px;
+   border-radius: 50%;
    border: 1px solid rgba(194, 161, 77, .55);
    background: var(--surface);
    box-shadow: 0 10px 22px rgba(0, 0, 0, .12);
@@ -57,18 +57,76 @@
    justify-content: center;
    cursor: pointer;
    z-index: 10;
+   /* font-size: var(--title-smaller-size); */
    transition: .15s ease;
 }
 
-.camera-btn:hover {
-   transform: scale(1.05);
+.pencil-btn:hover {
+   transform: scale(1.1);
    background: #fff;
 }
 
-.camera-icon {
+.pencil-icon {
    width: 20px;
    height: 20px;
 }
+
+/* Container */
+.profile-avatar-wrap {
+   position: relative;
+   display: inline-block;
+}
+
+/* Menu */
+.photo-menu {
+   position: absolute;
+   bottom: 40px;
+   /* above the pencil button */
+   left: 75%;
+   background: none;
+   border: none;
+
+   min-width: 140px;
+   display: flex;
+   flex-direction: column;
+   z-index: 10;
+
+   /* Hidden state */
+   opacity: 0;
+   transform: translateY(10px);
+   pointer-events: none;
+
+   /* Transition for fade + slide */
+   transition: opacity 1s ease, transform 0.25s ease;
+}
+
+/* Show menu */
+.photo-menu[style*="block"] {
+   opacity: 1;
+   transform: translateY(-20px);
+   pointer-events: auto;
+}
+
+.photo-menu button {
+   margin: 2px;
+   min-width: 140px;
+}
+
+/* Menu buttons */
+/* .photo-menu button {
+   background: transparent;
+   border: none;
+   padding: 10px 12px;
+   text-align: left;
+   width: 100%;
+   font-size: 14px;
+   cursor: pointer;
+   transition: background 0.2s;
+} */
+/* 
+.photo-menu button:hover {
+   background: #f0f0f0;
+} */
 
 /* PROFILE META */
 
@@ -101,6 +159,10 @@
    min-height: 520px;
 }
 
+.remove-btn {
+   margin: 1em 0 0 1em;
+}
+
 /* TABS */
 
 .tabs {
@@ -112,26 +174,26 @@
 }
 
 .tab {
-  padding: 7px 16px;
-  border-radius: 7px;
-  border: 1px solid var(--border);
-  background: transparent;
-  font-size: var(--title-smaller-size);
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+   padding: 7px 16px;
+   border-radius: 7px;
+   border: 1px solid var(--border);
+   background: transparent;
+   font-size: var(--title-smaller-size);
+   font-weight: 600;
+   color: var(--text-secondary);
+   cursor: pointer;
+   transition: all 0.2s ease;
+   white-space: nowrap;
 }
 
 .tab:hover {
-  background: rgba(75, 0, 20, 0.06);
-  color: var(--burgundy);
+   background: rgba(75, 0, 20, 0.06);
+   color: var(--burgundy);
 }
 
 .tab.active {
-  background: var(--burgundy);
-  color: white;
+   background: var(--burgundy);
+   color: white;
 }
 
 
