@@ -101,6 +101,7 @@ foreach ($events as $e) {
                 </div>
 
                 <div class="action-btns">
+                    <a href="archived_events.php" class="btn-secondary">Archived Events</a>
                     <a href="create_event.php" class="btn-primary">+ New Event</a>
                 </div>
             </header>

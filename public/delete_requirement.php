@@ -22,8 +22,12 @@ $doc = $res->fetch_assoc();
 
 if ($doc && !empty($doc['file_path'])) {
 
-    if (file_exists($doc['file_path'])) {
-        unlink($doc['file_path']);
+    $file = "../" . $doc['file_path']; // ensure correct path
+
+    if (is_file($file) && file_exists($file)) {
+        if (!unlink($file)) {
+            error_log("Failed to delete file: $file");
+        }
     }
 
     // reset requirement

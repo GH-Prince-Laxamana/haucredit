@@ -21,13 +21,23 @@ if (!$event_id) {
 $stmt = $conn->prepare("
     SELECT *
     FROM events
-    WHERE event_id = ? AND user_id = ? AND archived_at IS NULL
+    WHERE event_id = ? AND user_id = ?
     LIMIT 1
 ");
 $stmt->bind_param("ii", $event_id, $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $event = $result->fetch_assoc();
+
+$is_archived = !empty($event['archived_at']);
+
+$days_remaining = null;
+
+if ($is_archived) {
+    $archived_time = strtotime($event['archived_at']);
+    $expiry_time = $archived_time + (30 * 24 * 60 * 60);
+    $days_remaining = ceil(($expiry_time - time()) / 86400);
+}
 
 if (!$event) {
     die("Event not found or you don't have permission to view it.");
@@ -44,6 +54,7 @@ $stmt_docs->bind_param("i", $event_id);
 $stmt_docs->execute();
 $res_docs = $stmt_docs->get_result();
 
+$required_docs = [];
 while ($row = $res_docs->fetch_assoc()) {
     $required_docs[] = $row;
 }
@@ -92,17 +103,25 @@ $doc_messages = [
                 </div>
 
                 <div class="action-btns">
-                    <a href="create_event.php?id=<?= $event['event_id'] ?>" class="btn-secondary">
-                        Edit Event
-                    </a>
+                    <?php if (!$is_archived): ?>
+                        <a href="create_event.php?id=<?= $event['event_id'] ?>" class="btn-secondary">
+                            Edit Event
+                        </a>
+                    <?php endif; ?>
 
                     <form method="POST" action="archive_event.php" class="inline-form">
                         <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
 
-                        <button type="submit" name="archive_event" class="btn-danger"
-                            onclick="return confirm('Archive this event? You can restore it for 30 days.')">
-                            Archive Event
-                        </button>
+                        <?php if ($is_archived): ?>
+                            <button type="submit" name="restore_event" class="btn-danger btn-restore">
+                                Restore Event
+                            </button>
+                        <?php else: ?>
+                            <button type="submit" name="archive_event" class="btn-danger"
+                                onclick="return confirm('Archive this event? You can restore it for 30 days.')">
+                                Archive Event
+                            </button>
+                        <?php endif; ?>
                     </form>
                 </div>
             </header>
@@ -116,8 +135,17 @@ $doc_messages = [
                 <!-- Status Banner (spans full width) -->
                 <div class="status-banner status-<?= strtolower(str_replace(' ', '-', $event['event_status'])) ?>">
                     <div class="status-content">
-                        <h3>Event Status: <?= htmlspecialchars($event['event_status']) ?></h3>
-                        <p>Your event is currently under review by the Office of Student Affairs</p>
+                        <?php if (!$is_archived): ?>
+                            <h3>Event Status: <?= htmlspecialchars($event['event_status']) ?></h3>
+                            <p>Your event is currently under review by the Office of Student Affairs</p>
+                        <?php else: ?>
+                            <h3>This event is archived</h3>
+                            <p>
+                                You can view the event but editing and uploads are disabled.<br>
+                                This event will be permanently deleted in
+                                <strong><?= max($days_remaining, 0) ?> days</strong>
+                            </p>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -294,7 +322,7 @@ $doc_messages = [
                                             </button>
 
                                             <!-- Upload / Replace -->
-                                            <?php if ($doc['doc_status'] !== 'Uploaded'): ?>
+                                            <?php if (!$is_archived && $doc['doc_status'] !== 'Uploaded'): ?>
                                                 <form action="create_requirement.php" method="POST"
                                                     enctype="multipart/form-data" class="upload-form">
                                                     <input type="hidden" name="req_id" value="<?= $doc['req_id'] ?>">
@@ -307,7 +335,7 @@ $doc_messages = [
                                             <?php endif; ?>
 
                                             <!-- Delete Uploaded File -->
-                                            <?php if ($has_upload): ?>
+                                            <?php if ($has_upload && !$is_archived): ?>
                                                 <form action="delete_requirement.php" method="POST"
                                                     onsubmit="return confirm('Remove uploaded document?');">
                                                     <input type="hidden" name="req_id" value="<?= $doc['req_id'] ?>">
@@ -351,10 +379,25 @@ $doc_messages = [
 
                 </div>
                 <!-- END RIGHT COLUMN -->
+                <?php if ($is_archived): ?>
+                    <section class="danger-zone">
+                        <h3>Danger Zone</h3>
+                        <p>Permanently delete this archived event. This cannot be undone.</p>
 
+                        <form method="POST" action="delete_event.php">
+                            <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
+                            <button class="btn-danger"
+                                onclick="return confirm('Permanently delete this event? This cannot be undone.')">
+                                Delete Permanently
+                            </button>
+                        </form>
+                    </section>
+                <?php endif; ?>
+
+                <?php include 'assets/includes/footer.php' ?>
             </section>
 
-            <?php include 'assets/includes/footer.php' ?>
+
         </main>
     </div>
 

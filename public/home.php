@@ -38,6 +38,7 @@ $stmt = $conn->prepare("
 
         WHERE e.user_id = ? 
         AND e.archived_at IS NULL
+        AND end_datetime >= NOW() 
 
         GROUP BY e.event_id
         ORDER BY e.start_datetime ASC
@@ -179,7 +180,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                         </article>
                     </a>
 
-                    <a href="#" class="home-stat-link">
+                    <a href="archived_events.php" class="home-stat-link">
                         <article class="home-stat-card">
                             <div class="home-stat-header">
                                 <div class="home-stat-icon">
@@ -245,7 +246,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                                 </a>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <li>No active events.</li>
+                            <li>No active events after <?= date("F j") ?>.</li>
                         <?php endif; ?>
                     </ul>
                 </section>

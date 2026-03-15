@@ -64,6 +64,14 @@
   box-shadow: 0 6px 16px rgba(220, 38, 38, .35);
 }
 
+.btn-restore {
+  background: var(--green);
+}
+
+.btn-restore:hover {
+  background: #065e2a;
+}
+
 /* Status Banner */
 .status-banner {
   background: white;
@@ -546,6 +554,43 @@
 
 .upload-text {
   pointer-events: none;
+}
+
+/* Danger Zone */
+.danger-zone {
+  grid-column: 1 / -1;
+
+  background: #fff5f5;
+  border: 1px solid rgba(220, 38, 38, 0.15);
+  border-left: 4px solid #dc2626;
+
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+
+  padding: 18px 20px;
+  margin-top: 12px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.danger-zone h3 {
+  color: #991b1b;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.danger-zone p {
+  font-size: 14px;
+  color: rgba(0,0,0,0.65);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.danger-zone form {
+  margin-top: 4px;
 }
 
 /* =========================

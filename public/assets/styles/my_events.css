@@ -30,6 +30,27 @@
   box-shadow: 0 6px 18px rgba(75, 0, 20, 0.35);
 }
 
+.btn-secondary {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border-top: 1px solid var(--border);
+  background: white;
+  color: var(--burgundy);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 10px;
+  box-shadow: 0 4px 12px rgba(75, 0, 20, 0.25);
+}
+
+.btn-secondary:hover {
+  background: #fdfcfa;
+  transform: translateY(-2px);
+}
+
 /* ── Summary Strip ── */
 .summary-strip {
   display: grid;
@@ -200,7 +221,7 @@
 }
 
 .event-hidden {
-    display: none !important;
+  display: none !important;
 }
 
 .event-type-tag {
@@ -325,12 +346,12 @@
   transition: width 0.4s ease;
 }
 
-.progress-mid{
-    background: var(--orange);
+.progress-mid {
+  background: var(--orange);
 }
 
-.progress-complete{
-    background:var(--green);
+.progress-complete {
+  background: var(--green);
 }
 
 /* Card Footer */

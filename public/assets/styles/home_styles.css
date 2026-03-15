@@ -26,20 +26,28 @@
   background: #fff;
 }
 
-.home-notification-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: #dc2626;
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+.action-btns {
   display: flex;
+  gap: 12px;
   align-items: center;
-  justify-content: center;
+}
+
+.btn-secondary {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  background: white;
+  color: var(--burgundy);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  border-color: var(--burgundy);
+  background: #fdfcfa;
 }
 
 /* Cards */
@@ -319,18 +327,22 @@
 .event-card:hover {
   background: var(--offwhite);
 }
+
 .event-main {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 0; /* needed for text ellipsis */
+  min-width: 0;
+  /* needed for text ellipsis */
 }
 
 .event-info {
   display: flex;
   flex-direction: column;
-  width: 350px; /* fixed width for title + subtitle */
-  min-width: 0; /* ensures text truncates */
+  width: 350px;
+  /* fixed width for title + subtitle */
+  min-width: 0;
+  /* ensures text truncates */
 }
 
 .event-title {
@@ -355,8 +367,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1; /* takes remaining space */
-  min-width: 0; /* ensures bar shrinks properly */
+  flex: 1;
+  /* takes remaining space */
+  min-width: 0;
+  /* ensures bar shrinks properly */
 }
 
 .home-progress-bar-mini {

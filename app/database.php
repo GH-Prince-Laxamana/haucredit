@@ -78,7 +78,9 @@ try {
         docs_uploaded INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         archived_at DATETIME NULL,
-        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+        is_system_event TINYINT(1) DEFAULT 0,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        UNIQUE KEY unique_system_event (is_system_event)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
 
@@ -137,7 +139,13 @@ try {
     /* ================= CREATE DEFAULT EVENT + REQUIREMENTS ================= */
 
     // Only create if event_id = 1 doesn't exist
-    $checkEvent = $conn->query("SELECT 1 FROM events WHERE event_id = 1 LIMIT 1");
+    $checkEvent = $conn->query("
+        SELECT event_id 
+        FROM events 
+        WHERE is_system_event = 1 
+        LIMIT 1
+    ");
+
     if (!$checkEvent->fetch_assoc()) {
 
         $user_id = 1; // default admin
@@ -159,18 +167,19 @@ try {
         $participant_range = null;
         $overnight = 0;
         $event_status = "Pending Review";
+        $is_system_event = "1";
 
         $stmt = $conn->prepare("
         INSERT INTO events (
             user_id, organizing_body, background, activity_type, series,
             nature, event_name, start_datetime, end_datetime,
             participants, venue_platform, extraneous, collect_payments,
-            target_metric, distance, participant_range, overnight, event_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            target_metric, distance, participant_range, overnight, event_status, is_system_event
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
         $stmt->bind_param(
-            "isssssssssssssssis",
+            "isssssssssssssssisi",
             $user_id,
             $organizing_body,
             $background,
@@ -188,7 +197,8 @@ try {
             $distance,
             $participant_range,
             $overnight,
-            $event_status
+            $event_status,
+            $is_system_event
         );
 
         $stmt->execute();
