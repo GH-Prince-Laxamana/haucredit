@@ -25,7 +25,7 @@ if (isset($_POST['event_id'])) {
     $result = $check->get_result();
 
     if ($result->num_rows === 0) {
-        die("Unauthorized action.");
+        popup_error("Unauthorized action.");
     }
 
     /* ---------- GET FILE PATHS FROM REQUIREMENTS ---------- */
@@ -75,7 +75,7 @@ if (isset($_POST['event_id'])) {
     } catch (Exception $e) {
 
         $conn->rollback();
-        die("Deletion failed.");
+        popup_error("Deletion failed.");
 
     }
 

@@ -8,13 +8,13 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    die("Invalid request.");
+    popup_error("Invalid request.");
 }
 
 $req_id = $_POST['req_id'] ?? null;
 
 if (!$req_id || !isset($_FILES['document'])) {
-    die("Missing data.");
+    popup_error("Missing data.");
 }
 
 $file = $_FILES['document'];
@@ -32,15 +32,15 @@ $allowed_mime = [
 ];
 
 if (!in_array($mime, $allowed_mime)) {
-    die("Invalid file type.");
+    popup_error("Invalid file type.");
 }
 
 if (!in_array($ext, $allowed)) {
-    die("Invalid file type.");
+    popup_error("Invalid file type.");
 }
 
 if ($file['size'] > 100 * 1024 * 1024) {
-    die("File too large. Max 100MB.");
+    popup_error("File too large. Max 100MB.");
 }
 
 $upload_dir = "../uploads/requirements/"; 
@@ -50,11 +50,11 @@ if (!is_dir($upload_dir)) {
 
 $filename = uniqid("req_") . "." . $ext;
 
-$relative_path = "uploads/requirements/" . $filename;
+$relative_path = "../uploads/requirements/" . $filename;
 $full_path = $upload_dir . $filename;
 
 if (!move_uploaded_file($file['tmp_name'], $full_path)) {
-    die("Upload failed.");
+    popup_error("Upload failed.");
 }
 
 $old = $conn->prepare("SELECT file_path FROM requirements WHERE req_id = ?");

@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 $req_id = $_POST['req_id'] ?? null;
 
 if (!$req_id) {
-    die("Invalid request.");
+    popup_error("Invalid request.");
 }
 
 // get file path

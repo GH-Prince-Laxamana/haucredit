@@ -1,4 +1,5 @@
 <?php
+require_once 'error.php';
 /* ================= DATABASE SETUP ================= */
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -256,6 +257,5 @@ try {
     }
 
 } catch (Exception $e) {
-    die("Database Error: " . $e->getMessage());
+    popup_error("Database Error: " . $e->getMessage());
 }
-?>

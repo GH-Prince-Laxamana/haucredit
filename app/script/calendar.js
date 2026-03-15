@@ -413,7 +413,7 @@
       editBtn.type = "button";
       editBtn.className = "pill-btn edit";
       editBtn.title = "Edit";
-      editBtn.textContent = "";
+      editBtn.textContent = "✎";
 
       const delForm = document.createElement("form");
       delForm.className = "pill-del";

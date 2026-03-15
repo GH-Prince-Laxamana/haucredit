@@ -14,7 +14,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 $event_id = $_GET['id'] ?? null;
 
 if (!$event_id) {
-    die("Invalid event ID.");
+    popup_error("Invalid event ID.");
 }
 
 // Fetch the event info
@@ -40,7 +40,7 @@ if ($is_archived) {
 }
 
 if (!$event) {
-    die("Event not found or you don't have permission to view it.");
+    popup_error("Event not found or you don't have permission to view it.");
 }
 
 // Fetch required documents for this event
@@ -103,19 +103,24 @@ $doc_messages = [
                 </div>
 
                 <div class="action-btns">
-                    <form method="POST" action="archive_event.php" class="inline-form">
+                    <form method="POST" action="archive_event.php" class="inline-form" data-confirm="<?= $is_archived
+                        ? 'Restore this event?'
+                        : 'Archive this event? You can restore it for 30 days.' ?>">
+
                         <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
 
                         <?php if ($is_archived): ?>
-                            <button type="submit" name="restore_event" class="btn-primary btn-restore">
+                            <input type="hidden" name="action" value="restore">
+                            <button type="submit" class="btn-primary btn-restore">
                                 Restore Event
                             </button>
                         <?php else: ?>
-                            <button type="submit" name="archive_event" class="btn-primary btn-danger"
-                                onclick="return confirm('Archive this event? You can restore it for 30 days.')">
+                            <input type="hidden" name="action" value="archive">
+                            <button type="submit" class="btn-primary btn-danger">
                                 Archive Event
                             </button>
                         <?php endif; ?>
+
                     </form>
 
                     <?php if (!$is_archived): ?>
@@ -266,7 +271,8 @@ $doc_messages = [
                         <div class="card-body">
                             <div class="doc-checklist">
                                 <p class="doc-help">
-                                    Upload the required documents. If no file is uploaded, you may preview or download
+                                    Upload your documents in PDF or DOCX format. If no file is uploaded, you may preview
+                                    or download
                                     the
                                     template.
                                 </p>
@@ -336,8 +342,8 @@ $doc_messages = [
 
                                             <!-- Delete Uploaded File -->
                                             <?php if ($has_upload && !$is_archived): ?>
-                                                <form action="delete_requirement.php" method="POST"
-                                                    onsubmit="return confirm('Remove uploaded document?');">
+                                                <form data-confirm="Remove uploaded document?" action="delete_requirement.php"
+                                                    method="POST">
                                                     <input type="hidden" name="req_id" value="<?= $doc['req_id'] ?>">
                                                     <button class="btn-file btn-danger">Remove</button>
                                                 </form>
@@ -384,12 +390,10 @@ $doc_messages = [
                         <h3>Danger Zone</h3>
                         <p>Permanently delete this archived event. This cannot be undone.</p>
 
-                        <form method="POST" action="delete_event.php">
+                        <form method="POST" action="delete_event.php"
+                            data-confirm="Permanently delete this event? This cannot be undone.">
                             <input type="hidden" name="event_id" value="<?= $event['event_id'] ?>">
-                            <button class="btn-primary btn-danger"
-                                onclick="return confirm('Permanently delete this event? This cannot be undone.')">
-                                Delete Permanently
-                            </button>
+                            <button class="btn-primary btn-danger">Delete Permanently</button>
                         </form>
                     </section>
                 <?php endif; ?>

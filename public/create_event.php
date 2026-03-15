@@ -52,7 +52,7 @@ if ($event_id) {
       $formData[$field] = $existing_event[$field] ?? '';
     }
   } else {
-    die("Event not found or you don't have permission to edit it.");
+    popup_error("Event not found or you don't have permission to edit it.");
   }
 } else {
   foreach ($ce_fields as $field) {

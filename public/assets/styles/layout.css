@@ -364,6 +364,81 @@ body.sidebar-open .sidebar-overlay {
   justify-content: center;
 }
 
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .35);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.popup-box {
+  background: var(--surface);
+  padding: 28px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  width: max-content;
+  min-width: 300px;
+  text-align: center;
+}
+
+.popup-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-size: var(--title-section-smaller-size);
+}
+
+.popup-message {
+  font-size: var(--title-smaller-size);
+  color: var(--text-secondary);
+}
+
+.popup-buttons {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+
+/* errp */
+.error-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+
+.error-content {
+  max-width: 500px;
+}
+
+.error-title {
+  font-size: var(--title-size);
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.error-message {
+  font-size: var(--title-smaller-size);
+  color: var(--text-secondary);
+  margin-bottom: 22px;
+  line-height: 1.6;
+}
+
+.error-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+
 /* =========================
    RESPONSIVE
    ========================= */
