@@ -2,6 +2,7 @@
 .event-form {
   max-width: 1200px;
   margin: 0 auto;
+  padding-top: 20px;
   width: 100%;
 }
 
@@ -39,26 +40,34 @@
 }
 
 .acc {
+  background: white;
   border-radius: var(--radius);
+  padding: 0;
   box-shadow: var(--shadow);
-  border: 1px solid var(--border);
-  margin-bottom: 20px;
+  border: 1px solid rgba(194, 161, 77, .15);
+  margin-bottom: 24px;
   overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.acc:hover {
+
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .12);
 }
 
 .acc-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.2em;
+  padding: 18px 20px;
   cursor: pointer;
-  list-style: none;
   transition: background 0.2s ease;
-  background: #fffbf2;
+  background: white;
+  border-bottom: 1px solid rgba(194, 161, 77, .15);
 }
 
 .acc-head:hover {
-  background: #f5f0e8;
+  background: rgba(194, 161, 77, .05);
 }
 
 .acc-head::-webkit-details-marker {
@@ -72,11 +81,15 @@
 }
 
 .acc-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--gold);
-  flex-shrink: 0;
+  width: 35px;
+  height: 35px;
+  border-radius: 8px;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 35px;
+  color: var(--burgundy-light);
 }
 
 .acc-text {
@@ -86,13 +99,13 @@
 }
 
 .acc-title {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 1.35rem;
+  font-weight: 700;
   color: var(--burgundy);
 }
 
 .acc-sub {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--text-secondary);
 }
 
@@ -112,7 +125,7 @@
 }
 
 .acc-body {
-  padding: 0 24px 24px;
+  padding: 0px 20px 10px;
   border-top: 1px solid var(--border);
 }
 
@@ -139,9 +152,8 @@ legend {
 }
 
 .hint {
-  font-style: italic;
   color: var(--text-secondary);
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .multi-select {
@@ -156,7 +168,7 @@ legend {
   border: none;
   outline: none;
   padding: 8px 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .dropdown-list {
@@ -176,6 +188,7 @@ legend {
 
 .dropdown-list div {
   padding: 8px 10px;
+  font-size: 0.9rem;
   cursor: pointer;
 }
 
@@ -196,7 +209,7 @@ legend {
   color: #fff;
   padding: 6px 10px;
   border-radius: 20px;
-  font-size: 1rem;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -235,7 +248,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 label:has(input[type="radio"]) {
-  font-size: 1rem;
+  font-size: 0.9rem;
   accent-color: var(--burgundy);
 }
 
@@ -258,10 +271,12 @@ label:has(input[type="radio"]) {
 
 input,
 textarea,
-.multi-select {
-  border: 1px solid var(--border-fields);
+.multi-select,
+select {
+  border: 1px solid rgba(194, 161, 77, .25);
   border-radius: 8px;
-  transition: all 0.2s ease;
+  padding: 10px 12px;
+  background: white;
 }
 
 input:hover,
@@ -273,8 +288,8 @@ textarea:hover,
 input:focus,
 textarea:focus,
 .multi-select:focus-within {
-  outline: var(--burgundy);
-  border-color: var(--burgundy);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(194, 161, 77, .15);
 }
 
 details summary {
@@ -323,16 +338,19 @@ details {
 /* Step 1 actions - only Next button */
 .step-1-actions {
   display: flex;
-  justify-content: flex-end; /* Align Next button to the right if desired */
+  justify-content: flex-end;
+  /* Align Next button to the right if desired */
 }
 
 .step-1-actions .back-btn {
-  display: none !important; /* Hide back button in step 1 */
+  display: none !important;
+  /* Hide back button in step 1 */
 }
 
 /* Step 2 actions - both Back and Create Event buttons */
 .step-2-actions {
-  display: none; /* Hidden by default */
+  display: none;
+  /* Hidden by default */
 }
 
 .step-2-actions.active {
@@ -345,7 +363,8 @@ details {
 
 .step-2-actions.active .back-btn,
 .step-2-actions.active .create-btn {
-  display: inline-flex; /* Show both buttons */
+  display: inline-flex;
+  /* Show both buttons */
 }
 
 .primary-btn {
@@ -527,11 +546,13 @@ details {
 @media (max-width: 767px) {
   .ce-topbar {
     display: flex;
-    flex-direction: row; /* Keep row layout */
+    flex-direction: row;
+    /* Keep row layout */
     align-items: center;
     gap: 12px;
     padding: 0 0 10px 0;
-    flex-wrap: nowrap; /* Prevent wrapping */
+    flex-wrap: nowrap;
+    /* Prevent wrapping */
   }
 
   .ce-topbar .hamburger {
@@ -542,7 +563,8 @@ details {
   .ce-topbar .title-wrap {
     flex: 1;
     padding-left: 0;
-    min-width: 0; /* Allow shrinking */
+    min-width: 0;
+    /* Allow shrinking */
   }
 
   .ce-topbar .title-wrap h1 {
@@ -672,7 +694,8 @@ details {
   }
 
   .step-1-actions .back-btn {
-    display: none !important; /* Ensure back button is hidden */
+    display: none !important;
+    /* Ensure back button is hidden */
   }
 
   /* Step 2 actions - both buttons */
@@ -834,11 +857,11 @@ details {
   .ce-topbar .title-wrap h1 {
     font-size: 16px;
   }
-  
+
   .ce-topbar .title-wrap p {
     font-size: 10px;
   }
-  
+
   .primary-btn,
   .secondary-btn {
     padding: 12px 10px;

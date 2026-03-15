@@ -421,7 +421,7 @@ if (isset($_POST['create_event'])) {
           <summary class="acc-head">
 
             <span class="acc-left">
-              <span class="acc-dot"></span>
+              <span class="acc-dot"><i class="fa-solid fa-magnifying-glass-chart"></i></span>
 
               <span class="acc-text">
                 <label for="organizing_body" class="acc-title">Classification</label>
@@ -621,7 +621,7 @@ if (isset($_POST['create_event'])) {
           <summary class="acc-head">
 
             <span class="acc-left">
-              <span class="acc-dot"></span>
+              <span class="acc-dot"><i class="fa-solid fa-circle-info"></i></span>
 
               <span class="acc-text">
                 <label for="organizing_body" class="acc-title">Basic Information</label>
@@ -706,7 +706,7 @@ if (isset($_POST['create_event'])) {
           <summary class="acc-head">
 
             <span class="acc-left">
-              <span class="acc-dot"></span>
+              <span class="acc-dot"><i class="fa-solid fa-calendar-days"></i></span>
 
               <span class="acc-text">
                 <label for="organizing_body" class="acc-title">Logistics</label>
