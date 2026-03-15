@@ -305,6 +305,10 @@
   transition: width 0.4s ease;
 }
 
+.progress-low {
+  background: var(--red);
+}
+
 .progress-mid {
   background: var(--orange);
 }

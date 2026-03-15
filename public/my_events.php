@@ -196,6 +196,8 @@ foreach ($events as $e) {
                             $progress_class = 'progress-complete';
                         } elseif ($pct >= 50) {
                             $progress_class = 'progress-mid';
+                        } else {
+                            $progress_class = 'progress-low';
                         }
                         ?>
 
