@@ -2,6 +2,7 @@
 session_start();
 require_once "../app/database.php";
 
+
 date_default_timezone_set('Asia/Manila');
 
 if (!isset($_SESSION["user_id"])) {
@@ -160,7 +161,7 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
             <header class="topbar">
                 <div class="title-wrap">
                     <h1>Requirements</h1>
-                    <p>Track compliance progress</p>
+                    <p>Keep track your compliance progress.</p>
                 </div>
             </header>
 

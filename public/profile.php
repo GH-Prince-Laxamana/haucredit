@@ -2,6 +2,7 @@
 session_start();
 require_once "../app/database.php";
 
+
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
@@ -249,6 +250,7 @@ if (isset($_POST["change_password"])) {
             <header class="topbar">
                 <div class="title-wrap">
                     <h1>Profile Settings</h1>
+                    <p>Update personal information or password.</p>
                 </div>
             </header>
 
@@ -309,8 +311,8 @@ if (isset($_POST["change_password"])) {
                         </div>
 
                         <div class="crop-actions">
-                            <button class="crop-btn cancel" id="cropCancel">Cancel</button>
-                            <button class="crop-btn save" id="cropSave">Apply</button>
+                            <button class="btn-secondary btn-smaller cancel" id="cropCancel">Cancel</button>
+                            <button class="btn-primary btn-smaller save" id="cropSave">Apply</button>
                         </div>
 
                     </div>
@@ -459,11 +461,11 @@ if (isset($_POST["change_password"])) {
 
                             <div class="pw-actions">
 
-                                <button class="pw-btn ghost" type="reset">
+                                <button class="btn-secondary btn-smaller ghost" type="reset">
                                     Discard Changes
                                 </button>
 
-                                <button class="pw-btn primary" type="submit" name="update_profile">
+                                <button class="btn-primary btn-smaller" type="submit" name="update_profile">
                                     Apply Changes
                                 </button>
 
@@ -493,7 +495,7 @@ if (isset($_POST["change_password"])) {
                                     <input id="curpw" name="current_password" type="password" required>
 
                                     <button class="eye-btn" type="button" data-toggle="curpw">
-                                        👁
+                                        <i class="fa-regular fa-eye"></i>
                                     </button>
 
                                 </div>
@@ -510,7 +512,7 @@ if (isset($_POST["change_password"])) {
                                     <input id="newpw" name="new_password" type="password" required>
 
                                     <button class="eye-btn" type="button" data-toggle="newpw">
-                                        👁
+                                        <i class="fa-regular fa-eye"></i>
                                     </button>
 
                                 </div>
@@ -527,7 +529,7 @@ if (isset($_POST["change_password"])) {
                                     <input id="confpw" name="confirm_password" type="password" required>
 
                                     <button class="eye-btn" type="button" data-toggle="confpw">
-                                        👁
+                                        <i class="fa-regular fa-eye"></i>
                                     </button>
 
                                 </div>
@@ -537,11 +539,11 @@ if (isset($_POST["change_password"])) {
 
                             <div class="pw-actions">
 
-                                <button class="pw-btn ghost" type="reset">
+                                <button class="btn-secondary btn-smaller ghost" type="reset">
                                     Discard Changes
                                 </button>
 
-                                <button class="pw-btn primary" type="submit" name="change_password">
+                                <button class="btn-primary btn-smaller primary" type="submit" name="change_password">
                                     Apply Changes
                                 </button>
 
@@ -560,7 +562,7 @@ if (isset($_POST["change_password"])) {
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script src="assets/script/profile.js" defer></script>
+    <script src="../app/script/profile.js" defer></script>
 
 </body>
 

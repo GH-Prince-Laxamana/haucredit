@@ -70,7 +70,7 @@
 }
 
 .home-stat-label {
-  font-size: 14px;
+  font-size: var(--title-smaller-size);
   color: #64748b;
   font-weight: 500;
 }
@@ -92,7 +92,7 @@
 }
 
 .home-section-title {
-  font-size: 20px;
+  font-size: var(--title-section-smaller-size);
   font-weight: 700;
   color: var(--burgundy);
 }
@@ -105,7 +105,7 @@
   color: var(--gold);
   text-decoration: none;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--title-smaller-size);
   transition: color 0.2s ease;
 }
 
@@ -113,6 +113,7 @@
   color: var(--burgundy);
 }
 
+/* 
 .home-event-row {
   border-bottom: 1px solid #e2e8f0;
   padding: 16px 0;
@@ -134,14 +135,14 @@
 .home-event-name {
   font-weight: 600;
   color: var(--burgundy);
-  font-size: 15px;
+  font-size: var(--title-smaller-size);
   margin-bottom: 4px;
 }
 
 .home-event-date {
   color: #64748b;
   font-size: 13px;
-}
+}*/
 
 .home-event-progress {
   display: flex;
@@ -165,7 +166,7 @@
 }
 
 .home-progress-text {
-  font-size: 13px;
+  font-size: var(--sub-title-size);
   font-weight: 600;
   color: #64748b;
   min-width: 42px;
@@ -176,7 +177,7 @@
   align-items: center;
   padding: 6px 12px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: var(--sub-title-size);
   font-weight: 600;
 }
 
@@ -211,31 +212,32 @@
   flex: 1;
 }
 
-.home-deadline-info h4 {
-  font-size: 15px;
+/* .home-deadline-info h4 {
+  font-size: 1px;
   font-weight: 600;
   color: var(--burgundy);
   margin-bottom: 4px;
-}
+} */
 
-.home-deadline-info p {
-  font-size: 13px;
+/* .home-deadline-info p {
+  font-size: var(--title-smaller-size);
   color: #64748b;
-}
+} */
 
 .home-deadline-date {
   text-align: right;
 }
 
+/* 
 .home-deadline-date strong {
   display: block;
   color: #d97706;
-  font-size: 16px;
+  font-size: var(--title-smaller-size);
   margin-bottom: 2px;
-}
+} */
 
 .home-deadline-date span {
-  font-size: 12px;
+  font-size: var(--sub-title-size);
   color: #64748b;
 }
 
@@ -280,7 +282,7 @@
 }
 
 .event-title {
-  font-size: 15px;
+  font-size: var(--title-smaller-size);
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -289,12 +291,16 @@
 }
 
 .event-sub {
-  font-size: 13px;
+  font-size: var(--sub-title-size);
   color: var(--gold);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 8px 0;
+}
+
+time {
+  font-weight: 700;
 }
 
 .event-progress {
@@ -332,7 +338,7 @@
   }
 }
 
-.notification-wrapper {
+/* .notification-wrapper {
   position: relative;
 }
 
@@ -374,4 +380,4 @@
 
 .notif-item:hover {
   background: #f7f7f7;
-}
+} */

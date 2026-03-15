@@ -35,13 +35,13 @@
 }
 
 .req-head h2 {
-  font-size: 1rem;
+  font-size: var(--title-section-smaller-size);
   font-weight: 800;
   color: var(--burgundy);
 }
 
 .req-head p {
-  font-size: 0.9rem;
+  font-size: var(--title-smaller-size);
   color: var(--text-secondary);
 }
 
@@ -67,7 +67,7 @@
 }
 
 .event-header h3 {
-  font-size: 16px;
+  font-size: var(--title-smaller-size);
   font-weight: 700;
   color: black;
 }
@@ -106,7 +106,7 @@
 ========================= */
 
 .req-title {
-  font-size: 15px;
+  font-size: var(--title-smaller-size);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -116,7 +116,7 @@
 ========================= */
 
 .status {
-  font-size: 12px;
+  font-size: var(--sub-title-size);
   font-weight: 600;
   padding: 5px 10px;
   border-radius: 20px;
@@ -134,34 +134,8 @@
   color: var(--orange);
 }
 
-/* =========================
-   FILE BUTTON
-========================= */
-
-.btn-secondary {
-  padding: 6px 20px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--burgundy-2);
-  font-weight: 600;
-  font-size: 12px;
-  text-decoration: none;
-  transition: all .2s ease;
-}
-
-.btn-secondary:hover {
-  border-color: var(--burgundy);
-  color: var(--burgundy);
-  background: var(--offwhite);
-}
-
-/* =========================
-   EMPTY MESSAGE
-========================= */
-
 .empty-msg {
-  font-size: 13px;
+  font-size: var(--title-smaller-size);
   color: #999;
   padding: 12px 0;
 }
@@ -183,14 +157,14 @@
 }
 
 .progress-card h3 {
-  font-size: 17px;
+  font-size: var(--title-section-smaller-size);
   font-weight: 700;
   margin-bottom: 8px;
   color: var(--burgundy);
 }
 
 .progress-card p {
-  font-size: 13px;
+  font-size: var(--title-smaller-size);
   color: var(--text-secondary);
   margin: 2px 0;
 }
@@ -232,7 +206,7 @@
 }
 
 .filter-bar label {
-  font-size: 14px;
+  font-size: var(--title-smaller-size);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -242,7 +216,7 @@
   padding: 5px 5px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  font-size: 14px;
+  font-size: var(--title-smaller-size);
   font-weight: 500;
   color: var(--text-primary);
   cursor: pointer;

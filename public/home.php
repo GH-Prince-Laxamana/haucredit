@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once "../app/database.php";
+
 require_once "../app/security_headers.php";
 send_security_headers();
 
@@ -130,6 +131,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
 
                 <div class="title-wrap">
                     <h1>Dashboard</h1>
+                    <p><?= $username ?></p>
                     <p><?= $org_body ?></p>
                 </div>
 
@@ -197,7 +199,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                     <header class="home-section-header">
                         <h2 class="home-section-title">Active Events</h2>
                         <?php if ($show_view_all): ?>
-                            <a href="my_events.php" class="home-view-all">View All →</a>
+                            <a href="my_events.php" class="btn-secondary btn-smaller">View All</a>
                         <?php endif; ?>
                     </header>
 
@@ -221,10 +223,10 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                                             <div class="event-info">
                                                 <div class="event-title"><?= htmlspecialchars($event['event_name']) ?></div>
                                                 <div class="event-sub">
+                                                    <?= htmlspecialchars($event['venue_platform']) ?> •
                                                     <time datetime="<?= htmlspecialchars($event['start_datetime']) ?>">
                                                         <?= date("F j, g:i A", strtotime($event['start_datetime'])) ?>
                                                     </time>
-                                                    • <?= htmlspecialchars($event['venue_platform']) ?>
                                                 </div>
                                             </div>
 
@@ -255,7 +257,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                     <header class="home-section-header">
                         <h2 class="home-section-title">Upcoming Deadlines</h2>
                         <?php if ($show_view_all_deadlines): ?>
-                            <a href="requirements.php" class="home-view-all">View All →</a>
+                            <a href="my_events.php" class="btn-secondary btn-smaller">View All</a>
                         <?php endif; ?>
                     </header>
 
@@ -323,7 +325,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
         </main>
     </div>
 
-    <script src="assets/script/layout.js?v=1"></script>
+    <script src="../app/script/layout.js?v=1"></script>
 </body>
 
 </html>

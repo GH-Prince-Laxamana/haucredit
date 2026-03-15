@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once "../app/database.php";
+
 require_once "../app/security_headers.php";
 send_security_headers();
 
@@ -8,19 +9,19 @@ $profile_pic = "default.jpg";
 
 if (isset($_SESSION["user_id"])) {
 
-    $user_id = $_SESSION["user_id"];
+  $user_id = $_SESSION["user_id"];
 
-    $profile_stmt = $conn->prepare("
+  $profile_stmt = $conn->prepare("
         SELECT profile_pic
         FROM users
         WHERE user_id=?
     ");
 
-    $profile_stmt->bind_param("i", $user_id);
-    $profile_stmt->execute();
-    $user_profile = $profile_stmt->get_result()->fetch_assoc();
+  $profile_stmt->bind_param("i", $user_id);
+  $profile_stmt->execute();
+  $user_profile = $profile_stmt->get_result()->fetch_assoc();
 
-    $profile_pic = $user_profile['profile_pic'] ?? "default.jpg";
+  $profile_pic = $user_profile['profile_pic'] ?? "default.jpg";
 }
 
 ?>
@@ -47,7 +48,7 @@ if (isset($_SESSION["user_id"])) {
 
         <div class="title-wrap">
           <h1>About Us</h1>
-          <p>Learn more about HAUCREDIT and our team</p>
+          <p>Learn How HAUCREDIT Simplifies Student Event Management</p>
         </div>
       </header>
 
@@ -69,17 +70,28 @@ if (isset($_SESSION["user_id"])) {
         <section class="about-section">
           <h2>Key Features</h2>
           <ul class="feature-list">
-            <li><strong>Smart Event Classification</strong> - Automatically determines required documents based on
-              activity type</li>
-            <li><strong>Dynamic Forms</strong> - Shows only relevant fields for your specific event (on-campus, virtual,
-              off-campus, community service)</li>
+            <li><strong>Centralized Event Dashboard</strong> - View all your inputted events in one place with real-time
+              updates
+              on compliance status, requirements, and progress. Your event dashboard makes planning and monitoring
+              effortless.</li>
+
+            <li><strong>Intelligent Event Guidance</strong> - HAUCREDIT automatically classifies your event type and
+              highlights required documents, helping student leaders stay on track with institutional policies.HAUCREDIT
+              automatically classifies your event type and highlights required documents, helping student leaders stay
+              on track with institutional policies.</li>
             <li><strong>Template Library</strong> - Direct access to official HAU OSA form templates via tinyurl links
             </li>
-            <li><strong>Compliance Checklist</strong> - Auto-generates requirements list based on your event details
+
+            <li><strong>Automated Compliance Checklist</strong> - Generate a personalized checklist for each event to
+              ensure nothing is overlooked, minimizing delays and administrative headaches.
             </li>
-            <li><strong>Calendar Integration</strong> - View all scheduled events with progress tracking</li>
-            <li><strong>Session Management</strong> - Secure login system for student councils and organizations</li>
-          </ul>
+
+            <li><strong>Built-in Templates for Requirements</strong> - Whenever specific forms are needed, HAUCREDIT
+              provides direct access to official HAU OSA templates alongside your event requirements.</li>
+
+            <li><strong>Secure Login & Session Management</strong> - Access HAUCREDIT safely with your personal account,
+              ensuring your event data remains private and protected.</li>
+
         </section>
 
         <section class="about-section">
@@ -179,7 +191,7 @@ if (isset($_SESSION["user_id"])) {
     </main>
   </div>
 
-  <script src="assets/script/layout.js?v=1"></script>
+  <script src="../app/script/layout.js?v=1"></script>
 </body>
 
 </html>

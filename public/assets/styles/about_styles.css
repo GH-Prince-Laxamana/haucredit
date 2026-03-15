@@ -12,7 +12,7 @@
 .about-hero h1 {
   color: var(--burgundy);
   margin-bottom: 20px;
-  font-size: 28px;
+  font-size: var(--title-section-size);
   font-weight: 700;
 }
 
@@ -25,7 +25,7 @@
 .about-section h2 {
   color: var(--burgundy);
   margin-bottom: 25px;
-  font-size: 22px;
+  font-size: var(--title-section-smaller-size);
   font-weight: 600;
   border-bottom: 2px solid #c2a14d;
   padding-bottom: 10px;
@@ -88,18 +88,18 @@
 .about-card h3 {
   color: var(--burgundy);
   margin-bottom: 8px;
-  font-size: 16px;
+  font-size: var(--title-smaller-size);
 }
 
 .about-card .role {
   color: var(--gold);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--title-smaller-size);
   margin-bottom: 10px;
 }
 
 .about-card p {
-  font-size: 13px;
+  font-size: var(--title-smaller-size);
   line-height: 1.6;
   color: var(--text-secondary);
 }
@@ -113,7 +113,7 @@
 
 .contact-item h3 {
   color: var(--burgundy);
-  font-size: 16px;
+  font-size: var(--title-smaller-size);
   margin-bottom: 10px;
 }
 

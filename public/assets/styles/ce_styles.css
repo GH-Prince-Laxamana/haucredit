@@ -1,6 +1,6 @@
 /* ===== CREATE EVENT PAGE ===== Head: Kenaz, Prince */
 .event-form {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding-top: 20px;
   width: 100%;
@@ -25,7 +25,6 @@
 }
 
 .ce-topbar .title-wrap h1 {
-  font-size: 28px;
   line-height: 1.1;
   color: var(--text-primary);
   text-align: left;
@@ -34,7 +33,7 @@
 
 .ce-topbar .title-wrap p {
   margin-top: 6px;
-  font-size: 14px;
+  font-size: var(--title-smaller-size);
   opacity: 0.7;
   text-align: left;
 }
@@ -51,7 +50,6 @@
 }
 
 .acc:hover {
-
   box-shadow: 0 12px 28px rgba(0, 0, 0, .12);
 }
 
@@ -59,7 +57,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px;
+  padding: 20px;
   cursor: pointer;
   transition: background 0.2s ease;
   background: white;
@@ -81,14 +79,14 @@
 }
 
 .acc-dot {
-  width: 35px;
-  height: 35px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   background: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 35px;
+  font-size: 40px;
   color: var(--burgundy-light);
 }
 
@@ -99,13 +97,13 @@
 }
 
 .acc-title {
-  font-size: 1.35rem;
+  font-size: var(--title-section-size);
   font-weight: 700;
   color: var(--burgundy);
 }
 
 .acc-sub {
-  font-size: 0.9rem;
+  font-size: var(--title-smaller-size);
   color: var(--text-secondary);
 }
 
@@ -155,20 +153,21 @@
 
 .field-title,
 legend {
-  font-size: 1.3rem;
+  font-size: var(--title-section-smaller-size);
   font-weight: 600;
   color: var(--burgundy);
 }
 
 .hint {
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--title-smaller-size);
+  padding: 0 0 5px;
 }
 
 .multi-select {
   position: relative;
   border-radius: 6px;
-  padding: 5px 10px;
+  padding: 0 10px 5px;
   background: #fff;
 }
 
@@ -176,8 +175,8 @@ legend {
   width: 100%;
   border: none;
   outline: none;
-  padding: 8px 0;
-  font-size: 0.9rem;
+  padding: 5px 0;
+  font-size: var(--title-smaller-size);
 }
 
 .dropdown-list {
@@ -197,7 +196,7 @@ legend {
 
 .dropdown-list div {
   padding: 8px 10px;
-  font-size: 0.9rem;
+  font-size: var(--title-smaller-size);
   cursor: pointer;
 }
 
@@ -218,7 +217,7 @@ legend {
   color: #fff;
   padding: 6px 10px;
   border-radius: 20px;
-  font-size: 0.9rem;
+  font-size: var(--title-smaller-size);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -232,7 +231,7 @@ legend {
 input[type="datetime-local"] {
   width: 100%;
   padding: 12px 14px;
-  font-size: 1rem;
+  font-size: var(--title-smaller-size);
   background: #fff;
   color: var(--burgundy);
   border: 1px solid var(--border-fields);
@@ -251,13 +250,15 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 
 .long-field textarea {
   padding: 0.5em;
-  height: 30px;
+  height: 35px;
   width: 100%;
   max-width: 100%;
+  font-family: var(--font-family);
+  font-size: var(--title-smaller-size);
 }
 
 label:has(input[type="radio"]) {
-  font-size: 0.9rem;
+  font-size: var(--title-smaller-size);
   accent-color: var(--burgundy);
 }
 

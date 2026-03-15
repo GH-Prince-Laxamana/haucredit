@@ -1,7 +1,7 @@
 <?php
 session_start();
-
 require_once "../app/database.php";
+
 require_once "../app/security_headers.php";
 send_security_headers();
 

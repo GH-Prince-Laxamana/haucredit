@@ -74,7 +74,7 @@ body:has(.auth-container)::before {
   font-weight: 900;
   letter-spacing: .7px;
   text-transform: uppercase;
-  font-size: 1rem;
+  font-size: var(--title-smaller-size);
 }
 
 .navbar-title .accent {
@@ -88,7 +88,7 @@ body:has(.auth-container)::before {
 }
 
 .navlinks a {
-  font-size: .92rem;
+  font-size: var(--title-smaller-size);
   font-weight: 600;
   padding: 10px 14px;
   border-radius: 12px;
@@ -168,7 +168,7 @@ body:has(.auth-container)::before {
 }
 
 .brand-tagline {
-  font-size: 1rem;
+  font-size: var(--title-smaller-size);
   max-width: 560px;
   color: rgba(255, 255, 255, .92);
 }
@@ -179,7 +179,7 @@ body:has(.auth-container)::before {
   flex-direction: column;
   gap: 12px;
   align-items: center;
-  font-size: 1rem;
+  font-size: var(--title-smaller-size);
 }
 
 .auth-left-panel li::before {
@@ -200,7 +200,7 @@ body:has(.auth-container)::before {
 }
 
 .subtitle {
-  font-size: .95rem;
+  font-size: var(--title-smaller-size);
   color: #777;
   margin: 6px 0 18px;
 }
@@ -212,7 +212,7 @@ body:has(.auth-container)::before {
 label {
   display: block;
   margin-bottom: 6px;
-  font-size: .78rem;
+  font-size: var(--sub-title-size);
   font-weight: 900;
   letter-spacing: .75px;
   text-transform: uppercase;
@@ -227,7 +227,7 @@ select {
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, .18);
   background: #fff;
-  font-size: 1rem;
+  font-size: var(--title-smaller-size);
 }
 
 input:focus,
@@ -267,7 +267,7 @@ button {
   background: linear-gradient(180deg, var(--burgundy), var(--burgundy-2));
   color: #fff;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: var(--title-smaller-size);
   box-shadow: 0 14px 26px rgba(90, 0, 22, .22);
   cursor: pointer;
   transition: transform .15s ease, filter .15s ease;
@@ -281,7 +281,7 @@ button:hover {
 /* Links */
 .link {
   text-align: center;
-  font-size: .9rem;
+  font-size: var(--title-smaller-size);
   color: #777;
   margin-top: 12px;
 }
@@ -303,7 +303,7 @@ button:hover {
 .forgot-link {
   color: var(--burgundy);
   font-weight: 700;
-  font-size: .9rem;
+  font-size: var(--title-smaller-size);
 }
 
 .forgot-link:hover {
@@ -315,7 +315,7 @@ button:hover {
   margin-top: 14px;
   padding: 12px 14px;
   border-radius: 12px;
-  font-size: .95rem;
+  font-size: var(--title-smaller-size);
 }
 
 .notice.error {

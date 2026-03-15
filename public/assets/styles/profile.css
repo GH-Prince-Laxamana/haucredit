@@ -86,7 +86,7 @@
 
 .profile-org {
    margin-top: 4px;
-   font-size: 13px;
+   font-size: var(--title-smaller-size);
    color: rgba(0, 0, 0, .45);
 }
 
@@ -112,24 +112,28 @@
 }
 
 .tab {
-   border: 1px solid rgba(194, 161, 77, .35);
-   background: rgba(75, 0, 20, .07);
-   color: rgba(75, 0, 20, .75);
-   font-weight: 800;
-   padding: 8px 14px;
-   border-radius: 12px;
-   cursor: pointer;
-   transition: .15s ease;
+  padding: 7px 16px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font-size: var(--title-smaller-size);
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .tab:hover {
-   background: rgba(75, 0, 20, .12);
+  background: rgba(75, 0, 20, 0.06);
+  color: var(--burgundy);
 }
 
 .tab.active {
-   background: var(--burgundy);
-   color: var(--offwhite);
+  background: var(--burgundy);
+  color: white;
 }
+
 
 /* =========================
    EDIT PROFILE FORM
@@ -149,7 +153,7 @@
 
 .form-field label {
    display: block;
-   font-size: 11px;
+   font-size: var(--sub-title-size);
    font-weight: 900;
    letter-spacing: .4px;
    margin-bottom: 6px;
@@ -162,7 +166,7 @@
    border-radius: 10px;
    border: 1px solid var(--border-fields);
    padding: 0 12px;
-   font-size: 13px;
+   font-size: var(--sub-title-size);
    background: #fff;
 }
 
@@ -185,7 +189,7 @@
 
 .pw-field label {
    display: block;
-   font-size: 11px;
+   font-size: var(--sub-title-size);
    font-weight: 900;
    letter-spacing: .4px;
    margin-bottom: 6px;
@@ -207,7 +211,7 @@
    border: none;
    outline: none;
    flex: 1;
-   font-size: 13px;
+   font-size: var(--sub-title-size);
    font-family: inherit;
    background: transparent;
 }
@@ -221,7 +225,7 @@
    border: none;
    background: transparent;
    cursor: pointer;
-   font-size: 14px;
+   font-size: var(--title-smaller-size);
    opacity: .6;
    padding: 6px;
    border-radius: 6px;
@@ -289,7 +293,7 @@
    padding: 14px 16px;
    margin-bottom: 18px;
    border-radius: 14px;
-   font-size: 13px;
+   font-size: var(--title-smaller-size);
    font-weight: 600;
    box-shadow: 0 6px 18px rgba(0, 0, 0, .08);
    animation: alertFade .35s ease;
@@ -311,7 +315,7 @@
    border-radius: 50%;
    background: #1c7a4a;
    color: #fff;
-   font-size: 12px;
+   font-size: var(--title-smaller-size);
    font-weight: 800;
 }
 
@@ -328,10 +332,11 @@
    justify-content: center;
    width: 22px;
    height: 22px;
+   padding: 2px 5px 5px;
    border-radius: 50%;
    background: #b93838;
    color: #fff;
-   font-size: 12px;
+   font-size: var(--title-smaller-size);
    font-weight: 800;
 }
 
@@ -391,7 +396,7 @@
 .crop-header button {
    border: none;
    background: none;
-   font-size: 18px;
+   font-size: var(--title-section-smaller-size);
    cursor: pointer;
 }
 

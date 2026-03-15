@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once "../app/database.php";
+
 require_once "../app/security_headers.php";
 send_security_headers();
 
@@ -418,6 +419,7 @@ if (isset($_POST['create_event'])) {
 
       <form method="POST" class="event-form">
         <details class="step-1 acc" open>
+
           <summary class="acc-head">
 
             <span class="acc-left">
@@ -766,12 +768,12 @@ if (isset($_POST['create_event'])) {
 
               <div class="radio-group inline">
                 <label>
-                  <input type="radio" name="has_visitors" value="Yes" <?= ($formData['has_visitors'] ?? '') === 'Yes' ? 'checked' : '' ?>>
+                  <input type="radio" name="has_visitors" value="Yes" <?= ($formData['has_visitors'] ?? '') === 'Yes' ? 'checked' : '' ?> required>
                   Yes
                 </label>
 
                 <label>
-                  <input type="radio" name="has_visitors" value="No" <?= ($formData['has_visitors'] ?? '') === 'No' ? 'checked' : '' ?>>
+                  <input type="radio" name="has_visitors" value="No" <?= ($formData['has_visitors'] ?? '') === 'No' ? 'checked' : '' ?> required>
                   No
                 </label>
               </div>
@@ -851,7 +853,7 @@ if (isset($_POST['create_event'])) {
       <?php include 'assets/includes/footer.php' ?>
     </main>
   </div>
-  <script src="assets/script/layout.js?v=1"></script>
+  <script src="../app/script/layout.js?v=1"></script>
   <script src="../app/script/create_event.js"></script>
 </body>
 

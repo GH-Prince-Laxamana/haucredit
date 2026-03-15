@@ -99,7 +99,7 @@ $doc_messages = [
 
                 <div class="title-wrap">
                     <h1><?= htmlspecialchars($event['event_name']) ?></h1>
-                    <p>Event Details & Compliance Status</p>
+                    <p>Event Details and Compliance Status</p>
                 </div>
 
                 <div class="action-btns">
@@ -415,7 +415,7 @@ $doc_messages = [
         </div>
     </div>
 
-    <script src="assets/script/layout.js?v=1"></script>
+    <script src="../app/script/layout.js?v=1"></script>
     <script>
         function previewDocument(url, name, noTemplateMsg = '') {
             const modal = document.getElementById('docPreviewModal');
@@ -477,6 +477,7 @@ $doc_messages = [
         }
 
     </script>
+
 </body>
 
 </html>

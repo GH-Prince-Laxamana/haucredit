@@ -2,6 +2,7 @@
 session_start();
 require_once "../app/database.php";
 
+
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
@@ -97,7 +98,7 @@ foreach ($events as $e) {
 
                 <div class="title-wrap">
                     <h1>My Events</h1>
-                    <p>Manage and track your submitted activities</p>
+                    <p>Manage and track your events.</p>
                 </div>
 
                 <div class="action-btns">
@@ -229,7 +230,7 @@ foreach ($events as $e) {
                             <!-- Card Footer -->
                             <div class="event-card-footer">
                                 <span class="event-created">
-                                    Submitted <?= date('M j, Y', strtotime($event['created_at'])) ?>
+                                    Created <?= date('M j, Y', strtotime($event['created_at'])) ?>
                                 </span>
                                 <div class="card-actions">
                                     <a href="create_event.php?id=<?= $event['event_id'] ?>" class="btn-secondary btn-edit">Edit</a>
@@ -264,7 +265,7 @@ foreach ($events as $e) {
         </main>
     </div>
 
-    <script src="assets/script/layout.js?v=1"></script>
+    <script src="../app/script/layout.js?v=1"></script>
     <script>
         let currentFilter = 'all';
 

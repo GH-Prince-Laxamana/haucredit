@@ -1,6 +1,8 @@
 <?php
 session_start();
 require_once "../app/database.php";
+
+
 require_once "../app/security_headers.php";
 send_security_headers();
 
@@ -369,7 +371,7 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
           <!-- <h1 class="mobile-title">Calendar</h1> -->
           <div class="title-wrap">
             <h1 class="desktop-title">Calendar</h1>
-            <p>Plan and track your entries.</p>
+            <p>Organize your schedule and track progress.</p>
           </div>
         </div>
       </header>
@@ -388,18 +390,16 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
               <button class="cal-tab" type="button" data-view="day">Day</button>
             </div>
 
-            <button class="cal-add" id="openAdd" type="button">
-              <span class="plus" aria-hidden="true">+</span> Add
-            </button>
+            <button class="btn-primary ghost" type="button" id="openAdd"><i class="fa-solid fa-plus"></i> Add</button>
           </div>
 
           <div class="cal-monthrow">
             <div class="cal-month">
               <strong><?php echo htmlspecialchars($monthName . " " . $year); ?></strong>
               <a class="cal-navbtn" href="?y=<?php echo $prevY; ?>&m=<?php echo $prevM; ?>"
-                aria-label="Previous month">◀</a>
+                aria-label="Previous month"><i class="fa-solid fa-caret-left"></i></a>
               <a class="cal-navbtn" href="?y=<?php echo $nextY; ?>&m=<?php echo $nextM; ?>"
-                aria-label="Next month">▶</a>
+                aria-label="Next month"><i class="fa-solid fa-caret-right"></i></a>
             </div>
           </div>
 
@@ -461,7 +461,7 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
                     $startISO = date("Y-m-d\\TH:i", strtotime($e["start_datetime"]));
                     $endISO = $e["end_datetime"] ? date("Y-m-d\\TH:i", strtotime($e["end_datetime"])) : "";
 
-                    echo '<div class="pill' . htmlspecialchars($spanClass) . '"'
+                    echo '<div class="pill pill-link' . htmlspecialchars($spanClass) . '"'
                       . ' data-entry-id="' . (int) $p["entry_id"] . '"'
                       . ' data-title="' . htmlspecialchars($e["title"], ENT_QUOTES, "UTF-8") . '"'
                       . ' data-start="' . htmlspecialchars($startISO, ENT_QUOTES, "UTF-8") . '"'
@@ -473,14 +473,14 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
                       echo '<div class="pill-time">' . htmlspecialchars($p["time"]) . '</div>';
 
                     echo '<div class="pill-actions">';
-                    echo '<button type="button" class="pill-btn edit" title="Edit">✎</button>';
+                    echo '<button type="button" class="pill-btn edit" title="Edit"><i class="fa-solid fa-pen"></i></button>';
 
                     echo '<form method="post" class="pill-del">';
                     echo '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($csrf_token) . '">';
                     echo '<input type="hidden" name="action" value="delete_entry">';
                     echo '<input type="hidden" name="entry_id" value="' . (int) $p["entry_id"] . '">';
                     echo '<input type="hidden" name="ajax" value="1">';
-                    echo '<button type="submit" class="pill-btn del" title="Delete">🗑</button>';
+                    echo '<button type="submit" class="pill-btn del" title="Delete"><i class="fa-solid fa-trash-can"></i></button>';
                     echo '</form>';
 
                     echo '</div></div>';
@@ -575,15 +575,15 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
         </label>
 
         <div class="cal-actions">
-          <button class="cal-btn ghost" type="button" id="cancelAdd">Cancel</button>
-          <button class="cal-btn" type="submit">Save</button>
+          <button class="btn-secondary btn-smaller ghost" type="button" id="cancelAdd">Cancel</button>
+          <button class="btn-primary btn-smaller" type="submit">Save</button>
         </div>
       </form>
     </div>
   </div>
 
-  <script src="assets/script/layout.js?v=1"></script>
-  <script src="assets/script/calendar.js?v=1"></script>
+  <script src="../app/script/layout.js?v=1"></script>
+  <script src="../app/script/calendar.js?v=1"></script>
 </body>
 
 </html>

@@ -40,7 +40,7 @@
   border: none;
   background: transparent;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--sub-title-size);
   font-weight: 900;
   color: rgba(75, 0, 20, .75);
   cursor: pointer;
@@ -79,7 +79,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 13px;
+  padding: 10px 5px;
+  font-size: var(--title-section-smaller-size);
   color: var(--text-secondary);
 }
 
@@ -131,7 +132,7 @@
 .cal-cell.head {
   min-height: 36px;
   background: rgba(75, 0, 20, .06);
-  font-size: 11px;
+  font-size: var(--sub-title-size);
   font-weight: 900;
   color: rgba(0, 0, 0, .60);
   display: flex;
@@ -145,7 +146,7 @@
 }
 
 .day {
-  font-size: 11px;
+  font-size: var(--sub-title-size);
   font-weight: 900;
   color: rgba(0, 0, 0, .55);
 }
@@ -203,7 +204,7 @@
 }
 
 .pill-title {
-  font-size: 10.5px;
+  font-size: 0.75rem;
   font-weight: 900;
   color: rgba(75, 0, 20, .80);
   white-space: nowrap;
@@ -214,7 +215,7 @@
 
 .pill-time {
   margin-top: 2px;
-  font-size: 10px;
+  font-size: 0.75rem;
   color: rgba(0, 0, 0, .55);
 }
 
@@ -245,11 +246,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 0.65rem;
+  color: var(--burgundy);
 }
 
 .pill-del {
   margin: 0;
+}
+
+.pill-link {
+  cursor: pointer;
+}
+
+.pill-link:hover {
+  filter: brightness(1.05);
 }
 
 /* Span look (connected) */
@@ -349,7 +359,7 @@
 .t-row {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--title-smaller-size);
   color: rgba(0, 0, 0, .60);
 }
 
@@ -366,7 +376,7 @@
   padding: 10px 12px;
   color: rgba(75, 0, 20, .85);
   font-weight: 900;
-  font-size: 13px;
+  font-size: var(--title-smaller-size);
   margin-bottom: 12px;
 }
 
@@ -410,6 +420,7 @@
   transform: translateY(10px) scale(.99);
   opacity: 0;
   transition: transform .18s ease, opacity .18s ease;
+  height: max-content;
 }
 
 .cal-modal.show .cal-modal__panel {
@@ -429,7 +440,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--title-smaller-size);
   color: rgba(75, 0, 20, .75);
   padding: 6px 10px;
   border-radius: 10px;
@@ -449,7 +460,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--sub-title-size);
   font-weight: 900;
   color: rgba(0, 0, 0, .65);
 }
@@ -463,11 +474,14 @@
 .cal-input,
 .cal-textarea {
   width: 100%;
+  max-width: 530px;
+  max-height: 430px;
   border-radius: 12px;
   border: 1px solid var(--border-fields);
   background: var(--surface-2);
   padding: 10px 12px;
   outline: none;
+  font-size: var(--title-smaller-size);
 }
 
 .cal-input:focus,
@@ -515,7 +529,7 @@
   border-radius: 12px;
   background: rgba(75, 0, 20, .05);
   font-weight: 900;
-  font-size: 12px;
+  font-size: var(--sub-title-size);
   color: rgba(0, 0, 0, .65);
   text-align: center;
 }
@@ -535,8 +549,8 @@
 }
 
 .week-col .wk-date {
-  font-weight: 900;
-  font-size: 12px;
+  font-weight: 500;
+  font-size: var(--sub-title-size);
   color: rgba(0, 0, 0, .60);
   margin-bottom: 8px;
 }
@@ -585,20 +599,20 @@
 
 .day-item .di-title {
   font-weight: 900;
-  font-size: 13px;
+  font-size: var(--sub-title-size);
   color: rgba(75, 0, 20, .85);
 }
 
 .day-item .di-notes {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--sub-title-size);
   color: rgba(0, 0, 0, .55);
   white-space: pre-wrap;
 }
 
 .day-item .di-time {
   font-weight: 900;
-  font-size: 12px;
+  font-size: var(--sub-title-size);
   color: rgba(0, 0, 0, .55);
   white-space: nowrap;
 }
