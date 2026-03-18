@@ -64,24 +64,24 @@ $requirements_map = [
   'OSA-Initiated Activity' => [
     'On-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary'],
     'Virtual Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary'],
-    'Community Service - On-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'OCES Annex A Form'],
-    'Community Service - Virtual Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'OCES Annex A Form'],
-    'Off-Campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
-    'Community Service - Off-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+    'Community Service - On-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Student Organization Intake Form (OCES Annex A Form)'],
+    'Community Service - Virtual Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Student Organization Intake Form (OCES Annex A Form)'],
+    'Off-Campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'Student Organization Intake Form (OCES Annex A Form)'],
+    'Community Service - Off-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'Student Organization Intake Form (OCES Annex A Form)'],
   ],
   'Student-Initiated Activity' => [
     'On-campus Activity' => ['Program Flow and/or Itinerary', 'Planned Budget'],
     'Virtual Activity' => ['Program Flow and/or Itinerary', 'Planned Budget'],
-    'Community Service - On-campus Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'OCES Annex A Form'],
-    'Community Service - Virtual Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'OCES Annex A Form'],
+    'Community Service - On-campus Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'Student Organization Intake Form (OCES Annex A Form)'],
+    'Community Service - Virtual Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'Student Organization Intake Form (OCES Annex A Form)'],
     'Off-Campus Activity' => ['Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
     'Community Service - Off-campus Activity' => ['Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
   ],
   'Participation' => [
     'On-campus Activity' => [],
     'Virtual Activity' => [],
-    'Community Service - On-campus Activity' => ['OCES Annex A Form'],
-    'Community Service - Virtual Activity' => ['OCES Annex A Form'],
+    'Community Service - On-campus Activity' => ['Student Organization Intake Form (OCES Annex A Form)'],
+    'Community Service - Virtual Activity' => ['Student Organization Intake Form (OCES Annex A Form)'],
     'Off-Campus Activity' => ['Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance'],
     'Community Service - Off-campus Activity' => ['Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
   ]
@@ -246,11 +246,12 @@ if (isset($_POST['create_event'])) {
     'Planned Budget' => '',
     'List of Participants' => '',
     'CHEd Certificate of Compliance' => 'https://docs.google.com/document/d/1gdHMH0iFZpS3OFwoG8w1r8DZoMh_oeXB4nN22kQt21o/edit',
-    'OCES Annex A Form' => '',
+    'Student Organization Intake Form (OCES Annex A Form)' => 'https://docs.google.com/document/d/1WKsTW9acn0s9jXj4TANrkJBp3WIe9Ilh/edit',
     'Request Letter for Collection/Selling' => 'https://docs.google.com/document/d/1uA5CrIyGeVlrcw8dBQCpKN2XzyvSOtHU81FmY4XZ6ic/edit',
     'Medical Clearance of Participants' => '',
     'Risk Assessment Plan with Emergency Contacts and Emergency Map' => '',
-    'Visitors and Vehicle Lists' => 'https://docs.google.com/document/d/12GynKf48JzB1hPn-xelzkDNYMfDXw3LLqwYkNlavRog/edit'
+    'Visitors and Vehicle Lists' => 'https://docs.google.com/document/d/12GynKf48JzB1hPn-xelzkDNYMfDXw3LLqwYkNlavRog/edit',
+    '' => 'https://drive.google.com/file/d/1WKsTW9acn0s9jXj4TANrkJBp3WIe9Ilh/view'
   ];
 
   $requirements_descs = [
@@ -268,7 +269,7 @@ if (isset($_POST['create_event'])) {
 
     'CHEd Certificate of Compliance' => 'Shall be notarized. Please view template provided.',
 
-    'OCES Annex A Form' => 'Form required by the Office of Community Extension Services.',
+    'Student Organization Intake Form (OCES Annex A Form)' => 'Form required by the Office of Community Extension Services.',
 
     'Request Letter for Collection/Selling' => 'A letter approved by the College/School Dean should be uploaded here. If you are a uniwide student group, address it to Ms. Iris Ann Castro (OSA Director) through Mr. Paul Ernest D. Carreon (Student Activities Coordinator) submit it without their signature. No need to place our names on the approval.',
 
