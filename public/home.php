@@ -5,16 +5,22 @@ require_once "../app/security_headers.php";
 
 send_security_headers();
 
+// ===== AUTHENTICATION CHECK =====
+// Ensure user is logged in before displaying dashboard
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
 }
 
+// ===== USER DATA EXTRACTION =====
+// Retrieve and sanitize user information from session
 $user_id = $_SESSION['user_id'];
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
 
-/* ------------------- EVENTS QUERY ------------------- */
+/* ================= EVENTS QUERY ================= */
+// Fetch active events with document progress for the current user
+// Includes calculation of event phase based on completion and timing
 $stmt = $conn->prepare("
     SELECT 
         e.event_id,
@@ -42,15 +48,18 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $events = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-/* ------------------- PROGRESS CALCULATIONS ------------------- */
+/* ================= PROGRESS CALCULATIONS ================= */
+// Calculate overall compliance progress across all active events
 $total_docs_all = array_sum(array_column($events, 'total_docs'));
 $uploaded_docs_all = array_sum(array_column($events, 'uploaded_docs'));
 $overall_progress = $total_docs_all ? round(($uploaded_docs_all / $total_docs_all) * 100) : 0;
 
+// Determine if "View All" link should be shown for events
 $show_view_all = count($events) > 3;
 $show_limit_events = array_slice($events, 0, 3);
 
-/* ------------------- EVENT PHASE COUNTS ------------------- */
+/* ================= EVENT PHASE COUNTS ================= */
+// Count events by their current phase for potential future use
 $active = $pending = $completed = 0;
 foreach ($show_limit_events as $e) {
     switch ($e['event_phase']) {
@@ -66,7 +75,8 @@ foreach ($show_limit_events as $e) {
     }
 }
 
-/* ------------------- DEADLINES QUERY ------------------- */
+/* ================= DEADLINES QUERY ================= */
+// Fetch upcoming deadlines for pending requirements
 $deadline_stmt = $conn->prepare("
     SELECT 
         e.event_id,
@@ -84,10 +94,12 @@ $deadline_stmt->bind_param("i", $user_id);
 $deadline_stmt->execute();
 $deadlines = $deadline_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
+// Determine if "View All" link should be shown for deadlines
 $show_view_all_deadlines = count($deadlines) > 3;
 $show_limit_deadlines = array_slice($deadlines, 0, 3);
 
-/* ------------------- ARCHIVED EVENTS COUNT ------------------- */
+/* ================= ARCHIVED EVENTS COUNT ================= */
+// Count total archived events for the user
 $archived_stmt = $conn->prepare("SELECT COUNT(*) AS total FROM events WHERE user_id = ? AND archived_at IS NOT NULL");
 $archived_stmt->bind_param("i", $user_id);
 $archived_stmt->execute();
@@ -106,10 +118,13 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
 
 <body>
     <div class="app">
+        <!-- Sidebar overlay for mobile navigation -->
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+        
         <?php include 'assets/includes/general_nav.php' ?>
 
         <main class="main">
+            <!-- ===== PAGE HEADER ===== -->
             <header class="topbar">
                 <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
                 <div class="title-wrap">
@@ -124,10 +139,13 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                 </div>
             </header>
 
+            <!-- ===== DASHBOARD CONTENT ===== -->
             <section class="home-content">
-                <!-- STATS -->
+                
+                <!-- ===== STATISTICS GRID ===== -->
                 <section class="home-stats-grid">
                     <?php
+                    // Define statistics cards with their data and links
                     $stats = [
                         ['count' => count($events), 'label' => 'Active Events', 'icon' => 'fa-regular fa-calendar-days', 'link' => 'my_events.php'],
                         ['count' => count($deadlines), 'label' => 'Upcoming Deadlines', 'icon' => 'fa-solid fa-list-check', 'link' => 'requirements.php#req-deadlines'],
@@ -135,6 +153,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                         ['count' => $archived_events, 'label' => 'Archived Events', 'icon' => 'fa-regular fa-folder-open', 'link' => 'archived_events.php']
                     ];
 
+                    // Render each statistic card
                     foreach ($stats as $s): ?>
                         <a href="<?= $s['link'] ?>" class="home-stat-link">
                             <article class="home-stat-card">
@@ -148,7 +167,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                     <?php endforeach; ?>
                 </section>
 
-                <!-- ACTIVE EVENTS -->
+                <!-- ===== ACTIVE EVENTS SECTION ===== -->
                 <section class="home-section">
                     <header class="home-section-header">
                         <h2 class="home-section-title">Active Events</h2>
@@ -160,7 +179,9 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                     <ul class="events-table">
                         <?php if ($show_limit_events): ?>
                             <?php foreach ($show_limit_events as $event):
+                                // Calculate progress percentage for this event
                                 $progress = $event['total_docs'] ? round(($event['uploaded_docs'] / $event['total_docs']) * 100) : 0;
+                                // Determine progress bar color based on completion level
                                 $progress_color = $progress >= 75 ? '#2e7d32' : ($progress >= 40 ? '#f9a825' : '#d32f2f');
                                 ?>
                                 <a class="event-card-container" href="view_event.php?id=<?= $event['event_id'] ?>">
@@ -197,7 +218,7 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                     </ul>
                 </section>
 
-                <!-- DEADLINES -->
+                <!-- ===== UPCOMING DEADLINES SECTION ===== -->
                 <section class="home-section">
                     <header class="home-section-header">
                         <h2 class="home-section-title">Upcoming Deadlines</h2>

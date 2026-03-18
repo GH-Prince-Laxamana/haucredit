@@ -2,37 +2,44 @@
 session_start();
 require_once "../app/database.php";
 
+// ===== AUTHENTICATION CHECK =====
+// Ensure user is logged in before displaying events
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
 }
 
+// ===== USER DATA EXTRACTION =====
+// Retrieve and sanitize username from session
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
+/* ================= EVENTS QUERY ================= */
+// Fetch all active events for the current user with document progress and phase calculation
+// Phase logic: pending (incomplete docs), active (complete docs + future end), completed (past end)
 $stmt = $conn->prepare("
-SELECT 
-    e.event_id,
-    e.event_name,
-    e.activity_type,
-    e.nature,
-    e.organizing_body,
-    e.venue_platform,
-    e.start_datetime,
-    e.end_datetime,
-    e.participants,
-    e.event_status,
-    e.created_at,
+    SELECT 
+        e.event_id,
+        e.event_name,
+        e.activity_type,
+        e.nature,
+        e.organizing_body,
+        e.venue_platform,
+        e.start_datetime,
+        e.end_datetime,
+        e.participants,
+        e.event_status,
+        e.created_at,
 
-    COUNT(r.req_id) AS docs_total,
-    SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) AS docs_uploaded,
+        COUNT(r.req_id) AS docs_total,
+        SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) AS docs_uploaded,
 
-    CASE
-        WHEN SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) < COUNT(r.req_id)
-            THEN 'pending'
-        WHEN e.end_datetime >= NOW()
-            THEN 'active'
-        ELSE 'completed'
-    END AS event_phase
+        CASE
+            WHEN SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) < COUNT(r.req_id)
+                THEN 'pending'
+            WHEN e.end_datetime >= NOW()
+                THEN 'active'
+            ELSE 'completed'
+        END AS event_phase
 
     FROM events e
     LEFT JOIN requirements r ON e.event_id = r.event_id
@@ -54,14 +61,15 @@ $stmt->bind_param("i", $_SESSION["user_id"]);
 $stmt->execute();
 $result = $stmt->get_result();
 
+// ===== STORE EVENTS IN ARRAY =====
+// Collect all event data into an array for processing
 $events = [];
 while ($row = $result->fetch_assoc()) {
     $events[] = $row;
 }
 
-/* ================================
-   SUMMARY COUNTS
-================================ */
+/* ================= SUMMARY COUNTS ================= */
+// Calculate total events and count by phase for summary display
 $total_events = count($events);
 $active = $pending = $completed = 0;
 
@@ -94,11 +102,13 @@ foreach ($events as $e) {
 
 <body>
     <div class="app">
+        <!-- Sidebar overlay for mobile navigation -->
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
         <?php include 'assets/includes/general_nav.php' ?>
 
         <main class="main">
+            <!-- ===== PAGE HEADER ===== -->
             <header class="topbar">
                 <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
 
@@ -114,9 +124,8 @@ foreach ($events as $e) {
             </header>
 
             <section class="content my-events-page">
-                <!-- ===============================
-                SUMMARY CARDS
-                ================================ -->
+                <!-- ===== SUMMARY CARDS ===== -->
+                <!-- Display overview statistics for events -->
                 <div class="summary-strip">
                     <div class="summary-card">
                         <span class="summary-num"><?= $total_events ?></span>
@@ -139,9 +148,8 @@ foreach ($events as $e) {
                     </div>
                 </div>
 
-                <!-- ===============================
-                SEARCH + FILTER
-                ================================ -->
+                <!-- ===== SEARCH AND FILTER CONTROLS ===== -->
+                <!-- Provide search and filter functionality for events -->
                 <div class="list-toolbar">
                     <div class="search-wrap">
                         <span class="search-icon">
@@ -160,17 +168,17 @@ foreach ($events as $e) {
                     </div>
                 </div>
 
-                <!-- ===============================
-                EVENT CARDS
-                ================================ -->
+                <!-- ===== EVENT CARDS GRID ===== -->
+                <!-- Display individual event cards with details and actions -->
                 <div class="events-grid" id="eventsGrid">
                     <?php foreach ($events as $event): ?>
                         <?php
+                        // Calculate document upload progress percentage
                         $pct = $event['docs_total'] > 0
                             ? round(($event['docs_uploaded'] / $event['docs_total']) * 100)
                             : 0;
 
-                        /* Search blob */
+                        // Create searchable text blob for filtering
                         $search_blob = strtolower(
                             $event['event_name'] . ' ' .
                             $event['activity_type'] . ' ' .
@@ -181,7 +189,7 @@ foreach ($events as $e) {
                             date('M j Y', strtotime($event['end_datetime']))
                         );
 
-                        /* Organizing body cleanup */
+                        // Clean up organizing body display (remove JSON artifacts)
                         $org_clean = str_replace(
                             ['[', ']', '"', "'"],
                             '',
@@ -190,21 +198,17 @@ foreach ($events as $e) {
 
                         $org_clean = str_replace(',', ', ', $org_clean);
 
-                        /* Progress bar style */
-                        $progress_class = '';
-                        if ($pct == 100) {
-                            $progress_class = 'progress-complete';
-                        } elseif ($pct >= 50) {
-                            $progress_class = 'progress-mid';
-                        } else {
-                            $progress_class = 'progress-low';
-                        }
+                        $pct_color_ref = max(0, min(100, (int) $pct)); // clamp 0–100
+                    
+                        $hue = ($pct_color_ref / 100) * 120; // 0 = red, 120 = green
+                    
+                        $progress_color = "hsl($hue, 70%, 45%)";
                         ?>
 
                         <article class="event-card" data-status="<?= $event['event_phase'] ?>"
                             data-search="<?= htmlspecialchars($search_blob) ?>">
 
-                            <!-- Card Top -->
+                            <!-- Card Top Section -->
                             <div class="event-card-top">
                                 <span class="event-type-tag">
                                     <?= htmlspecialchars($event['activity_type']) ?>
@@ -218,7 +222,7 @@ foreach ($events as $e) {
                                 </span>
                             </div>
 
-                            <!-- Card Body -->
+                            <!-- Card Body Section -->
                             <div class="event-card-body">
                                 <h3 class="event-title">
                                     <?= htmlspecialchars($event['event_name']) ?>
@@ -254,7 +258,7 @@ foreach ($events as $e) {
                                     </div>
                                 </div>
 
-                                <!-- Documents Progress -->
+                                <!-- Documents Progress Section -->
                                 <div class="doc-progress">
                                     <div class="doc-progress-label">
                                         <span>Documents</span>
@@ -264,12 +268,12 @@ foreach ($events as $e) {
                                     </div>
 
                                     <div class="progress-bar">
-                                        <div class="progress-fill <?= $progress_class ?>" style="width: <?= $pct ?>%"></div>
+                                        <div class="progress-fill" style="width: <?= $pct ?>%; --progress-color: <?= $progress_color ?>"></div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Card Footer -->
+                            <!-- Card Footer Section -->
                             <footer class="event-card-footer">
                                 <span class="event-created">
                                     Created <?= date('M j, Y', strtotime($event['created_at'])) ?>
@@ -286,10 +290,8 @@ foreach ($events as $e) {
                     <?php endforeach; ?>
                 </div>
 
-                <!-- ===============================
-                EMPTY STATE
-                ================================ -->
-
+                <!-- ===== EMPTY STATE ===== -->
+                <!-- Display when no events match the current filters -->
                 <div class="empty-state" id="emptyState" <?= empty($events) ? '' : 'hidden' ?>>
                     <div class="empty-icon">
                         <i class="fa-solid fa-file-circle-xmark"></i>
