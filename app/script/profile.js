@@ -155,9 +155,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Handle crop cancel button click
   if (cropCancel) {
-    cropCancel.addEventListener("click", () =>
-      cropModal.classList.remove("active"),
-    );
+    cropCancel.addEventListener("click", () => {
+      cropModal.classList.remove("active");
+      // Reset the file input to clear any selected file and allow re-uploading
+      photoInput.value = '';
+      // Optional: Ensure cropper is fully cleaned up (though it should be from change event)
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+    });
   }
 
   // Handle crop modal close button click
