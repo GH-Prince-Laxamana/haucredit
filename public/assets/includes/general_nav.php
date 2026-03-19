@@ -4,16 +4,20 @@ $username = htmlspecialchars((string) ($_SESSION["username"] ?? ""), ENT_QUOTES,
 $current_page = basename($_SERVER['PHP_SELF']);
 
 $profile_pic = "default.jpg";
+
 if ($user_id) {
-    $profile_stmt = $conn->prepare("
+    $fetchUserProfilePictureSql = "
         SELECT profile_pic
         FROM users
-        WHERE user_id=?
-    ");
+        WHERE user_id = ?
+    ";
 
-    $profile_stmt->bind_param("i", $user_id);
-    $profile_stmt->execute();
-    $user_profile = $profile_stmt->get_result()->fetch_assoc();
+    $user_profile = fetchOne(
+        $conn,
+        $fetchUserProfilePictureSql,
+        "i",
+        [$user_id]
+    );
 
     $profile_pic = $user_profile['profile_pic'] ?? "default.jpg";
 }

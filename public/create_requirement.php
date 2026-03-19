@@ -27,9 +27,7 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
     popup_error("Upload failed.");
 }
 
-/* ================= VALIDATE OWNERSHIP =================
-   Ensure the requirement belongs to an event owned by the logged-in user
-*/
+/* ================= VALIDATE OWNERSHIP ================= */
 $owned_requirement = fetchOne(
     $conn,
     "
@@ -100,39 +98,37 @@ if (!move_uploaded_file($file['tmp_name'], $file_full_path)) {
 try {
     $conn->begin_transaction();
 
-    /* ================= MARK OLD FILES AS NOT CURRENT ================= */
+    /* ================= GET ALL OLD FILES FOR THIS REQUIREMENT ================= */
     $oldFileRows = fetchAll(
         $conn,
         "
-    SELECT file_path
-    FROM requirement_files
-    WHERE event_req_id = ?
-      AND is_current = 1
-    ",
+        SELECT file_path
+        FROM requirement_files
+        WHERE event_req_id = ?
+          AND file_path IS NOT NULL
+          AND file_path != ''
+        ",
         "i",
         [$event_req_id]
     );
 
     $old_paths = [];
     foreach ($oldFileRows as $row) {
-        if (!empty($row['file_path'])) {
-            $old_paths[] = $row['file_path'];
-        }
+        $old_paths[] = $row['file_path'];
     }
 
+    /* ================= DELETE ALL OLD FILE ROWS ================= */
     execQuery(
         $conn,
         "
-    UPDATE requirement_files
-    SET is_current = 0
-    WHERE event_req_id = ?
-      AND is_current = 1
-    ",
+        DELETE FROM requirement_files
+        WHERE event_req_id = ?
+        ",
         "i",
         [$event_req_id]
     );
 
-    /* ================= INSERT NEW CURRENT FILE ================= */
+    /* ================= INSERT NEW FILE ================= */
     $original_file_name = $file['name'];
     $file_size = (int) $file['size'];
     $uploaded_by = (int) $_SESSION["user_id"];
@@ -140,17 +136,16 @@ try {
     execQuery(
         $conn,
         "
-    INSERT INTO requirement_files (
-        event_req_id,
-        file_path,
-        original_file_name,
-        file_type,
-        file_size,
-        uploaded_by,
-        uploaded_at,
-        is_current
-    ) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)
-    ",
+        INSERT INTO requirement_files (
+            event_req_id,
+            file_path,
+            original_file_name,
+            file_type,
+            file_size,
+            uploaded_by,
+            uploaded_at
+        ) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)
+        ",
         "isssii",
         [$event_req_id, $file_relative_path, $original_file_name, $mime_type, $file_size, $uploaded_by]
     );
@@ -159,11 +154,11 @@ try {
     execQuery(
         $conn,
         "
-    UPDATE event_requirements
-    SET submission_status = 'uploaded',
-        updated_at = CURRENT_TIMESTAMP
-    WHERE event_req_id = ?
-    ",
+        UPDATE event_requirements
+        SET submission_status = 'uploaded',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE event_req_id = ?
+        ",
         "i",
         [$event_req_id]
     );
@@ -172,10 +167,10 @@ try {
     $totalDocsRow = fetchOne(
         $conn,
         "
-    SELECT COUNT(*) AS total_docs
-    FROM event_requirements
-    WHERE event_id = ?
-    ",
+        SELECT COUNT(*) AS total_docs
+        FROM event_requirements
+        WHERE event_id = ?
+        ",
         "i",
         [$event_id]
     );
@@ -184,11 +179,11 @@ try {
     $uploadedDocsRow = fetchOne(
         $conn,
         "
-    SELECT COUNT(*) AS uploaded_docs
-    FROM event_requirements
-    WHERE event_id = ?
-      AND submission_status = 'uploaded'
-    ",
+        SELECT COUNT(*) AS uploaded_docs
+        FROM event_requirements
+        WHERE event_id = ?
+          AND submission_status = 'uploaded'
+        ",
         "i",
         [$event_id]
     );
@@ -197,21 +192,19 @@ try {
     execQuery(
         $conn,
         "
-    UPDATE events
-    SET docs_total = ?, docs_uploaded = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE event_id = ?
-    ",
+        UPDATE events
+        SET docs_total = ?, docs_uploaded = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE event_id = ?
+        ",
         "iii",
         [$total_docs, $uploaded_docs, $event_id]
     );
 
     $conn->commit();
 
-    /* ================= DELETE OLD FILES FROM DISK =================
-       After successful commit only
-    */
+    /* ================= DELETE OLD FILES FROM DISK AFTER COMMIT ================= */
     foreach ($old_paths as $old_relative_path) {
-        $old_full_path = __DIR__ . "/../" . $old_relative_path;
+        $old_full_path = __DIR__ . "/../" . ltrim($old_relative_path, "/");
         if (is_file($old_full_path)) {
             @unlink($old_full_path);
         }

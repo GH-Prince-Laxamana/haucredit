@@ -20,12 +20,8 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
    - event_location
    - event_metrics
    - docs_total / docs_uploaded from events
-         AND (
-            ed.end_datetime IS NULL
-            OR ed.end_datetime >= NOW()
-          )
 */
-$stmt = $conn->prepare("
+$fetchAllEventsSql = "
     SELECT
         e.event_id,
         e.event_name,
@@ -50,10 +46,14 @@ $stmt = $conn->prepare("
     ORDER BY
         CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
         ed.start_datetime ASC
-");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$all_events = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+";
+
+$all_events = fetchAll(
+    $conn,
+    $fetchAllEventsSql,
+    "i",
+    [$user_id]
+);
 
 /* ================= PROGRESS CALCULATIONS ================= */
 $total_docs_all = array_sum(array_map(fn($e) => (int) ($e['docs_total'] ?? 0), $all_events));
@@ -90,7 +90,7 @@ foreach ($all_events as $e) {
    - event_requirements.submission_status
    - requirement_templates.req_name / req_desc
 */
-$deadline_stmt = $conn->prepare("
+$fetchDeadlinesSql = "
     SELECT
         e.event_id,
         rt.req_name,
@@ -113,27 +113,38 @@ $deadline_stmt = $conn->prepare("
             OR ed.end_datetime >= NOW()
           )
     ORDER BY er.deadline ASC
-");
-$deadline_stmt->bind_param("i", $user_id);
-$deadline_stmt->execute();
-$deadlines = $deadline_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+";
+
+$deadlines = fetchAll(
+    $conn,
+    $fetchDeadlinesSql,
+    "i",
+    [$user_id]
+);
 
 $show_view_all_deadlines = count($deadlines) > 3;
 $show_limit_deadlines = array_slice($deadlines, 0, 3);
 
 /* ================= ARCHIVED EVENTS COUNT ================= */
-$archived_stmt = $conn->prepare("
+$countArchivedEventsSql = "
     SELECT COUNT(*) AS total
     FROM events
     WHERE user_id = ? AND archived_at IS NOT NULL
-");
-$archived_stmt->bind_param("i", $user_id);
-$archived_stmt->execute();
-$archived_events = (int) ($archived_stmt->get_result()->fetch_assoc()['total'] ?? 0);
+";
+
+$archivedRow = fetchOne(
+    $conn,
+    $countArchivedEventsSql,
+    "i",
+    [$user_id]
+);
+
+$archived_events = (int) ($archivedRow['total'] ?? 0);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,13 +233,14 @@ $archived_events = (int) ($archived_stmt->get_result()->fetch_assoc()['total'] ?
                                 $uploaded_docs = (int) ($event['docs_uploaded'] ?? 0);
                                 $progress = $total_docs > 0 ? round(($uploaded_docs / $total_docs) * 100) : 0;
                                 $progress_color = $progress >= 75 ? '#2e7d32' : ($progress >= 40 ? '#f9a825' : '#d32f2f');
-                            ?>
+                                ?>
                                 <li>
                                     <a class="event-card-container" href="view_event.php?id=<?= (int) $event['event_id'] ?>">
                                         <article class="event-card">
                                             <div class="event-main">
                                                 <div class="event-info">
-                                                    <div class="event-title"><?= htmlspecialchars($event['event_name'] ?? '') ?></div>
+                                                    <div class="event-title"><?= htmlspecialchars($event['event_name'] ?? '') ?>
+                                                    </div>
                                                     <div class="event-sub">
                                                         <?= htmlspecialchars($event['venue_platform'] ?? 'No venue set') ?> •
                                                         <?php if (!empty($event['start_datetime'])): ?>
@@ -243,8 +255,7 @@ $archived_events = (int) ($archived_stmt->get_result()->fetch_assoc()['total'] ?
 
                                                 <div class="event-progress">
                                                     <div class="home-progress-bar-mini">
-                                                        <div
-                                                            class="home-progress-fill-mini"
+                                                        <div class="home-progress-fill-mini"
                                                             style="width: <?= $progress ?>%; background: <?= $progress_color ?>;">
                                                         </div>
                                                     </div>
@@ -314,4 +325,5 @@ $archived_events = (int) ($archived_stmt->get_result()->fetch_assoc()['total'] ?
 
     <script src="../app/script/layout.js?v=1"></script>
 </body>
+
 </html>

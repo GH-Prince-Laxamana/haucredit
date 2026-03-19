@@ -73,18 +73,22 @@ function clamp_date(string $d, string $min, string $max): string
 /* ================= STATS ================= */
 function stats(mysqli $conn, int $user_id, string $monthStart, string $monthEnd, string $monthStartDate, string $monthEndDate): array
 {
-  $stmt = $conn->prepare("
+  $countEntriesSql = "
     SELECT COUNT(*) c
     FROM calendar_entries
     WHERE user_id = ?
       AND start_datetime <= ?
       AND COALESCE(end_datetime, start_datetime) >= ?
-  ");
-  $stmt->bind_param("iss", $user_id, $monthEnd, $monthStart);
-  $stmt->execute();
-  $entries = (int) ($stmt->get_result()->fetch_assoc()["c"] ?? 0);
+  ";
+  $entriesRow = fetchOne(
+    $conn,
+    $countEntriesSql,
+    "iss",
+    [$user_id, $monthEnd, $monthStart]
+  );
+  $entries = (int) ($entriesRow["c"] ?? 0);
 
-  $stmt2 = $conn->prepare("
+  $countEntryDaysSql = "
     SELECT COALESCE(
       SUM(
         CASE
@@ -101,22 +105,31 @@ function stats(mysqli $conn, int $user_id, string $monthStart, string $monthEnd,
     WHERE user_id = ?
       AND start_datetime <= ?
       AND COALESCE(end_datetime, start_datetime) >= ?
-  ");
-  $stmt2->bind_param("ssssiss", $monthEndDate, $monthStartDate, $monthEndDate, $monthStartDate, $user_id, $monthEnd, $monthStart);
-  $stmt2->execute();
-  $entry_days = (int) ($stmt2->get_result()->fetch_assoc()["days"] ?? 0);
+  ";
+  $entryDaysRow = fetchOne(
+    $conn,
+    $countEntryDaysSql,
+    "ssssiss",
+    [$monthEndDate, $monthStartDate, $monthEndDate, $monthStartDate, $user_id, $monthEnd, $monthStart]
+  );
+  $entry_days = (int) ($entryDaysRow["days"] ?? 0);
 
   $now = date("Y-m-d H:i:s");
-  $stmt3 = $conn->prepare("
+
+  $countUpcomingSql = "
     SELECT COUNT(*) c
     FROM calendar_entries
     WHERE user_id = ?
       AND start_datetime BETWEEN ? AND ?
       AND start_datetime >= ?
-  ");
-  $stmt3->bind_param("isss", $user_id, $monthStart, $monthEnd, $now);
-  $stmt3->execute();
-  $upcoming = (int) ($stmt3->get_result()->fetch_assoc()["c"] ?? 0);
+  ";
+  $upcomingRow = fetchOne(
+    $conn,
+    $countUpcomingSql,
+    "isss",
+    [$user_id, $monthStart, $monthEnd, $now]
+  );
+  $upcoming = (int) ($upcomingRow["c"] ?? 0);
 
   return compact("entries", "entry_days", "upcoming");
 }
@@ -156,40 +169,51 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($error_msg === "") {
           if ($action === "add_entry") {
-            $stmt = $conn->prepare("
+            $insertCalendarEntrySql = "
               INSERT INTO calendar_entries (user_id, event_id, title, start_datetime, end_datetime, notes)
               VALUES (?, NULL, ?, ?, ?, ?)
-            ");
-            $stmt->bind_param("issss", $user_id, $title, $start_dt, $end_dt, $notes);
-            $stmt->execute();
+            ";
+            execQuery(
+              $conn,
+              $insertCalendarEntrySql,
+              "issss",
+              [$user_id, $title, $start_dt, $end_dt, $notes]
+            );
           } else {
             $entry_id = (int) ($_POST["entry_id"] ?? 0);
 
-            $check = $conn->prepare("
+            $checkEditableEntrySql = "
               SELECT event_id
               FROM calendar_entries
               WHERE entry_id = ?
                 AND user_id = ?
               LIMIT 1
-            ");
-            $check->bind_param("ii", $entry_id, $user_id);
-            $check->execute();
-            $entryRow = $check->get_result()->fetch_assoc();
+            ";
+            $entryRow = fetchOne(
+              $conn,
+              $checkEditableEntrySql,
+              "ii",
+              [$entry_id, $user_id]
+            );
 
             if (!$entryRow) {
               $error_msg = "Calendar entry not found.";
             } elseif (!empty($entryRow["event_id"])) {
               $error_msg = "Event-linked entries cannot be edited here.";
             } else {
-              $stmt = $conn->prepare("
+              $updateCalendarEntrySql = "
                 UPDATE calendar_entries
                 SET title = ?, start_datetime = ?, end_datetime = ?, notes = ?
                 WHERE entry_id = ?
                   AND user_id = ?
                 LIMIT 1
-              ");
-              $stmt->bind_param("ssssii", $title, $start_dt, $end_dt, $notes, $entry_id, $user_id);
-              $stmt->execute();
+              ";
+              execQuery(
+                $conn,
+                $updateCalendarEntrySql,
+                "ssssii",
+                [$title, $start_dt, $end_dt, $notes, $entry_id, $user_id]
+              );
             }
           }
 
@@ -206,30 +230,37 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $entry_id = (int) ($_POST["entry_id"] ?? 0);
 
       if ($entry_id > 0) {
-        $check = $conn->prepare("
+        $checkDeleteEntrySql = "
           SELECT event_id
           FROM calendar_entries
           WHERE entry_id = ?
             AND user_id = ?
           LIMIT 1
-        ");
-        $check->bind_param("ii", $entry_id, $user_id);
-        $check->execute();
-        $row = $check->get_result()->fetch_assoc();
+        ";
+        $row = fetchOne(
+          $conn,
+          $checkDeleteEntrySql,
+          "ii",
+          [$entry_id, $user_id]
+        );
 
         if (!$row) {
           $error_msg = "Calendar entry not found.";
         } elseif (!empty($row["event_id"])) {
           $error_msg = "Event-linked entries cannot be deleted here.";
         } else {
-          $stmt = $conn->prepare("
+          $deleteCalendarEntrySql = "
             DELETE FROM calendar_entries
             WHERE entry_id = ?
               AND user_id = ?
             LIMIT 1
-          ");
-          $stmt->bind_param("ii", $entry_id, $user_id);
-          $stmt->execute();
+          ";
+          execQuery(
+            $conn,
+            $deleteCalendarEntrySql,
+            "ii",
+            [$entry_id, $user_id]
+          );
 
           header("Location: calendar.php?y=$year&m=$month");
           exit();
@@ -240,7 +271,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 
 /* ================= FETCH ENTRIES ================= */
-$stmt = $conn->prepare("
+$fetchCalendarEntriesSql = "
   SELECT
     ce.entry_id,
     ce.title,
@@ -256,15 +287,19 @@ $stmt = $conn->prepare("
     AND ce.start_datetime <= ?
     AND COALESCE(ce.end_datetime, ce.start_datetime) >= ?
   ORDER BY ce.start_datetime ASC
-");
-$stmt->bind_param("iss", $user_id, $monthEnd, $monthStart);
-$stmt->execute();
-$res = $stmt->get_result();
+";
+
+$calendarEntries = fetchAll(
+  $conn,
+  $fetchCalendarEntriesSql,
+  "iss",
+  [$user_id, $monthEnd, $monthStart]
+);
 
 $byDay = [];
 $allEntries = [];
 
-while ($row = $res->fetch_assoc()) {
+foreach ($calendarEntries as $row) {
   $id = (int) $row["entry_id"];
   $start_dt = $row["start_datetime"];
   $end_dt_real = $row["end_datetime"];
@@ -306,6 +341,7 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -355,8 +391,10 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
           <div class="cal-monthrow">
             <div class="cal-month">
               <strong><?= htmlspecialchars($monthName . " " . $year); ?></strong>
-              <a class="cal-navbtn" href="?y=<?= $prevY; ?>&m=<?= $prevM; ?>" aria-label="Previous month"><i class="fa-solid fa-caret-left"></i></a>
-              <a class="cal-navbtn" href="?y=<?= $nextY; ?>&m=<?= $nextM; ?>" aria-label="Next month"><i class="fa-solid fa-caret-right"></i></a>
+              <a class="cal-navbtn" href="?y=<?= $prevY; ?>&m=<?= $prevM; ?>" aria-label="Previous month"><i
+                  class="fa-solid fa-caret-left"></i></a>
+              <a class="cal-navbtn" href="?y=<?= $nextY; ?>&m=<?= $nextM; ?>" aria-label="Next month"><i
+                  class="fa-solid fa-caret-right"></i></a>
             </div>
           </div>
 
@@ -405,10 +443,14 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
                   foreach ($byDay[$dateKey] as $p) {
                     $spanClass = "";
                     if ($p["spans"]) {
-                      if ($p["isStart"] && !$p["isEnd"]) $spanClass = " span-start";
-                      elseif ($p["isEnd"] && !$p["isStart"]) $spanClass = " span-end";
-                      elseif ($p["isMid"]) $spanClass = " span-mid";
-                      else $spanClass = " span-one";
+                      if ($p["isStart"] && !$p["isEnd"])
+                        $spanClass = " span-start";
+                      elseif ($p["isEnd"] && !$p["isStart"])
+                        $spanClass = " span-end";
+                      elseif ($p["isMid"])
+                        $spanClass = " span-mid";
+                      else
+                        $spanClass = " span-one";
                     }
 
                     $e = $allEntries[$p["entry_id"]];
@@ -530,4 +572,5 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
   <script src="../app/script/layout.js?v=1"></script>
   <script src="../app/script/calendar.js?v=1"></script>
 </body>
+
 </html>

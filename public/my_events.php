@@ -18,7 +18,7 @@ $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
    - event_location
    - docs_total / docs_uploaded from events
 */
-$stmt = $conn->prepare("
+$fetchUserEventsSql = "
     SELECT
         e.event_id,
         e.event_name,
@@ -61,15 +61,14 @@ $stmt = $conn->prepare("
         CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
         ed.start_datetime DESC,
         e.created_at DESC
-");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
+";
 
-$events = [];
-while ($row = $result->fetch_assoc()) {
-    $events[] = $row;
-}
+$events = fetchAll(
+    $conn,
+    $fetchUserEventsSql,
+    "i",
+    [$user_id]
+);
 
 /* ================= SUMMARY COUNTS ================= */
 $total_events = count($events);

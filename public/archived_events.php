@@ -15,23 +15,25 @@ $user_id = (int) $_SESSION['user_id'];
    Delete archived events older than 30 days for this user.
    Pull uploaded files from requirement_files through event_requirements.
 */
-$cleanup = $conn->prepare("
+$fetchExpiredArchivedEventsSql = "
     SELECT event_id
     FROM events
     WHERE archived_at IS NOT NULL
       AND archived_at <= NOW() - INTERVAL 30 DAY
       AND user_id = ?
-");
-$cleanup->bind_param("i", $user_id);
-$cleanup->execute();
-$res = $cleanup->get_result();
+";
 
-while ($row = $res->fetch_assoc()) {
+$expiredArchivedEvents = fetchAll(
+    $conn,
+    $fetchExpiredArchivedEventsSql,
+    "i",
+    [$user_id]
+);
+
+foreach ($expiredArchivedEvents as $row) {
     $event_id = (int) $row['event_id'];
 
-    $filePaths = [];
-
-    $files = $conn->prepare("
+    $fetchRequirementFilePathsSql = "
         SELECT rf.file_path
         FROM requirement_files rf
         INNER JOIN event_requirements er
@@ -39,26 +41,36 @@ while ($row = $res->fetch_assoc()) {
         WHERE er.event_id = ?
           AND rf.file_path IS NOT NULL
           AND rf.file_path != ''
-    ");
-    $files->bind_param("i", $event_id);
-    $files->execute();
-    $fres = $files->get_result();
+    ";
 
-    while ($file = $fres->fetch_assoc()) {
+    $fileRows = fetchAll(
+        $conn,
+        $fetchRequirementFilePathsSql,
+        "i",
+        [$event_id]
+    );
+
+    $filePaths = [];
+    foreach ($fileRows as $file) {
         $filePaths[] = $file['file_path'];
     }
 
     try {
         $conn->begin_transaction();
 
-        $delEvent = $conn->prepare("
+        $deleteExpiredArchivedEventSql = "
             DELETE FROM events
             WHERE event_id = ?
               AND user_id = ?
               AND archived_at IS NOT NULL
-        ");
-        $delEvent->bind_param("ii", $event_id, $user_id);
-        $delEvent->execute();
+        ";
+
+        execQuery(
+            $conn,
+            $deleteExpiredArchivedEventSql,
+            "ii",
+            [$event_id, $user_id]
+        );
 
         $conn->commit();
 
@@ -80,7 +92,7 @@ while ($row = $res->fetch_assoc()) {
    - event_location
    - events.docs_total / docs_uploaded
 */
-$stmt = $conn->prepare("
+$fetchArchivedEventsSql = "
     SELECT
         e.event_id,
         e.event_name,
@@ -106,10 +118,14 @@ $stmt = $conn->prepare("
         e.archived_at DESC,
         CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
         ed.start_datetime ASC
-");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$events = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+";
+
+$events = fetchAll(
+    $conn,
+    $fetchArchivedEventsSql,
+    "i",
+    [$user_id]
+);
 ?>
 
 <!DOCTYPE html>

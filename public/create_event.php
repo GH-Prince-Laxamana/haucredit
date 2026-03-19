@@ -4,10 +4,7 @@ require_once "../app/database.php";
 require_once "../app/security_headers.php";
 send_security_headers();
 
-$requirements_map = require_once "../app/config/requirements_map.php";
-$org_options = require_once "../app/config/org_options.php";
-$activity_types = require_once "../app/config/activity_types.php";
-$series_options = require_once "../app/config/series_options.php";
+
 
 if (!isset($_SESSION["user_id"])) {
   header("Location: index.php");

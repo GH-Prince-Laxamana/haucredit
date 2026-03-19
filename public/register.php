@@ -3,31 +3,25 @@ session_start();
 require_once "../app/database.php";
 
 // ===== SECURITY HEADERS =====
-// Include security headers to protect against common web vulnerabilities
 require_once("../app/security_headers.php");
 send_security_headers();
 
 // ===== SELF-REFERENCING URL =====
-// Generate a safe, self-referencing URL for the form action to prevent XSS
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 
 // ===== AUTHENTICATION CHECK =====
-// Redirect logged-in users to the home page to prevent unauthorized access
 if (isset($_SESSION["user_id"])) {
     header("Location: home.php");
     exit();
 }
 
 // ===== VARIABLE INITIALIZATION =====
-// Initialize variables for error messages, success messages, and form field values
 $error = "";
 $success = "";
 $username = $email = $stud_num = $org_body = "";
 
 // ===== POST REQUEST HANDLING =====
-// Process form submission for user registration
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // Extract and sanitize form input values
     $username = trim($_POST["username"] ?? "");
     $email = trim($_POST["email"] ?? "");
     $stud_num = trim($_POST["stud_num"] ?? "");
@@ -36,32 +30,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $confirm = trim($_POST["confirm_password"] ?? "");
 
     // ===== VALIDATION: REQUIRED FIELDS =====
-    // Check if all required fields are filled
     if ($username === "" || $email === "" || $stud_num === "" || $org_body === "" || $password === "" || $confirm === "") {
         $error = "Please fill in all fields.";
 
-    // ===== VALIDATION: EMAIL FORMAT =====
-    // Validate email format using PHP's built-in filter
+        // ===== VALIDATION: EMAIL FORMAT =====
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Invalid email format.";
 
-    // ===== VALIDATION: HAU STUDENT EMAIL ONLY =====
-    // Ensure email is from HAU student domain
+        // ===== VALIDATION: HAU STUDENT EMAIL ONLY =====
     } elseif (!preg_match('/@(student\.hau\.edu\.ph)$/i', $email)) {
         $error = "Email must be your HAU student email (e.g. @student.hau.edu.ph).";
 
-    // ===== VALIDATION: STUDENT NUMBER LENGTH =====
-    // Check minimum length for student number
+        // ===== VALIDATION: STUDENT NUMBER LENGTH =====
     } elseif (strlen($stud_num) < 8) {
         $error = "Invalid student number.";
 
-    // ===== VALIDATION: PASSWORD MATCH =====
-    // Ensure password and confirmation match
+        // ===== VALIDATION: PASSWORD MATCH =====
     } elseif ($password !== $confirm) {
         $error = "Passwords do not match.";
 
-    // ===== VALIDATION: PASSWORD STRENGTH =====
-    // Enforce password complexity requirements
+        // ===== VALIDATION: PASSWORD STRENGTH =====
     } elseif (
         strlen($password) < 8 ||
         !preg_match('/[A-Z]/', $password) ||
@@ -72,35 +60,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } else {
         // ===== PASSWORD HASHING =====
-        // Hash the password securely using bcrypt
         $hash = password_hash($password, PASSWORD_DEFAULT);
 
         // ===== DATABASE INSERTION =====
-        // Prepare and execute SQL statement to insert new user
-        $stmt = mysqli_prepare(
-            $conn,
-            "INSERT INTO users 
+        $insertUserSql = "
+            INSERT INTO users 
                 (user_name, user_password, user_email, stud_num, org_body, user_reg_date) 
-             VALUES (?, ?, ?, ?, ?, NOW())"
-        );
+            VALUES (?, ?, ?, ?, ?, NOW())
+        ";
 
-        mysqli_stmt_bind_param($stmt, "sssss", $username, $hash, $email, $stud_num, $org_body);
-
-        // Attempt to execute the statement and handle potential errors
         try {
-            mysqli_stmt_execute($stmt);
+            execQuery(
+                $conn,
+                $insertUserSql,
+                "sssss",
+                [$username, $hash, $email, $stud_num, $org_body]
+            );
+
             $success = "Registration successful! You may now log in.";
 
             // Clear form fields after successful registration
             $username = $email = $stud_num = $org_body = "";
 
         } catch (mysqli_sql_exception) {
-            // Handle duplicate entry errors (unique constraint violations)
             $error = "Username, email, or student number already exists.";
         }
-
-        // Close the prepared statement
-        mysqli_stmt_close($stmt);
     }
 }
 ?>
@@ -181,85 +165,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         <label for="org_body">Organizing Body</label>
                         <input list="org_list" id="org_body" name="org_body" value="<?= htmlspecialchars($org_body) ?>"
                             placeholder="Search or select organization" required>
-                        <!-- ===== ORGANIZATION DATALIST ===== -->
-                        <!-- Predefined list of recognized organizations for autocomplete -->
                         <datalist id="org_list">
-                            <!-- HAU OFFICE -->
-                            <option value="HAU OSA">
-
-                            <!-- UNIVERSITY STUDENT GOVERNMENT -->
-                            <option value="HAUSG USC">
-                            <option value="HAUSG HC">
-                            <option value="HAUSG SEN">
-                            <option value="HAUSG COMELEC">
-                            <option value="HAUSG CSO">
-                            <option value="HAUSG CFA">
-
-                            <!-- COLLEGE STUDENT COUNCILS -->
-                            <option value="HAUSG CSC-CCJEF">
-                            <option value="HAUSG CSC-SAS">
-                            <option value="HAUSG CSC-SBA">
-                            <option value="HAUSG CSC-SoC">
-                            <option value="HAUSG CSC-SEd">
-                            <option value="HAUSG CSC-SEA">
-                            <option value="HAUSG CSC-SHTM">
-                            <option value="HAUSG CSC-SNAMS">
-
-                            <!-- STUDENT PUBLICATIONS -->
-                            <option value="HPC Angge">
-                            <option value="HPC HQ">
-                            <option value="HPC NX">
-                            <option value="HPC Enteng">
-                            <option value="HPC AP">
-                            <option value="HPC Reple">
-                            <option value="HPC Soln">
-                            <option value="HPC CC">
-                            <option value="HPC LL">
-
-                            <!-- UNI-WIDE ORGANIZATIONS -->
-                            <option value="Uniwide DC">
-                            <option value="Uniwide JJC">
-                            <option value="Uniwide JO">
-                            <option value="Uniwide GDGoC">
-                            <option value="Uniwide ADS">
-                            <option value="Uniwide RCY">
-                            <option value="Uniwide RAC">
-                            <option value="Uniwide APLMS">
-                            <option value="Uniwide SVE">
-                            <option value="Uniwide 21CC">
-                            <option value="Uniwide HPC">
-
-                            <!-- SCHOOL ORGANIZATIONS -->
-                            <option value="CCJEF COPS">
-                            <option value="CCJEF SAFE">
-                            <option value="SAS PsychSoc">
-                            <option value="SAS CL">
-                            <option value="SBA Mansoc">
-                            <option value="SoC MAFIA">
-                            <option value="SoC LOOP">
-                            <option value="SoC CG">
-                            <option value="SoC CSIA">
-                            <option value="SEd KAS">
-                            <option value="SEd KLDS">
-                            <option value="SEA SAEP">
-                            <option value="SEA UAPSA">
-                            <option value="SEA PSME">
-                            <option value="SEA PIIE">
-                            <option value="SEA IIEE">
-                            <option value="SEA PICE">
-                            <option value="SEA IECEP">
-                            <option value="SEA ICpEP">
-                            <option value="SHTM HMAP">
-                            <option value="SHTM LTSP">
-                            <option value="SNAMS ARTS">
-                            <option value="SNAMS PHISMETS">
-                            <option value="SNAMS SANS">
-
-                            <!-- POLITICAL PARTIES -->
-                            <option value="PP Lualu">
-                            <option value="PP Sulung">
-                            <option value="PP Sulagpo">
-                            <option value="PP Tindig">
+                            <?php foreach ($org_options as $org): ?>
+                                <option value="<?= htmlspecialchars($org, ENT_QUOTES, 'UTF-8') ?>">
+                                <?php endforeach; ?>
                         </datalist>
                     </div>
 

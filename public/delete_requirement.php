@@ -18,7 +18,7 @@ if ($event_req_id <= 0) {
 }
 
 /* ================= OWNERSHIP + REQUIREMENT CHECK ================= */
-$checkStmt = $conn->prepare("
+$checkRequirementOwnershipSql = "
     SELECT
         er.event_req_id,
         er.event_id,
@@ -31,10 +31,14 @@ $checkStmt = $conn->prepare("
       AND e.user_id = ?
       AND e.archived_at IS NULL
     LIMIT 1
-");
-$checkStmt->bind_param("ii", $event_req_id, $_SESSION['user_id']);
-$checkStmt->execute();
-$reqRow = $checkStmt->get_result()->fetch_assoc();
+";
+
+$reqRow = fetchOne(
+    $conn,
+    $checkRequirementOwnershipSql,
+    "ii",
+    [$event_req_id, $_SESSION['user_id']]
+);
 
 if (!$reqRow) {
     popup_error("Requirement not found or access denied.");
@@ -43,17 +47,36 @@ if (!$reqRow) {
 $event_id = (int) $reqRow['event_id'];
 
 /* ================= GET CURRENT FILE ================= */
-$fileStmt = $conn->prepare("
-    SELECT req_file_id, file_path
+$fetchAllRequirementFilesSql = "
+    SELECT file_path
     FROM requirement_files
     WHERE event_req_id = ?
-      AND is_current = 1
-    LIMIT 1
-");
-$fileStmt->bind_param("i", $event_req_id);
-$fileStmt->execute();
-$fileRes = $fileStmt->get_result();
-$currentFile = $fileRes->fetch_assoc();
+      AND file_path IS NOT NULL
+      AND file_path != ''
+";
+
+$fileRows = fetchAll(
+    $conn,
+    $fetchAllRequirementFilesSql,
+    "i",
+    [$event_req_id]
+);
+
+if (empty($fileRows)) {
+    popup_error("No uploaded file found for this requirement.");
+}
+
+$filePaths = [];
+foreach ($fileRows as $row) {
+    $filePaths[] = $row['file_path'];
+}
+
+$currentFile = fetchOne(
+    $conn,
+    $fetchAllRequirementFilesSql,
+    "i",
+    [$event_req_id]
+);
 
 if (!$currentFile) {
     popup_error("No uploaded file found for this requirement.");
@@ -67,17 +90,20 @@ try {
     $conn->begin_transaction();
 
     /* ================= DELETE FILE RECORD ================= */
-    $deleteFileStmt = $conn->prepare("
-        DELETE FROM requirement_files
-        WHERE req_file_id = ?
-          AND event_req_id = ?
-        LIMIT 1
-    ");
-    $deleteFileStmt->bind_param("ii", $req_file_id, $event_req_id);
-    $deleteFileStmt->execute();
+    $deleteRequirementFilesSql = "
+    DELETE FROM requirement_files
+    WHERE event_req_id = ?
+";
+
+    execQuery(
+        $conn,
+        $deleteRequirementFilesSql,
+        "i",
+        [$event_req_id]
+    );
 
     /* ================= RESET REQUIREMENT STATUS ================= */
-    $resetReqStmt = $conn->prepare("
+    $resetRequirementStatusSql = "
         UPDATE event_requirements
         SET submission_status = 'pending',
             review_status = 'not_reviewed',
@@ -86,45 +112,65 @@ try {
             remarks = NULL,
             updated_at = CURRENT_TIMESTAMP
         WHERE event_req_id = ?
-    ");
-    $resetReqStmt->bind_param("i", $event_req_id);
-    $resetReqStmt->execute();
+    ";
+    execQuery(
+        $conn,
+        $resetRequirementStatusSql,
+        "i",
+        [$event_req_id]
+    );
 
     /* ================= RECALCULATE EVENT COUNTS ================= */
-    $countStmt = $conn->prepare("
+    $countEventRequirementsSql = "
         SELECT COUNT(*) AS total_docs
         FROM event_requirements
         WHERE event_id = ?
-    ");
-    $countStmt->bind_param("i", $event_id);
-    $countStmt->execute();
-    $total_docs = (int) ($countStmt->get_result()->fetch_assoc()['total_docs'] ?? 0);
+    ";
+    $totalDocsRow = fetchOne(
+        $conn,
+        $countEventRequirementsSql,
+        "i",
+        [$event_id]
+    );
+    $total_docs = (int) ($totalDocsRow['total_docs'] ?? 0);
 
-    $uploadedStmt = $conn->prepare("
+    $countUploadedRequirementsSql = "
         SELECT COUNT(*) AS uploaded_docs
         FROM event_requirements
         WHERE event_id = ?
           AND submission_status = 'uploaded'
-    ");
-    $uploadedStmt->bind_param("i", $event_id);
-    $uploadedStmt->execute();
-    $uploaded_docs = (int) ($uploadedStmt->get_result()->fetch_assoc()['uploaded_docs'] ?? 0);
+    ";
+    $uploadedDocsRow = fetchOne(
+        $conn,
+        $countUploadedRequirementsSql,
+        "i",
+        [$event_id]
+    );
+    $uploaded_docs = (int) ($uploadedDocsRow['uploaded_docs'] ?? 0);
 
-    $updateEventStmt = $conn->prepare("
+    $updateEventDocumentCountsSql = "
         UPDATE events
         SET docs_total = ?,
             docs_uploaded = ?,
             updated_at = CURRENT_TIMESTAMP
         WHERE event_id = ?
-    ");
-    $updateEventStmt->bind_param("iii", $total_docs, $uploaded_docs, $event_id);
-    $updateEventStmt->execute();
+    ";
+    execQuery(
+        $conn,
+        $updateEventDocumentCountsSql,
+        "iii",
+        [$total_docs, $uploaded_docs, $event_id]
+    );
 
     $conn->commit();
 
     /* ================= DELETE PHYSICAL FILE AFTER COMMIT ================= */
-    if (is_file($full_path)) {
-        @unlink($full_path);
+    foreach ($filePaths as $relativePath) {
+        $fullPath = __DIR__ . "/../" . ltrim($relativePath, "/");
+
+        if (is_file($fullPath)) {
+            @unlink($fullPath);
+        }
     }
 
 } catch (Exception $e) {

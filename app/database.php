@@ -2,6 +2,11 @@
 require_once 'error.php';
 require_once 'query_builder_functions.php';
 
+$requirements_map = require_once "config/requirements_map.php";
+$org_options = require_once "config/org_options.php";
+$activity_types = require_once "config/activity_types.php";
+$series_options = require_once "config/series_options.php";
+
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $db_server = "127.0.0.1";

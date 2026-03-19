@@ -19,17 +19,21 @@ if ($event_id <= 0) {
 }
 
 /* ================= OWNERSHIP + ARCHIVE CHECK ================= */
-$checkStmt = $conn->prepare("
+$checkArchivedEventSql = "
     SELECT event_id
     FROM events
     WHERE event_id = ?
       AND user_id = ?
       AND archived_at IS NOT NULL
     LIMIT 1
-");
-$checkStmt->bind_param("ii", $event_id, $user_id);
-$checkStmt->execute();
-$eventRow = $checkStmt->get_result()->fetch_assoc();
+";
+
+$eventRow = fetchOne(
+    $conn,
+    $checkArchivedEventSql,
+    "ii",
+    [$event_id, $user_id]
+);
 
 if (!$eventRow) {
     popup_error("Unauthorized action or event is not archived.");
@@ -39,9 +43,7 @@ if (!$eventRow) {
    Current DB path:
    events -> event_requirements -> requirement_files
 */
-$filePaths = [];
-
-$fileStmt = $conn->prepare("
+$fetchEventFilePathsSql = "
     SELECT DISTINCT rf.file_path
     FROM requirement_files rf
     INNER JOIN event_requirements er
@@ -52,12 +54,17 @@ $fileStmt = $conn->prepare("
       AND e.user_id = ?
       AND rf.file_path IS NOT NULL
       AND rf.file_path != ''
-");
-$fileStmt->bind_param("ii", $event_id, $user_id);
-$fileStmt->execute();
-$fileRes = $fileStmt->get_result();
+";
 
-while ($row = $fileRes->fetch_assoc()) {
+$fileRows = fetchAll(
+    $conn,
+    $fetchEventFilePathsSql,
+    "ii",
+    [$event_id, $user_id]
+);
+
+$filePaths = [];
+foreach ($fileRows as $row) {
     $filePaths[] = $row['file_path'];
 }
 
@@ -77,17 +84,22 @@ while ($row = $fileRes->fetch_assoc()) {
 try {
     $conn->begin_transaction();
 
-    $deleteEventStmt = $conn->prepare("
+    $deleteArchivedEventSql = "
         DELETE FROM events
         WHERE event_id = ?
           AND user_id = ?
           AND archived_at IS NOT NULL
         LIMIT 1
-    ");
-    $deleteEventStmt->bind_param("ii", $event_id, $user_id);
-    $deleteEventStmt->execute();
+    ";
 
-    if ($deleteEventStmt->affected_rows === 0) {
+    $deleteStmt = execQuery(
+        $conn,
+        $deleteArchivedEventSql,
+        "ii",
+        [$event_id, $user_id]
+    );
+
+    if ($deleteStmt->affected_rows === 0) {
         throw new Exception("Event could not be deleted.");
     }
 
