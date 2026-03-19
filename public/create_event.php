@@ -513,6 +513,7 @@ if (isset($_POST['create_event'])) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -745,7 +746,7 @@ if (isset($_POST['create_event'])) {
             <div class="field long-field">
               <label for="nature" class="field-title">Nature of the Event</label>
               <small class="hint">
-                If you were asked to describe what is your activity in one to three words, what would it be?
+                If you were asked to describe what is your activity in one to three words, what would it be? (Example: Seminar)
               </small>
               <textarea name="nature" id="nature" required><?= htmlspecialchars($formData['nature']) ?></textarea>
             </div>
@@ -753,34 +754,32 @@ if (isset($_POST['create_event'])) {
             <div class="field long-field">
               <label for="event_name" class="field-title">Name of the Event</label>
               <small class="hint">
-                If this is one event in a series of events, place the umbrella event first, then the specific activity.
+                If this is one event in a series of events, place the umbrella event first, then the specific activity. (Example: Example: SOC Days '25: Code Geeks Hackathon)
               </small>
-              <textarea name="event_name" id="event_name" required><?= htmlspecialchars($formData['event_name']) ?></textarea>
+              <textarea name="event_name" id="event_name"
+                required><?= htmlspecialchars($formData['event_name']) ?></textarea>
             </div>
 
             <div class="field long-field">
               <label for="target_metric" class="field-title">Target Metric</label>
               <small class="hint">
-                Indicate the target metric and the standard value you wish to achieve.
-                (ex. 50% Turnout of Voters, 75% Satisfaction Rating)
+                Indicate the target metric and the standard value you wish to achieve. (Example: 75% Satisfaction Rating)
               </small>
-              <textarea name="target_metric" id="target_metric" rows="2"><?= htmlspecialchars($formData['target_metric'] ?? '') ?></textarea>
+              <textarea name="target_metric" id="target_metric"
+                rows="2"><?= htmlspecialchars($formData['target_metric'] ?? '') ?></textarea>
             </div>
 
             <fieldset class="field">
               <label for="extraneous" class="field-title">Is this an extraneous activity?</label>
-              <small class="hint">Mark if this activity is classified as extraneous.</small>
 
               <div class="radio-group inline">
                 <label>
-                  <input type="radio" name="extraneous" value="Yes" required
-                    <?= ($formData['extraneous'] === 'Yes') ? 'checked' : '' ?>>
+                  <input type="radio" name="extraneous" value="Yes" required <?= ($formData['extraneous'] === 'Yes') ? 'checked' : '' ?>>
                   Yes
                 </label>
 
                 <label>
-                  <input type="radio" name="extraneous" value="No" required
-                    <?= ($formData['extraneous'] === 'No') ? 'checked' : '' ?>>
+                  <input type="radio" name="extraneous" value="No" required <?= ($formData['extraneous'] === 'No') ? 'checked' : '' ?>>
                   No
                 </label>
               </div>
@@ -836,14 +835,16 @@ if (isset($_POST['create_event'])) {
 
             <div class="field long-field" style="margin-top: 0;">
               <label for="participants" class="field-title">Participants</label>
-              <small class="hint">Indicate number and group.</small>
-              <textarea name="participants" id="participants" rows="2" required><?= htmlspecialchars($formData['participants']) ?></textarea>
+              <small class="hint">Indicate number and group. (Example: 8 members, 7 officers, 2 guest speakers)</small>
+              <textarea name="participants" id="participants" rows="2"
+                required><?= htmlspecialchars($formData['participants']) ?></textarea>
             </div>
 
             <div class="field long-field">
               <label for="venue_platform" class="field-title">Venue / Platform</label>
-              <small class="hint">Indicate the room number or platform link.</small>
-              <textarea name="venue_platform" id="venue_platform" required><?= htmlspecialchars($formData['venue_platform']) ?></textarea>
+              <small class="hint">Indicate the room number for caserooms. Provide the invite link if for online sessions and invite either studentactivities@hau.edu.ph or studentactivities.hauosa@gmail.com</small>
+              <textarea name="venue_platform" id="venue_platform"
+                required><?= htmlspecialchars($formData['venue_platform']) ?></textarea>
             </div>
 
             <fieldset class="field" id="visitors-block"
@@ -853,14 +854,12 @@ if (isset($_POST['create_event'])) {
 
               <div class="radio-group inline">
                 <label>
-                  <input type="radio" name="has_visitors" value="Yes"
-                    <?= (($formData['has_visitors'] ?? '') === 'Yes') ? 'checked' : '' ?>>
+                  <input type="radio" name="has_visitors" value="Yes" <?= (($formData['has_visitors'] ?? '') === 'Yes') ? 'checked' : '' ?>>
                   Yes
                 </label>
 
                 <label>
-                  <input type="radio" name="has_visitors" value="No"
-                    <?= (($formData['has_visitors'] ?? '') === 'No') ? 'checked' : '' ?>>
+                  <input type="radio" name="has_visitors" value="No" <?= (($formData['has_visitors'] ?? '') === 'No') ? 'checked' : '' ?>>
                   No
                 </label>
               </div>
@@ -915,14 +914,12 @@ if (isset($_POST['create_event'])) {
 
                 <div class="radio-group inline">
                   <label>
-                    <input type="radio" name="overnight" value="1"
-                      <?= ((string) $formData['overnight'] === '1') ? 'checked' : '' ?>>
+                    <input type="radio" name="overnight" value="1" <?= ((string) $formData['overnight'] === '1') ? 'checked' : '' ?>>
                     Yes
                   </label>
 
                   <label>
-                    <input type="radio" name="overnight" value="0"
-                      <?= ((string) $formData['overnight'] === '0') ? 'checked' : '' ?>>
+                    <input type="radio" name="overnight" value="0" <?= ((string) $formData['overnight'] === '0') ? 'checked' : '' ?>>
                     No
                   </label>
                 </div>
@@ -946,4 +943,5 @@ if (isset($_POST['create_event'])) {
   <script src="../app/script/layout.js?v=1"></script>
   <script src="../app/script/create_event.js"></script>
 </body>
+
 </html>
