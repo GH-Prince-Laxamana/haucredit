@@ -23,6 +23,7 @@
   --green: #16a34a;
   --blue: #0b7aba;
   --orange: #d97706;
+  --red: #b71919;
 
   --title-size: 2rem;
   --title-smaller-size: 1rem;
@@ -32,7 +33,7 @@
   --nav-title-size: 1rem;
   --btn-font-size: 14px;
 
-  --font-family: "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 /* Reset */

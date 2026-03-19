@@ -80,8 +80,7 @@ try {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         archived_at DATETIME NULL,
         is_system_event TINYINT(1) DEFAULT 0,
-        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-        UNIQUE KEY unique_system_event (is_system_event)
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
 

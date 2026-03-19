@@ -4,7 +4,7 @@
 .view-event-page {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 0;
+  gap: 1em;
   max-width: 1400px;
   margin: 0 auto;
   align-items: start;
@@ -383,7 +383,7 @@
   justify-content: center;
   position: relative;
   background:
-    conic-gradient(var(--green) calc(var(--progress) * 1%), #e5e7eb calc(var(--progress) * 1%));
+    conic-gradient(var(--progress-color) calc(var(--progress) * 1%), #e5e7eb calc(var(--progress) * 1%));
   animation: ringLoad 1.2s ease forwards;
 }
 
@@ -399,6 +399,19 @@
 .ring-inner {
   position: relative;
   z-index: 2;
+}
+
+.ring-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring-number {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--progress-color);
+  font-weight: 700;
 }
 
 @keyframes ringLoad {

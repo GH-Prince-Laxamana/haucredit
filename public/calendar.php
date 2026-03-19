@@ -1,7 +1,6 @@
 <?php
 session_start();
 require_once "../app/database.php";
-
 require_once "../app/security_headers.php";
 send_security_headers();
 
@@ -78,49 +77,57 @@ function wants_json(): bool
 function stats(mysqli $conn, int $user_id, string $monthStart, string $monthEnd, string $monthStartDate, string $monthEndDate): array
 {
   $stmt = $conn->prepare("
-        SELECT COUNT(*) AS c
-        FROM calendar_entries
-        WHERE user_id=?
-          AND start_datetime <= ?
-          AND COALESCE(end_datetime, start_datetime) >= ?
-    ");
+    SELECT COUNT(*) AS c
+    FROM calendar_entries
+    WHERE user_id=?
+      AND start_datetime <= ?
+      AND COALESCE(end_datetime, start_datetime) >= ?
+  ");
   $stmt->bind_param("iss", $user_id, $monthEnd, $monthStart);
   $stmt->execute();
   $entries = (int) ($stmt->get_result()->fetch_assoc()["c"] ?? 0);
 
   $stmt2 = $conn->prepare("
-      SELECT COALESCE(SUM(
-        CASE
-          WHEN LEAST(DATE(COALESCE(end_datetime,start_datetime)), ?) < GREATEST(DATE(start_datetime), ?)
-            THEN 0
-          ELSE DATEDIFF(
-            LEAST(DATE(COALESCE(end_datetime,start_datetime)), ?),
-            GREATEST(DATE(start_datetime), ?)
-          ) + 1
-        END
-      ),0) AS days
-      FROM calendar_entries
-      WHERE user_id=?
-        AND start_datetime <= ?
-        AND COALESCE(end_datetime, start_datetime) >= ?
-    ");
+    SELECT COALESCE(SUM(
+      CASE
+        WHEN LEAST(DATE(COALESCE(end_datetime,start_datetime)), ?) < GREATEST(DATE(start_datetime), ?)
+          THEN 0
+        ELSE DATEDIFF(
+          LEAST(DATE(COALESCE(end_datetime,start_datetime)), ?),
+          GREATEST(DATE(start_datetime), ?)
+        ) + 1
+      END
+    ),0) AS days
+    FROM calendar_entries
+    WHERE user_id=?
+      AND start_datetime <= ?
+      AND COALESCE(end_datetime, start_datetime) >= ?
+  ");
   $stmt2->bind_param("ssssiss", $monthEndDate, $monthStartDate, $monthEndDate, $monthStartDate, $user_id, $monthEnd, $monthStart);
   $stmt2->execute();
   $entry_days = (int) ($stmt2->get_result()->fetch_assoc()["days"] ?? 0);
 
   $now = date("Y-m-d H:i:s");
   $stmt3 = $conn->prepare("
-      SELECT COUNT(*) AS c
-      FROM calendar_entries
-      WHERE user_id=?
-        AND start_datetime BETWEEN ? AND ?
-        AND start_datetime >= ?
-    ");
+    SELECT COUNT(*) AS c
+    FROM calendar_entries
+    WHERE user_id=?
+      AND start_datetime BETWEEN ? AND ?
+      AND start_datetime >= ?
+  ");
   $stmt3->bind_param("isss", $user_id, $monthStart, $monthEnd, $now);
   $stmt3->execute();
   $upcoming = (int) ($stmt3->get_result()->fetch_assoc()["c"] ?? 0);
 
   return ["entries" => $entries, "entry_days" => $entry_days, "upcoming" => $upcoming];
+}
+
+function send_json_response(int $code, array $data): void
+{
+  header("Content-Type: application/json");
+  http_response_code($code);
+  echo json_encode($data);
+  exit();
 }
 
 /* POST */
@@ -130,13 +137,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $posted_token = $_POST["csrf_token"] ?? "";
 
   if (!hash_equals($csrf_token, $posted_token)) {
+    $msg = "Invalid request. Please try again.";
     if (wants_json()) {
-      header("Content-Type: application/json");
-      http_response_code(400);
-      echo json_encode(["success" => false, "error" => "Invalid request. Please try again."]);
-      exit();
+      send_json_response(400, ["success" => false, "error" => $msg]);
     }
-    $error_msg = "Invalid request. Please try again.";
+    $error_msg = $msg;
   } else {
     $action = $_POST["action"] ?? "";
 
@@ -151,10 +156,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       if ($title === "" || $start_date === "" || $start_time === "") {
         $msg = "Please fill in Title, Start Date, and Start Time.";
         if (wants_json()) {
-          header("Content-Type: application/json");
-          http_response_code(400);
-          echo json_encode(["success" => false, "error" => $msg]);
-          exit();
+          send_json_response(400, ["success" => false, "error" => $msg]);
         }
         $error_msg = $msg;
       } else {
@@ -166,10 +168,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
           if (strtotime($end_candidate) < strtotime($start_dt)) {
             $msg = "End date/time must not be earlier than Start date/time.";
             if (wants_json()) {
-              header("Content-Type: application/json");
-              http_response_code(400);
-              echo json_encode(["success" => false, "error" => $msg]);
-              exit();
+              send_json_response(400, ["success" => false, "error" => $msg]);
             }
             $error_msg = $msg;
           } else {
@@ -180,9 +179,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($error_msg === "") {
           if ($action === "add_entry") {
             $stmt = $conn->prepare("
-                            INSERT INTO calendar_entries (user_id, title, start_datetime, end_datetime, notes)
-                            VALUES (?, ?, ?, ?, ?)
-                        ");
+              INSERT INTO calendar_entries (user_id, title, start_datetime, end_datetime, notes)
+              VALUES (?, ?, ?, ?, ?)
+            ");
             $stmt->bind_param("issss", $user_id, $title, $start_dt, $end_dt, $notes);
             $stmt->execute();
             $entry_id = (int) $conn->insert_id;
@@ -190,11 +189,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
           } else {
             $entry_id = (int) ($_POST["entry_id"] ?? 0);
             $stmt = $conn->prepare("
-                            UPDATE calendar_entries
-                            SET title=?, start_datetime=?, end_datetime=?, notes=?
-                            WHERE entry_id=? AND user_id=?
-                            LIMIT 1
-                        ");
+              UPDATE calendar_entries
+              SET title=?, start_datetime=?, end_datetime=?, notes=?
+              WHERE entry_id=? AND user_id=?
+              LIMIT 1
+            ");
             $stmt->bind_param("ssssii", $title, $start_dt, $end_dt, $notes, $entry_id, $user_id);
             $stmt->execute();
             $mode = "edit";
@@ -212,8 +211,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDate);
 
-            header("Content-Type: application/json");
-            echo json_encode([
+            send_json_response(200, [
               "success" => true,
               "mode" => $mode,
               "entry" => [
@@ -229,7 +227,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
               ],
               "stats" => $s
             ]);
-            exit();
           }
 
           header("Location: calendar.php?y=$year&m=$month");
@@ -248,9 +245,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if (wants_json()) {
           $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDate);
-          header("Content-Type: application/json");
-          echo json_encode(["success" => true, "mode" => "delete", "deleted_id" => $entry_id, "stats" => $s]);
-          exit();
+          send_json_response(200, ["success" => true, "mode" => "delete", "deleted_id" => $entry_id, "stats" => $s]);
         }
 
         header("Location: calendar.php?y=$year&m=$month");
@@ -258,10 +253,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       } else {
         $msg = "Invalid entry to delete.";
         if (wants_json()) {
-          header("Content-Type: application/json");
-          http_response_code(400);
-          echo json_encode(["success" => false, "error" => $msg]);
-          exit();
+          send_json_response(400, ["success" => false, "error" => $msg]);
         }
         $error_msg = $msg;
       }
@@ -271,12 +263,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 /* FETCH for Month grid render (spans) */
 $stmt = $conn->prepare("
-    SELECT entry_id, title, start_datetime, end_datetime, notes
-    FROM calendar_entries
-    WHERE user_id=?
-      AND start_datetime <= ?
-      AND COALESCE(end_datetime, start_datetime) >= ?
-    ORDER BY start_datetime ASC
+  SELECT entry_id, title, start_datetime, end_datetime, notes
+  FROM calendar_entries
+  WHERE user_id=?
+    AND start_datetime <= ?
+    AND COALESCE(end_datetime, start_datetime) >= ?
+  ORDER BY start_datetime ASC
 ");
 $stmt->bind_param("iss", $user_id, $monthEnd, $monthStart);
 $stmt->execute();
@@ -287,7 +279,6 @@ $allEntries = [];
 
 while ($row = $res->fetch_assoc()) {
   $id = (int) $row["entry_id"];
-
   $start_dt = $row["start_datetime"];
   $end_dt_real = $row["end_datetime"];
   $end_dt_for_span = $end_dt_real ?: $start_dt;
@@ -311,10 +302,8 @@ while ($row = $res->fetch_assoc()) {
 
   while ($cur <= $endT) {
     $dayKey = date("Y-m-d", $cur);
-
     $isStart = ($dayKey === $startDate);
     $isEnd = ($dayKey === $endDate);
-    $isMid = (!$isStart && !$isEnd);
 
     $timeLabel = "";
     if ($isStart) {
@@ -330,7 +319,7 @@ while ($row = $res->fetch_assoc()) {
       "time" => $timeLabel,
       "isStart" => $isStart,
       "isEnd" => $isEnd,
-      "isMid" => $isMid,
+      "isMid" => (!$isStart && !$isEnd),
       "spans" => ($startDate !== $endDate)
     ];
 
@@ -362,12 +351,9 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
 
     <main class="main">
 
-      <!-- ✅ UPDATED TOPBAR (native-app style on mobile) -->
       <header class="topbar">
         <div class="topbar-left">
-          <!-- keep same id used by layout.js -->
           <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
-          <!-- <h1 class="mobile-title">Calendar</h1> -->
           <div class="title-wrap">
             <h1 class="desktop-title">Calendar</h1>
             <p>Organize your schedule and track progress.</p>
@@ -504,22 +490,6 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
             <div class="day-list" id="dayList"></div>
           </div>
         </div>
-
-        <!-- <aside class="tracker">
-          <h2>Progress<br>Tracker</h2>
-          <div class="ring" aria-hidden="true">
-            <div class="ring-inner"></div>
-          </div>
-
-          <div class="tracker-list">
-            <div class="t-row"><span>Entries this month</span><span class="t-score"
-                id="tEntries"><?php echo (int) $s["entries"]; ?></span></div>
-            <div class="t-row"><span>Entry-days this month</span><span class="t-score"
-                id="tDays"><?php echo (int) $s["entry_days"]; ?></span></div>
-            <div class="t-row"><span>Upcoming this month</span><span class="t-score"
-                id="tUpcoming"><?php echo (int) $s["upcoming"]; ?></span></div>
-          </div>
-        </aside> -->
       </section>
 
       <?php include 'assets/includes/footer.php' ?>

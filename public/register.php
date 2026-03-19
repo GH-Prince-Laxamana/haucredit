@@ -2,25 +2,32 @@
 session_start();
 require_once "../app/database.php";
 
-
+// ===== SECURITY HEADERS =====
+// Include security headers to protect against common web vulnerabilities
 require_once("../app/security_headers.php");
 send_security_headers();
 
+// ===== SELF-REFERENCING URL =====
+// Generate a safe, self-referencing URL for the form action to prevent XSS
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 
+// ===== AUTHENTICATION CHECK =====
+// Redirect logged-in users to the home page to prevent unauthorized access
 if (isset($_SESSION["user_id"])) {
     header("Location: home.php");
     exit();
 }
 
+// ===== VARIABLE INITIALIZATION =====
+// Initialize variables for error messages, success messages, and form field values
 $error = "";
 $success = "";
-
-
 $username = $email = $stud_num = $org_body = "";
 
+// ===== POST REQUEST HANDLING =====
+// Process form submission for user registration
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-
+    // Extract and sanitize form input values
     $username = trim($_POST["username"] ?? "");
     $email = trim($_POST["email"] ?? "");
     $stud_num = trim($_POST["stud_num"] ?? "");
@@ -28,21 +35,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $password = trim($_POST["password"] ?? "");
     $confirm = trim($_POST["confirm_password"] ?? "");
 
+    // ===== VALIDATION: REQUIRED FIELDS =====
+    // Check if all required fields are filled
     if ($username === "" || $email === "" || $stud_num === "" || $org_body === "" || $password === "" || $confirm === "") {
         $error = "Please fill in all fields.";
 
+    // ===== VALIDATION: EMAIL FORMAT =====
+    // Validate email format using PHP's built-in filter
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Invalid email format.";
 
+    // ===== VALIDATION: HAU STUDENT EMAIL ONLY =====
+    // Ensure email is from HAU student domain
     } elseif (!preg_match('/@(student\.hau\.edu\.ph)$/i', $email)) {
         $error = "Email must be your HAU student email (e.g. @student.hau.edu.ph).";
 
+    // ===== VALIDATION: STUDENT NUMBER LENGTH =====
+    // Check minimum length for student number
     } elseif (strlen($stud_num) < 8) {
         $error = "Invalid student number.";
 
+    // ===== VALIDATION: PASSWORD MATCH =====
+    // Ensure password and confirmation match
     } elseif ($password !== $confirm) {
         $error = "Passwords do not match.";
 
+    // ===== VALIDATION: PASSWORD STRENGTH =====
+    // Enforce password complexity requirements
     } elseif (
         strlen($password) < 8 ||
         !preg_match('/[A-Z]/', $password) ||
@@ -52,8 +71,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $error = "Password must be at least 8 characters including a mix of uppercase (A-Z), lowercase (a-z), and numeric (0-9) characters";
 
     } else {
+        // ===== PASSWORD HASHING =====
+        // Hash the password securely using bcrypt
         $hash = password_hash($password, PASSWORD_DEFAULT);
 
+        // ===== DATABASE INSERTION =====
+        // Prepare and execute SQL statement to insert new user
         $stmt = mysqli_prepare(
             $conn,
             "INSERT INTO users 
@@ -63,16 +86,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         mysqli_stmt_bind_param($stmt, "sssss", $username, $hash, $email, $stud_num, $org_body);
 
+        // Attempt to execute the statement and handle potential errors
         try {
             mysqli_stmt_execute($stmt);
             $success = "Registration successful! You may now log in.";
 
+            // Clear form fields after successful registration
             $username = $email = $stud_num = $org_body = "";
 
         } catch (mysqli_sql_exception) {
+            // Handle duplicate entry errors (unique constraint violations)
             $error = "Username, email, or student number already exists.";
         }
 
+        // Close the prepared statement
         mysqli_stmt_close($stmt);
     }
 }
@@ -89,6 +116,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 
 <body>
+    <!-- ===== NAVIGATION BAR ===== -->
+    <!-- Top navigation bar with branding and links -->
     <div class="navbar">
         <div class="navbar-brand">
             <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
@@ -102,7 +131,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
     </div>
 
+    <!-- ===== AUTHENTICATION CONTAINER ===== -->
+    <!-- Main container for the registration page layout -->
     <div class="auth-container">
+        <!-- ===== LEFT PANEL ===== -->
+        <!-- Branding and feature highlights -->
         <div class="auth-left-panel">
             <div class="brand-title">
                 <h1 class="brand-name">HAU<span class="brand-accent">CREDIT</span></h1>
@@ -116,13 +149,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </ul>
         </div>
 
+        <!-- ===== RIGHT PANEL ===== -->
+        <!-- Registration form and messages -->
         <div class="auth-right-panel">
             <div class="auth-card">
                 <h2>Register Account</h2>
                 <div class="subtitle">For recognized student organizations only.</div>
 
+                <!-- ===== REGISTRATION FORM ===== -->
+                <!-- Form for user registration with validation -->
                 <form action="<?= $self ?>" method="post">
-
                     <div class="form-group">
                         <label for="username">Username</label>
                         <input type="text" id="username" name="username" value="<?= htmlspecialchars($username) ?>"
@@ -145,11 +181,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         <label for="org_body">Organizing Body</label>
                         <input list="org_list" id="org_body" name="org_body" value="<?= htmlspecialchars($org_body) ?>"
                             placeholder="Search or select organization" required>
+                        <!-- ===== ORGANIZATION DATALIST ===== -->
+                        <!-- Predefined list of recognized organizations for autocomplete -->
                         <datalist id="org_list">
                             <!-- HAU OFFICE -->
                             <option value="HAU OSA">
 
-                                <!-- UNIVERSITY STUDENT GOVERNMENT -->
+                            <!-- UNIVERSITY STUDENT GOVERNMENT -->
                             <option value="HAUSG USC">
                             <option value="HAUSG HC">
                             <option value="HAUSG SEN">
@@ -157,7 +195,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="HAUSG CSO">
                             <option value="HAUSG CFA">
 
-                                <!-- COLLEGE STUDENT COUNCILS -->
+                            <!-- COLLEGE STUDENT COUNCILS -->
                             <option value="HAUSG CSC-CCJEF">
                             <option value="HAUSG CSC-SAS">
                             <option value="HAUSG CSC-SBA">
@@ -167,7 +205,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="HAUSG CSC-SHTM">
                             <option value="HAUSG CSC-SNAMS">
 
-                                <!-- STUDENT PUBLICATIONS -->
+                            <!-- STUDENT PUBLICATIONS -->
                             <option value="HPC Angge">
                             <option value="HPC HQ">
                             <option value="HPC NX">
@@ -178,7 +216,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="HPC CC">
                             <option value="HPC LL">
 
-                                <!-- UNI-WIDE ORGANIZATIONS -->
+                            <!-- UNI-WIDE ORGANIZATIONS -->
                             <option value="Uniwide DC">
                             <option value="Uniwide JJC">
                             <option value="Uniwide JO">
@@ -186,27 +224,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="Uniwide ADS">
                             <option value="Uniwide RCY">
                             <option value="Uniwide RAC">
-
                             <option value="Uniwide APLMS">
                             <option value="Uniwide SVE">
                             <option value="Uniwide 21CC">
                             <option value="Uniwide HPC">
 
-                                <!-- SCHOOL ORGANIZATIONS -->
+                            <!-- SCHOOL ORGANIZATIONS -->
                             <option value="CCJEF COPS">
                             <option value="CCJEF SAFE">
                             <option value="SAS PsychSoc">
                             <option value="SAS CL">
                             <option value="SBA Mansoc">
-
                             <option value="SoC MAFIA">
                             <option value="SoC LOOP">
                             <option value="SoC CG">
                             <option value="SoC CSIA">
-
                             <option value="SEd KAS">
                             <option value="SEd KLDS">
-
                             <option value="SEA SAEP">
                             <option value="SEA UAPSA">
                             <option value="SEA PSME">
@@ -215,15 +249,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="SEA PICE">
                             <option value="SEA IECEP">
                             <option value="SEA ICpEP">
-
                             <option value="SHTM HMAP">
                             <option value="SHTM LTSP">
-
                             <option value="SNAMS ARTS">
                             <option value="SNAMS PHISMETS">
                             <option value="SNAMS SANS">
 
-                                <!-- POLITICAL PARTIES -->
+                            <!-- POLITICAL PARTIES -->
                             <option value="PP Lualu">
                             <option value="PP Sulung">
                             <option value="PP Sulagpo">
@@ -246,20 +278,29 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <button type="submit">Create Account</button>
                 </form>
 
+                <!-- ===== ERROR MESSAGE ===== -->
+                <!-- Display error message if registration fails -->
                 <?php if ($error !== ""): ?>
                     <div class="notice error"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
 
+                <!-- ===== SUCCESS MESSAGE ===== -->
+                <!-- Display success message if registration succeeds -->
                 <?php if ($success !== ""): ?>
                     <div class="notice success"><?= htmlspecialchars($success) ?></div>
                 <?php endif; ?>
 
+                <!-- ===== LOGIN LINK ===== -->
+                <!-- Link to login page for existing users -->
                 <div class="link">
                     Already a Member? <a href="index.php">Log In</a>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- ===== FOOTER ===== -->
+    <!-- Include the site footer -->
     <?php include 'assets/includes/footer.php' ?>
 </body>
 

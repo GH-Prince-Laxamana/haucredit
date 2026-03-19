@@ -1,7 +1,6 @@
 <?php
 session_start();
 require_once "../app/database.php";
-
 require_once "../app/security_headers.php";
 send_security_headers();
 
@@ -64,24 +63,24 @@ $requirements_map = [
   'OSA-Initiated Activity' => [
     'On-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary'],
     'Virtual Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary'],
-    'Community Service - On-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'OCES Annex A Form'],
-    'Community Service - Virtual Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'OCES Annex A Form'],
-    'Off-Campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
-    'Community Service - Off-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
+    'Community Service - On-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Student Organization Intake Form (OCES Annex A Form)'],
+    'Community Service - Virtual Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Student Organization Intake Form (OCES Annex A Form)'],
+    'Off-Campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'Student Organization Intake Form (OCES Annex A Form)'],
+    'Community Service - Off-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'Student Organization Intake Form (OCES Annex A Form)'],
   ],
   'Student-Initiated Activity' => [
     'On-campus Activity' => ['Program Flow and/or Itinerary', 'Planned Budget'],
     'Virtual Activity' => ['Program Flow and/or Itinerary', 'Planned Budget'],
-    'Community Service - On-campus Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'OCES Annex A Form'],
-    'Community Service - Virtual Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'OCES Annex A Form'],
+    'Community Service - On-campus Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'Student Organization Intake Form (OCES Annex A Form)'],
+    'Community Service - Virtual Activity' => ['Program Flow and/or Itinerary', 'Planned Budget', 'Student Organization Intake Form (OCES Annex A Form)'],
     'Off-Campus Activity' => ['Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
     'Community Service - Off-campus Activity' => ['Program Flow and/or Itinerary', 'Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
   ],
   'Participation' => [
     'On-campus Activity' => [],
     'Virtual Activity' => [],
-    'Community Service - On-campus Activity' => ['OCES Annex A Form'],
-    'Community Service - Virtual Activity' => ['OCES Annex A Form'],
+    'Community Service - On-campus Activity' => ['Student Organization Intake Form (OCES Annex A Form)'],
+    'Community Service - Virtual Activity' => ['Student Organization Intake Form (OCES Annex A Form)'],
     'Off-Campus Activity' => ['Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance'],
     'Community Service - Off-campus Activity' => ['Parental Consent', 'Letter of Undertaking', 'Planned Budget', 'List of Participants', 'CHEd Certificate of Compliance', 'OCES Annex A Form'],
   ]
@@ -246,11 +245,12 @@ if (isset($_POST['create_event'])) {
     'Planned Budget' => '',
     'List of Participants' => '',
     'CHEd Certificate of Compliance' => 'https://docs.google.com/document/d/1gdHMH0iFZpS3OFwoG8w1r8DZoMh_oeXB4nN22kQt21o/edit',
-    'OCES Annex A Form' => '',
+    'Student Organization Intake Form (OCES Annex A Form)' => 'https://docs.google.com/document/d/1WKsTW9acn0s9jXj4TANrkJBp3WIe9Ilh/edit',
     'Request Letter for Collection/Selling' => 'https://docs.google.com/document/d/1uA5CrIyGeVlrcw8dBQCpKN2XzyvSOtHU81FmY4XZ6ic/edit',
     'Medical Clearance of Participants' => '',
     'Risk Assessment Plan with Emergency Contacts and Emergency Map' => '',
-    'Visitors and Vehicle Lists' => 'https://docs.google.com/document/d/12GynKf48JzB1hPn-xelzkDNYMfDXw3LLqwYkNlavRog/edit'
+    'Visitors and Vehicle Lists' => 'https://docs.google.com/document/d/12GynKf48JzB1hPn-xelzkDNYMfDXw3LLqwYkNlavRog/edit',
+    '' => 'https://drive.google.com/file/d/1WKsTW9acn0s9jXj4TANrkJBp3WIe9Ilh/view'
   ];
 
   $requirements_descs = [
@@ -268,7 +268,7 @@ if (isset($_POST['create_event'])) {
 
     'CHEd Certificate of Compliance' => 'Shall be notarized. Please view template provided.',
 
-    'OCES Annex A Form' => 'Form required by the Office of Community Extension Services.',
+    'Student Organization Intake Form (OCES Annex A Form)' => 'Form required by the Office of Community Extension Services.',
 
     'Request Letter for Collection/Selling' => 'A letter approved by the College/School Dean should be uploaded here. If you are a uniwide student group, address it to Ms. Iris Ann Castro (OSA Director) through Mr. Paul Ernest D. Carreon (Student Activities Coordinator) submit it without their signature. No need to place our names on the approval.',
 
@@ -397,27 +397,34 @@ if (isset($_POST['create_event'])) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Event</title>
+  <title><?= $editing ? 'Edit' : 'Create' ?> Event</title>
   <link rel="stylesheet" href="assets/styles/layout.css" />
   <link rel="stylesheet" href="assets/styles/ce_styles.css" />
 </head>
 
 <body>
   <div class="app">
+    <!-- Overlay for sidebar on mobile -->
     <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+
     <?php include 'assets/includes/general_nav.php' ?>
 
     <main class="main">
+      <!-- Page header -->
       <header class="topbar ce-topbar">
-        <button class="hamburger" id="menuBtn" type="button">☰</button>
+        <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
 
         <div class="title-wrap">
-          <h1>Create Event</h1>
-          <p>Fill out the form below to create a new event.</p>
+          <h1><?= $editing ? 'Edit Event' : 'Create Event' ?></h1>
+          <p><?= $editing ? 'Update the event details below.' : 'Fill out the form below to create a new event.' ?></p>
         </div>
       </header>
 
+      <!-- ===== EVENT FORM ===== -->
       <form method="POST" class="event-form">
+
+        <!-- ===== STEP 1: CLASSIFICATION ===== -->
+        <!-- Collect background and activity type information -->
         <details class="step-1 acc" open>
 
           <summary class="acc-head">
@@ -435,6 +442,8 @@ if (isset($_POST['create_event'])) {
           </summary>
 
           <div class="acc-body">
+
+            <!-- Organizing Body Selection -->
             <fieldset class="field">
               <label for="organizing_body" class="field-title">Organizing Body</label>
               <small class="hint">Select one or more organizing bodies.</small>
@@ -520,40 +529,42 @@ if (isset($_POST['create_event'])) {
                   "PP Tindig",
                 ];
 
-                foreach ($org_options as $org) {
-                  $organizing_body = [];
-                  if (!empty($formData['organizing_body'])) {
-                    $organizing_body = json_decode($formData['organizing_body'], true);
-                    if (!is_array($organizing_body))
-                      $organizing_body = [];
+                // Decode organizing_body from JSON if available
+                $organizing_body = [];
+                if (!empty($formData['organizing_body'])) {
+                  $organizing_body = json_decode($formData['organizing_body'], true);
+                  if (!is_array($organizing_body)) {
+                    $organizing_body = [];
                   }
+                }
 
-                  $selected = (isset($organizing_body) && is_array($organizing_body) && in_array($org, $organizing_body)) ? 'selected' : '';
-
-                  echo "<option value=\"$org\" $selected>$org</option>";
+                // Render option for each organization
+                foreach ($org_options as $org) {
+                  $selected = (is_array($organizing_body) && in_array($org, $organizing_body)) ? 'selected' : '';
+                  echo "<option value=\"$org\" $selected>" . htmlspecialchars($org) . "</option>";
                 }
                 ?>
               </select>
 
+              <!-- Display selected organizations as tags -->
               <div class="selected-tags" id="selectedTags">
                 <?php if (!empty($organizing_body) && is_array($organizing_body)): ?>
-
                   <?php foreach ($organizing_body as $org): ?>
                     <div class="tag">
                       <?= htmlspecialchars($org) ?><span>&times;</span>
                     </div>
-
                   <?php endforeach; ?>
                 <?php endif; ?>
               </div>
 
+              <!-- Custom multi-select dropdown -->
               <div class="multi-select" id="orgDropdown">
                 <input type="text" placeholder="Search or select organization" class="multi-input" autocomplete="off">
-
                 <div class="dropdown-list"></div>
               </div>
             </fieldset>
 
+            <!-- Background Selection -->
             <fieldset class="field">
               <label for="background" class="field-title">Background</label>
               <small class="hint">Indicate who initiated this activity.</small>
@@ -561,40 +572,50 @@ if (isset($_POST['create_event'])) {
               <div class="radio-group two-col">
                 <label>
                   <input type="radio" name="background" value="OSA-Initiated Activity" required
-                    <?= ($formData['background'] === 'OSA-Initiated Activity') ? 'checked' : '' ?>> OSA-Initiated Activity
+                    <?= ($formData['background'] === 'OSA-Initiated Activity') ? 'checked' : '' ?>>
+                  OSA-Initiated Activity
                 </label>
 
                 <label>
-                  <input type="radio" name="background" value="Student-Initiated Activity"
-                    <?= ($formData['background'] === 'Student-Initiated Activity') ? 'checked' : '' ?> required>
-                  Student-Initiated
-                  Activity
+                  <input type="radio" name="background" value="Student-Initiated Activity" required
+                    <?= ($formData['background'] === 'Student-Initiated Activity') ? 'checked' : '' ?>>
+                  Student-Initiated Activity
                 </label>
 
                 <label>
-                  <input type="radio" name="background" value="Participation"
-                    <?= ($formData['background'] === 'Participation') ? 'checked' : '' ?> required> Participation
+                  <input type="radio" name="background" value="Participation" required
+                    <?= ($formData['background'] === 'Participation') ? 'checked' : '' ?>>
+                  Participation
                 </label>
               </div>
             </fieldset>
 
+            <!-- Activity Type Selection -->
             <fieldset class="field">
               <label for="activity_type" class="field-title">Type Activity</label>
               <small class="hint">Choose the activity type. This helps categorize events for reporting.</small>
 
               <div class="radio-group two-col">
                 <?php
-                $types = ['On-campus Activity', 'Virtual Activity', 'Off-Campus Activity', 'Community Service - On-campus Activity', 'Community Service - Virtual Activity', 'Community Service - Off-campus Activity'];
+                $types = [
+                  'On-campus Activity',
+                  'Virtual Activity',
+                  'Off-Campus Activity',
+                  'Community Service - On-campus Activity',
+                  'Community Service - Virtual Activity',
+                  'Community Service - Off-campus Activity'
+                ];
 
+                // Render radio button for each activity type
                 foreach ($types as $type) {
                   $checked = ($formData['activity_type'] === $type) ? 'checked' : '';
-
-                  echo "<label><input type='radio' name='activity_type' value='$type' $checked required> $type</label>";
+                  echo "<label><input type='radio' name='activity_type' value='" . htmlspecialchars($type) . "' $checked required> " . htmlspecialchars($type) . "</label>";
                 }
                 ?>
               </div>
             </fieldset>
 
+            <!-- Series Selection (Participation activities only) -->
             <fieldset class="field" id="series-block"
               style="display:<?= ($formData['background'] === 'Participation') ? 'flex' : 'none' ?>;">
               <label for="series" class="field-title">Series</label>
@@ -602,12 +623,18 @@ if (isset($_POST['create_event'])) {
 
               <div class="radio-group two-col">
                 <?php
-                $series_options = ['College Days', 'University Days', 'Organization Themed-Fairs', 'OSA-Initiated Activities', 'HAU Institutional Activities'];
+                $series_options = [
+                  'College Days',
+                  'University Days',
+                  'Organization Themed-Fairs',
+                  'OSA-Initiated Activities',
+                  'HAU Institutional Activities'
+                ];
 
+                // Render radio button for each series option
                 foreach ($series_options as $opt) {
                   $checked = ($formData['series'] === $opt) ? 'checked' : '';
-
-                  echo "<label><input type='radio' name='series' value='$opt' $checked required> $opt</label>";
+                  echo "<label><input type='radio' name='series' value='" . htmlspecialchars($opt) . "' $checked required> " . htmlspecialchars($opt) . "</label>";
                 }
                 ?>
               </div>
@@ -615,10 +642,13 @@ if (isset($_POST['create_event'])) {
           </div>
         </details>
 
+        <!-- Step 1 Action Buttons -->
         <div class="step-actions step1-actions">
           <button type="button" class="btn-primary next-btn" disabled>Next</button>
         </div>
 
+        <!-- ===== STEP 2A: BASIC INFORMATION ===== -->
+        <!-- Collect event description and nature -->
         <details class="step-2 acc">
           <summary class="acc-head">
 
@@ -635,75 +665,86 @@ if (isset($_POST['create_event'])) {
           </summary>
 
           <div class="acc-body">
+
+            <!-- Nature of Event -->
             <div class="field long-field">
               <label for="nature" class="field-title">Nature of the Event</label>
               <small class="hint">
-                If you were asked to describe what is your activity in one to three words, what would
-                it be? (ex. Singing Context, Quiz Bee, Tutorial Session, Bulletin Board Campaign, Online Poster
-                Campaign, Amazing Race, Forum, Seminar, Workshop, Focus Group Discussion)
+                If you were asked to describe what is your activity in one to three words, what would it be?
+                (ex. Singing Contest, Quiz Bee, Tutorial Session, Bulletin Board Campaign, Online Poster Campaign, Amazing Race, Forum, Seminar, Workshop, Focus Group Discussion)
               </small>
 
               <textarea name="nature" id="nature" required><?= htmlspecialchars($formData['nature']) ?></textarea>
             </div>
 
+            <!-- Event Name -->
             <div class="field long-field">
               <label for="event_name" class="field-title">Name of the Event</label>
               <small class="hint">
-                If this is one event in a series of events (e.g. College Days, UDays, festivals with
-                mini-events), place the umbrella event first, then put a colon with the name and a hyphen for the nature
-                description. (ex. SAS Days 2025: Kundiman - Concert for a cause)
+                If this is one event in a series of events (e.g. College Days, UDays, festivals with mini-events),
+                place the umbrella event first, then put a colon with the name and a hyphen for the nature description.
+                (ex. SAS Days 2025: Kundiman - Concert for a cause)
               </small>
 
-              <textarea name="event_name" id="event_name"
-                required><?= htmlspecialchars($formData['event_name']) ?></textarea>
+              <textarea name="event_name" id="event_name" required><?= htmlspecialchars($formData['event_name']) ?></textarea>
             </div>
 
+            <!-- Target Metric -->
             <div class="field long-field">
               <label for="target_metric" class="field-title">Target Metric</label>
               <small class="hint">
-                Indicate the target metric and the standard value you wish to achieve. (ex. 50%
-                Turnout of Voters, 75% Satisfaction Rating)
+                Indicate the target metric and the standard value you wish to achieve.
+                (ex. 50% Turnout of Voters, 75% Satisfaction Rating)
               </small>
 
-              <textarea name="target_metric" id="target_metric"
-                rows="2"><?= htmlspecialchars($formData['target_metric']) ?></textarea>
+              <textarea name="target_metric" id="target_metric" rows="2"><?= htmlspecialchars($formData['target_metric']) ?></textarea>
             </div>
 
+            <!-- Extraneous Activity Flag -->
             <fieldset class="field">
               <label for="extraneous" class="field-title">Is this an extraneous activity?</label>
+              <small class="hint">Mark if this activity is classified as extraneous (requires medical clearance)</small>
 
               <div class="radio-group inline">
                 <label>
-                  <input type="radio" name="extraneous" value="Yes" <?= ($formData['extraneous'] === 'Yes') ? 'checked' : '' ?> required> Yes
+                  <input type="radio" name="extraneous" value="Yes" required
+                    <?= ($formData['extraneous'] === 'Yes') ? 'checked' : '' ?>>
+                  Yes
                 </label>
 
                 <label>
-                  <input type="radio" name="extraneous" value="No" <?= ($formData['extraneous'] === 'No') ? 'checked' : '' ?> required>
+                  <input type="radio" name="extraneous" value="No" required
+                    <?= ($formData['extraneous'] === 'No') ? 'checked' : '' ?>>
                   No
                 </label>
               </div>
             </fieldset>
 
+            <!-- Payment Collection Flag -->
             <fieldset class="field">
               <label for="collect-payments" class="field-title">
                 Would you collect payments or sell merchandise for this activity?
               </label>
-              <small class="hint"></small>
 
               <div class="radio-group inline">
                 <label>
-                  <input type="radio" name="collect_payments" value="Yes" <?= ($formData['collect_payments'] === 'Yes') ? 'checked' : '' ?> required>
+                  <input type="radio" name="collect_payments" value="Yes" required
+                    <?= ($formData['collect_payments'] === 'Yes') ? 'checked' : '' ?>>
                   Yes
                 </label>
 
                 <label>
-                  <input type="radio" name="collect_payments" value="No" <?= ($formData['collect_payments'] === 'No') ? 'checked' : '' ?> required> No
+                  <input type="radio" name="collect_payments" value="No" required
+                    <?= ($formData['collect_payments'] === 'No') ? 'checked' : '' ?>>
+                  No
                 </label>
               </div>
             </fieldset>
           </div>
         </details>
 
+        <!-- ===== STEP 2B: LOGISTICS ===== -->
+        <!-- Collect schedule, venue, and participants information -->
         <details class="step-2 acc">
           <summary class="acc-head">
 
@@ -720,70 +761,80 @@ if (isset($_POST['create_event'])) {
           </summary>
 
           <div class="acc-body">
+
+            <!-- Date & Time Fields -->
             <div class="form-row">
 
+              <!-- Start Date/Time -->
               <div class="field">
                 <label for="start_datetime" class="field-title">Start Date and Time</label>
-                <small class="hint">Indicate the start of ingress</small>
+                <small class="hint">Indicate the start of ingress (arrival time)</small>
 
                 <input type="datetime-local" name="start_datetime" id="start_datetime"
                   value="<?= htmlspecialchars($formData['start_datetime']) ?>" required>
               </div>
 
+              <!-- End Date/Time -->
               <div class="field">
                 <label for="end_datetime" class="field-title">End Date and Time</label>
-                <small class="hint">Indicate the start of egress</small>
+                <small class="hint">Indicate the start of egress (departure time)</small>
 
                 <input type="datetime-local" name="end_datetime" id="end_datetime"
                   value="<?= htmlspecialchars($formData['end_datetime']) ?>" required>
               </div>
             </div>
 
+            <!-- Participants Description -->
             <div class="field long-field" style="margin-top: 0;">
               <label for="participants" class="field-title">Participants</label>
               <small class="hint">
-                Indicate number and group (ex. 8 members, 7 officers, 2 guest speakers, 40
-                beneficiaries from XYZ Foundation)
+                Indicate number and group (ex. 8 members, 7 officers, 2 guest speakers, 40 beneficiaries from XYZ Foundation)
               </small>
 
-              <textarea name="participants" id="participants" rows="2"
-                required><?= htmlspecialchars($formData['participants']) ?></textarea>
+              <textarea name="participants" id="participants" rows="2" required><?= htmlspecialchars($formData['participants']) ?></textarea>
             </div>
 
+            <!-- Venue / Platform -->
             <div class="field long-field">
               <label for="venue_platform" class="field-title">Venue / Platform</label>
               <small class="hint">
-                Indicate the room number for caserooms. Provide the invite link if for online sessions
+                Indicate the room number for classrooms. Provide the invite link if for online sessions
                 and invite either studentactivities@hau.edu.ph or studentactivities.hauosa@gmail.com
               </small>
 
-              <textarea name="venue_platform" id="venue_platform"
-                required><?= htmlspecialchars($formData['venue_platform']) ?></textarea>
+              <textarea name="venue_platform" id="venue_platform" required><?= htmlspecialchars($formData['venue_platform']) ?></textarea>
             </div>
 
+            <!-- Visitors on Campus (On-campus activities only) -->
             <fieldset class="field" id="visitors-block"
               style="display:<?= (strpos($formData['activity_type'] ?? '', 'On-campus') !== false) ? 'flex' : 'none' ?>;">
 
               <label class="field-title">Will there be visitors entering the campus?</label>
+              <small class="hint">External guests or non-HAU members attending the event</small>
 
               <div class="radio-group inline">
                 <label>
-                  <input type="radio" name="has_visitors" value="Yes" <?= ($formData['has_visitors'] ?? '') === 'Yes' ? 'checked' : '' ?> required>
+                  <input type="radio" name="has_visitors" value="Yes" required
+                    <?= ($formData['has_visitors'] ?? '') === 'Yes' ? 'checked' : '' ?>>
                   Yes
                 </label>
 
                 <label>
-                  <input type="radio" name="has_visitors" value="No" <?= ($formData['has_visitors'] ?? '') === 'No' ? 'checked' : '' ?> required>
+                  <input type="radio" name="has_visitors" value="No" required
+                    <?= ($formData['has_visitors'] ?? '') === 'No' ? 'checked' : '' ?>>
                   No
                 </label>
               </div>
 
             </fieldset>
 
+            <!-- Off-Campus Specific Fields -->
             <fieldset class="field" id="offcampus-block"
               style="display:<?= (strpos($formData['activity_type'], 'Off-Campus') !== false) ? 'block' : 'none' ?>;">
 
               <div class="form-row">
+
+                <!-- Participant Range -->
                 <fieldset class="field" style="margin-top: 0;">
                   <label for="participant_range" class="field-title">Range of Total Number of Participants</label>
 
@@ -793,26 +844,30 @@ if (isset($_POST['create_event'])) {
 
                     foreach ($ranges as $r) {
                       $checked = ($formData['participant_range'] === $r) ? 'checked' : '';
-
-                      echo "<label><input type='radio' name='participant_range' value='$r' $checked required> $r</label>";
+                      echo "<label><input type='radio' name='participant_range' value='" . htmlspecialchars($r) . "' $checked required> " . htmlspecialchars($r) . "</label>";
                     }
                     ?>
                   </div>
                 </fieldset>
 
+                <!-- Distance Traveled -->
                 <fieldset class="field" style="margin-top: 0;">
                   <label for="distance" class="field-title">Distance</label>
+                  <small class="hint">How far will participants travel?</small>
 
                   <div class="radio-group">
                     <?php
-                    $distances = ['Within Angeles City', 'Within Central Luzon', 'Rest of PH or Overseas'];
+                    $distances = [
+                      'Within Angeles City',
+                      'Within Central Luzon',
+                      'Rest of PH or Overseas'
+                    ];
 
                     foreach ($distances as $option) {
                       $checked = (($formData['distance'] ?? '') === $option) ? 'checked' : '';
-
                       echo "<label>
                               <input type='radio' name='distance' value='" . htmlspecialchars($option) . "' $checked required>
-                              $option
+                              " . htmlspecialchars($option) . "
                             </label>";
                     }
                     ?>
@@ -820,21 +875,24 @@ if (isset($_POST['create_event'])) {
                 </fieldset>
               </div>
 
+              <!-- Overnight Stay -->
               <div class="field" style="margin-top: 0;">
-                <label for="participant_range" class="field-title">
+                <label for="overnight" class="field-title">
                   Will the activity last more than 12 hours from arrival to departure?
                 </label>
-                <small>Select "Yes" if it includes an overnight stay</small>
+                <small class="hint">Select "Yes" if it includes an overnight stay</small>
 
                 <div class="radio-group inline">
                   <label>
-                    <input type="radio" name="overnight" value="1" <?= ($formData['overnight'] == 1) ? 'checked' : '' ?>
-                      required> Yes
+                    <input type="radio" name="overnight" value="1" required
+                      <?= ($formData['overnight'] == 1) ? 'checked' : '' ?>>
+                    Yes
                   </label>
 
                   <label>
-                    <input type="radio" name="overnight" value="0" <?= ($formData['overnight'] == 0) ? 'checked' : '' ?>
-                      required> No
+                    <input type="radio" name="overnight" value="0" required
+                      <?= ($formData['overnight'] == 0) ? 'checked' : '' ?>>
+                    No
                   </label>
                 </div>
               </div>
@@ -842,6 +900,7 @@ if (isset($_POST['create_event'])) {
           </div>
         </details>
 
+        <!-- Final Action Buttons -->
         <div class="step-actions step-2-actions">
           <button type="button" class="btn-secondary back-btn">Back</button>
           <button type="submit" name="create_event" class="btn-primary create-btn" disabled>
@@ -853,6 +912,7 @@ if (isset($_POST['create_event'])) {
       <?php include 'assets/includes/footer.php' ?>
     </main>
   </div>
+
   <script src="../app/script/layout.js?v=1"></script>
   <script src="../app/script/create_event.js"></script>
 </body>
