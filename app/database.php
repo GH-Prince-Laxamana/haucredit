@@ -258,3 +258,28 @@ try {
 } catch (Exception $e) {
     popup_error("Database Error: " . $e->getMessage());
 }
+
+/* ================= ADDITION FOR USERS DASHBOARD (SAFE) ================= */
+
+/* Add role + status + last_login columns ONLY if they don't exist */
+$checkRole = $conn->query("SHOW COLUMNS FROM users LIKE 'role'");
+if ($checkRole->num_rows === 0) {
+    $conn->query("ALTER TABLE users 
+        ADD role ENUM('Admin','Moderator','User') DEFAULT 'User',
+        ADD status ENUM('Pending','Approved','Archived') DEFAULT 'Pending',
+        ADD last_login DATETIME NULL
+    ");
+}
+
+/* Add last_login column separately if role existed but last_login didn't */
+$checkLastLogin = $conn->query("SHOW COLUMNS FROM users LIKE 'last_login'");
+if ($checkLastLogin->num_rows === 0) {
+    $conn->query("ALTER TABLE users ADD last_login DATETIME NULL AFTER status");
+}
+
+/* Ensure admin has correct role + status */
+$conn->query("
+    UPDATE users 
+    SET role='Admin', status='Approved' 
+    WHERE user_id=1
+");

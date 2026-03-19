@@ -41,7 +41,12 @@ if ($user_id) {
         <a class="nav-item <?= ($current_page == 'home.php') ? 'active' : '' ?>" href="home.php">
             <span><i class="fa-regular fa-house"></i> Dashboard</span>
         </a>
-
+        
+        <!-- Users -->
+        <a class="nav-item <?= ($current_page == 'users.php') ? 'active' : '' ?>" href="users.php">
+            <span><i class="fa-solid fa-users"></i> Users</span>
+        </a>
+        
         <!-- Create Event -->
         <a class="nav-item <?= ($current_page == 'create_event.php') ? 'active' : '' ?>" href="create_event.php">
             <span><i class="fa-solid fa-plus"></i> Create Event</span>
