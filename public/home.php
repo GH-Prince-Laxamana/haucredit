@@ -176,8 +176,8 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                         <?php endif; ?>
                     </header>
 
-                    <ul class="events-table">
-                        <?php if ($show_limit_events): ?>
+                    <?php if ($show_limit_events): ?>
+                        <ul class="events-table">
                             <?php foreach ($show_limit_events as $event):
                                 // Calculate progress percentage for this event
                                 $progress = $event['total_docs'] ? round(($event['uploaded_docs'] / $event['total_docs']) * 100) : 0;
@@ -212,10 +212,20 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                                     </article>
                                 </a>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <li>No active events after <?= date("F j") ?>.</li>
-                        <?php endif; ?>
-                    </ul>
+                        </ul>
+                    <?php else: ?>
+                        <!-- ===== EMPTY STATE FOR ACTIVE EVENTS ===== -->
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <i class="fa-solid fa-file-circle-xmark"></i>
+                            </div>
+                            <h3>No events found</h3>
+                            <p>Try adjusting your search or filter, or create a new event.</p>
+                            <a href="create_event.php" class="btn-primary">
+                                Create Event
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </section>
 
                 <!-- ===== UPCOMING DEADLINES SECTION ===== -->
@@ -227,8 +237,8 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                         <?php endif; ?>
                     </header>
 
-                    <ul>
-                        <?php if ($show_limit_deadlines): ?>
+                    <?php if ($show_limit_deadlines): ?>
+                        <ul>
                             <?php foreach ($show_limit_deadlines as $d): ?>
                                 <li>
                                     <a class="req-card" href="view_event.php?id=<?= $d['event_id'] ?>">
@@ -255,10 +265,17 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
                                     </a>
                                 </li>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <li>No upcoming deadlines.</li>
-                        <?php endif; ?>
-                    </ul>
+                        </ul>
+                    <?php else: ?>
+                        <!-- ===== EMPTY STATE FOR DEADLINES ===== -->
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <i class="fa-regular fa-calendar-check"></i>
+                            </div>
+                            <h3>No upcoming deadlines</h3>
+                            <p>You're all caught up! No pending requirements at the moment.</p>
+                        </div>
+                    <?php endif; ?>
                 </section>
             </section>
 
