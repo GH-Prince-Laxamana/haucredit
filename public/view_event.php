@@ -410,22 +410,20 @@ if (is_array($decoded_orgs)) {
                                                 <?php endif; ?>
                                             </h4>
 
-                                            <span class="doc-status"><?= htmlspecialchars($display_status) ?></span>
-
                                             <?php if (!empty($doc['review_status'])): ?>
                                                 <div class="doc-status">
-                                                   <?= htmlspecialchars(ucwords(str_replace('_', ' ', $doc['review_status']))) ?>
+                                                   <?= htmlspecialchars($display_status) ?> • <?= htmlspecialchars(ucwords(str_replace('_', ' ', $doc['review_status']))) ?>
                                                 </div>
                                             <?php endif; ?>
 
                                             <?php if (!empty($doc['deadline'])): ?>
-                                                <div class="doc-deadline">
+                                                <div class="doc-status doc-deadline">
                                                     Deadline: <?= date('F j, Y g:i A', strtotime($doc['deadline'])) ?>
                                                 </div>
                                             <?php endif; ?>
 
                                             <?php if (!empty($doc['remarks'])): ?>
-                                                <div class="doc-remarks">
+                                                <div class="doc-status doc-remarks">
                                                     Remarks: <?= htmlspecialchars($doc['remarks']) ?>
                                                 </div>
                                             <?php endif; ?>

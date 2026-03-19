@@ -1,5 +1,6 @@
 <?php
 require_once 'error.php';
+require_once 'query_builder_functions.php';
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
@@ -20,6 +21,50 @@ try {
     $conn->select_db($db_name);
 
     $conn->begin_transaction();
+
+    function attachRequirementsToEvent(mysqli $conn, int $event_id, string $start_datetime): void
+    {
+        $templatesSelect = fetchAll(
+            $conn,
+            "
+                SELECT req_template_id, default_due_offset_days, default_due_basis
+                FROM requirement_templates
+                WHERE is_active = 1
+                ORDER BY req_template_id ASC
+                "
+        );
+
+        $eventRequirementsInsertSql = "
+                INSERT INTO event_requirements (
+                    event_id, req_template_id, submission_status, review_status, deadline
+                ) VALUES (?, ?, 'pending', 'not_reviewed', ?)
+                ON DUPLICATE KEY UPDATE
+                    deadline = VALUES(deadline),
+                    updated_at = CURRENT_TIMESTAMP
+                ";
+
+        foreach ($templatesSelect as $tpl) {
+            $tpl_id = (int) $tpl['req_template_id'];
+            $offset_days = $tpl['default_due_offset_days'];
+            $basis = $tpl['default_due_basis'];
+
+            $deadline = null;
+
+            if ($offset_days !== null && $basis !== 'manual') {
+                $eventStart = new DateTime($start_datetime);
+
+                if ($basis === 'before_start') {
+                    $eventStart->modify("-{$offset_days} days");
+                } elseif ($basis === 'after_start') {
+                    $eventStart->modify("+{$offset_days} days");
+                }
+
+                $deadline = $eventStart->format('Y-m-d H:i:s');
+            }
+
+            execQuery($conn, $eventRequirementsInsertSql, "iis", [$event_id, $tpl_id, $deadline]);
+        }
+    }
 
     $tables = [
 
@@ -148,6 +193,8 @@ try {
             req_name VARCHAR(255) NOT NULL UNIQUE,
             req_desc TEXT NULL,
             template_url VARCHAR(255) NULL,
+            default_due_offset_days INT NOT NULL DEFAULT 7,
+            default_due_basis ENUM('before_start','after_start','manual') NOT NULL DEFAULT 'before_start',
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -227,47 +274,35 @@ try {
     }
 
     /* ================= DEFAULT ADMIN ================= */
-    $checkAdminStmt = $conn->prepare("
+    $existingAdminSelect = fetchOne(
+        $conn,
+        "
         SELECT user_id
         FROM users
         WHERE user_name = ?
         LIMIT 1
-    ");
-    $adminUserName = 'admin';
-    $checkAdminStmt->bind_param("s", $adminUserName);
-    $checkAdminStmt->execute();
-    $existingAdmin = $checkAdminStmt->get_result()->fetch_assoc();
+        ",
+        "s",
+        ['admin']
+    );
 
-    if (!$existingAdmin) {
+    if (!$existingAdminSelect) {
         $adminPass = password_hash("203", PASSWORD_DEFAULT);
 
-        $insertAdminStmt = $conn->prepare("
+        $stmt = execQuery(
+            $conn,
+            "
             INSERT INTO users
             (user_name, user_password, user_email, stud_num, org_body, role, profile_pic, user_reg_date)
             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-        ");
-
-        $user_name = 'admin';
-        $user_email = 'admin@hau.edu.ph';
-        $stud_num = '203';
-        $org_body = 'SOC';
-        $role = 'admin';
-        $profile_pic = 'default.jpg';
-
-        $insertAdminStmt->bind_param(
+            ",
             "sssssss",
-            $user_name,
-            $adminPass,
-            $user_email,
-            $stud_num,
-            $org_body,
-            $role,
-            $profile_pic
+            ['admin', $adminPass, 'admin@hau.edu.ph', '203', 'SOC', 'admin', 'default.jpg']
         );
-        $insertAdminStmt->execute();
-        $admin_user_id = $insertAdminStmt->insert_id;
+
+        $admin_user_id = $stmt->insert_id;
     } else {
-        $admin_user_id = (int) $existingAdmin['user_id'];
+        $admin_user_id = (int) $existingAdminSelect['user_id'];
     }
 
     /* ================= DEFAULT REQUIREMENT TEMPLATES ================= */
@@ -316,41 +351,52 @@ try {
         'Visitors and Vehicle Lists' => 'https://docs.google.com/document/d/12GynKf48JzB1hPn-xelzkDNYMfDXw3LLqwYkNlavRog/edit'
     ];
 
-    $upsertTemplateStmt = $conn->prepare("
-        INSERT INTO requirement_templates (req_name, req_desc, template_url, is_active)
-        VALUES (?, ?, ?, 1)
-        ON DUPLICATE KEY UPDATE
-            req_desc = VALUES(req_desc),
-            template_url = VALUES(template_url),
-            is_active = VALUES(is_active)
-    ");
+    $templateUpsertSql = "
+            INSERT INTO requirement_templates (
+                req_name, req_desc, template_url, default_due_offset_days, default_due_basis, is_active
+            )
+            VALUES (?, ?, ?, ?, ?, 1)
+            ON DUPLICATE KEY UPDATE
+                req_desc = VALUES(req_desc),
+                template_url = VALUES(template_url),
+                default_due_offset_days = VALUES(default_due_offset_days),
+                default_due_basis = VALUES(default_due_basis),
+                is_active = VALUES(is_active)
+            ";
 
     foreach ($default_requirements as $req_name) {
         $req_desc = $default_requirements_descs[$req_name] ?? null;
         $template_url = $requirements_templates[$req_name] ?? null;
+        $offset_days = 7;
+        $basis = 'before_start';
 
-        $upsertTemplateStmt->bind_param("sss", $req_name, $req_desc, $template_url);
-        $upsertTemplateStmt->execute();
+        execQuery(
+            $conn,
+            $templateUpsertSql,
+            "sssis",
+            [$req_name, $req_desc, $template_url, $offset_days, $basis]
+        );
     }
 
     /* ================= SAMPLE SYSTEM EVENT ================= */
-    $checkEventStmt = $conn->prepare("
-        SELECT event_id
-        FROM events
-        WHERE is_system_event = 1
-        LIMIT 1
-    ");
-    $checkEventStmt->execute();
-    $existingEvent = $checkEventStmt->get_result()->fetch_assoc();
+    $checkSystemEventSql = "
+                            SELECT event_id
+                            FROM events
+                            WHERE is_system_event = 1
+                            LIMIT 1
+                            ";
+
+    $existingEvent = fetchOne($conn, $checkSystemEventSql);
 
     if (!$existingEvent) {
-        $activeTemplateCountResult = $conn->query("
-            SELECT COUNT(*) AS total
-            FROM requirement_templates
-            WHERE is_active = 1
-        ");
-        $activeTemplateCountRow = $activeTemplateCountResult->fetch_assoc();
-        $docs_total = (int) $activeTemplateCountRow['total'];
+        $countActiveTemplatesSql = "
+                                    SELECT COUNT(*) AS total
+                                    FROM requirement_templates
+                                    WHERE is_active = 1
+                                 ";
+
+        $activeTemplateCountRow = fetchOne($conn, $countActiveTemplatesSql);
+        $docs_total = (int) ($activeTemplateCountRow['total'] ?? 0);
 
         $user_id = $admin_user_id;
         $event_name = "Sample Debug Event";
@@ -380,134 +426,113 @@ try {
         $overnight = 0;
 
         /* Insert into events core */
-        $insertEventStmt = $conn->prepare("
-            INSERT INTO events (
-                user_id, organizing_body, nature, event_name,
-                event_status, admin_remarks, docs_total, docs_uploaded, is_system_event
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ");
-        $insertEventStmt->bind_param(
+        $insertEventSql = "
+                        INSERT INTO events (
+                            user_id, organizing_body, nature, event_name,
+                            event_status, admin_remarks, docs_total, docs_uploaded, is_system_event
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ";
+
+        $insertEventStmt = execQuery(
+            $conn,
+            $insertEventSql,
             "isssssiii",
-            $user_id,
-            $organizing_body,
-            $nature,
-            $event_name,
-            $event_status,
-            $admin_remarks,
-            $docs_total,
-            $docs_uploaded,
-            $is_system_event
+            [
+                $user_id,
+                $organizing_body,
+                $nature,
+                $event_name,
+                $event_status,
+                $admin_remarks,
+                $docs_total,
+                $docs_uploaded,
+                $is_system_event
+            ]
         );
-        $insertEventStmt->execute();
         $event_id = $insertEventStmt->insert_id;
 
         /* Insert into event_type */
-        $insertEventTypeStmt = $conn->prepare("
-            INSERT INTO event_type (event_id, background, activity_type, series)
-            VALUES (?, ?, ?, ?)
-        ");
-        $insertEventTypeStmt->bind_param(
+        $insertEventTypeSql = "
+                            INSERT INTO event_type (event_id, background, activity_type, series)
+                            VALUES (?, ?, ?, ?)
+                            ";
+
+        execQuery(
+            $conn,
+            $insertEventTypeSql,
             "isss",
-            $event_id,
-            $background,
-            $activity_type,
-            $series
+            [$event_id, $background, $activity_type, $series]
         );
-        $insertEventTypeStmt->execute();
 
         /* Insert into event_dates */
-        $insertEventDatesStmt = $conn->prepare("
-            INSERT INTO event_dates (event_id, start_datetime, end_datetime)
-            VALUES (?, ?, ?)
-        ");
-        $insertEventDatesStmt->bind_param(
+        $insertEventDatesSql = "
+                            INSERT INTO event_dates (event_id, start_datetime, end_datetime)
+                            VALUES (?, ?, ?)
+                            ";
+
+        execQuery(
+            $conn,
+            $insertEventDatesSql,
             "iss",
-            $event_id,
-            $start_datetime,
-            $end_datetime
+            [$event_id, $start_datetime, $end_datetime]
         );
-        $insertEventDatesStmt->execute();
 
         /* Insert into event_participants */
-        $insertEventParticipantsStmt = $conn->prepare("
-            INSERT INTO event_participants (event_id, participants, participant_range, has_visitors)
-            VALUES (?, ?, ?, ?)
-        ");
-        $insertEventParticipantsStmt->bind_param(
+        $insertEventParticipantsSql = "
+                                    INSERT INTO event_participants (event_id, participants, participant_range, has_visitors)
+                                    VALUES (?, ?, ?, ?)
+                                    ";
+
+        execQuery(
+            $conn,
+            $insertEventParticipantsSql,
             "isss",
-            $event_id,
-            $participants,
-            $participant_range,
-            $has_visitors
+            [$event_id, $participants, $participant_range, $has_visitors]
         );
-        $insertEventParticipantsStmt->execute();
 
         /* Insert into event_location */
-        $insertEventLocationStmt = $conn->prepare("
-            INSERT INTO event_location (event_id, venue_platform, distance)
-            VALUES (?, ?, ?)
-        ");
-        $insertEventLocationStmt->bind_param(
+        $insertEventLocationSql = "
+                                INSERT INTO event_location (event_id, venue_platform, distance)
+                                VALUES (?, ?, ?)
+                                ";
+
+        execQuery(
+            $conn,
+            $insertEventLocationSql,
             "iss",
-            $event_id,
-            $venue_platform,
-            $distance
+            [$event_id, $venue_platform, $distance]
         );
-        $insertEventLocationStmt->execute();
 
         /* Insert into event_logistics */
-        $insertEventLogisticsStmt = $conn->prepare("
-            INSERT INTO event_logistics (event_id, extraneous, collect_payments, overnight)
-            VALUES (?, ?, ?, ?)
-        ");
-        $insertEventLogisticsStmt->bind_param(
+        $insertEventLogisticsSql = "
+                                    INSERT INTO event_logistics (event_id, extraneous, collect_payments, overnight)
+                                    VALUES (?, ?, ?, ?)
+                                    ";
+
+        execQuery(
+            $conn,
+            $insertEventLogisticsSql,
             "issi",
-            $event_id,
-            $extraneous,
-            $collect_payments,
-            $overnight
+            [$event_id, $extraneous, $collect_payments, $overnight]
         );
-        $insertEventLogisticsStmt->execute();
 
-        /* Link all active requirement templates to this event */
-        $getTemplatesResult = $conn->query("
-            SELECT req_template_id
-            FROM requirement_templates
-            WHERE is_active = 1
-            ORDER BY req_template_id ASC
-        ");
-
-        $linkRequirementStmt = $conn->prepare("
-            INSERT INTO event_requirements (
-                event_id, req_template_id, submission_status, review_status
-            ) VALUES (?, ?, 'pending', 'not_reviewed')
-        ");
-
-        while ($tpl = $getTemplatesResult->fetch_assoc()) {
-            $tpl_id = (int) $tpl['req_template_id'];
-
-            $linkRequirementStmt->bind_param("ii", $event_id, $tpl_id);
-            $linkRequirementStmt->execute();
-        }
+        attachRequirementsToEvent($conn, $event_id, $start_datetime);
 
         /* Insert independent calendar entry linked to event */
         $notes = "Default debug event";
 
-        $insertCalendarStmt = $conn->prepare("
-            INSERT INTO calendar_entries
-            (user_id, event_id, title, start_datetime, end_datetime, notes)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-        $insertCalendarStmt->bind_param(
+        $insertCalendarEntrySql = "
+                                INSERT INTO calendar_entries
+                                (user_id, event_id, title, start_datetime, end_datetime, notes)
+                                VALUES (?, ?, ?, ?, ?, ?)
+                                ";
+
+        execQuery(
+            $conn,
+            $insertCalendarEntrySql,
             "iissss",
-            $user_id,
-            $event_id,
-            $event_name,
-            $start_datetime,
-            $end_datetime,
-            $notes
+            [$user_id, $event_id, $event_name, $start_datetime, $end_datetime, $notes]
         );
-        $insertCalendarStmt->execute();
     }
 
     $conn->commit();

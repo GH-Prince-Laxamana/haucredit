@@ -1,8 +1,6 @@
 <?php
 session_start();
 require_once "../app/database.php";
-require_once "../app/security_headers.php";
-send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
@@ -123,7 +121,7 @@ foreach ($events as $e) {
 
                 <div class="action-btns">
                     <a href="archived_events.php" class="btn-secondary">Archived Events</a>
-                    <a href="create_event.php" class="btn-primary">Create Event</a>
+                    <a href="create_event.php" class="btn-primary"><i class="fa-solid fa-plus"></i> Create Event</a>
                 </div>
             </header>
 
