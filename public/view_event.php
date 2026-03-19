@@ -17,7 +17,7 @@ if ($event_id <= 0) {
 }
 
 /* ================= EVENT DATA FETCH ================= */
-$stmt = $conn->prepare("
+$fetchEventSql = "
     SELECT
         e.event_id,
         e.user_id,
@@ -70,11 +70,14 @@ $stmt = $conn->prepare("
     WHERE e.event_id = ?
       AND e.user_id = ?
     LIMIT 1
-");
-$stmt->bind_param("ii", $event_id, $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-$event = $result->fetch_assoc();
+";
+
+$event = fetchOne(
+    $conn,
+    $fetchEventSql,
+    "ii",
+    [$event_id, $user_id]
+);
 
 if (!$event) {
     popup_error("Event not found or you don't have permission to view it.");
@@ -90,7 +93,7 @@ if ($is_archived) {
 }
 
 /* ================= REQUIRED DOCUMENTS FETCH ================= */
-$stmt_docs = $conn->prepare("
+$fetchRequiredDocsSql = "
     SELECT
         er.event_req_id,
         er.submission_status,
@@ -120,15 +123,14 @@ $stmt_docs = $conn->prepare("
        AND rf.is_current = 1
     WHERE er.event_id = ?
     ORDER BY er.created_at ASC, rt.req_name ASC
-");
-$stmt_docs->bind_param("i", $event_id);
-$stmt_docs->execute();
-$res_docs = $stmt_docs->get_result();
+";
 
-$required_docs = [];
-while ($row = $res_docs->fetch_assoc()) {
-    $required_docs[] = $row;
-}
+$required_docs = fetchAll(
+    $conn,
+    $fetchRequiredDocsSql,
+    "i",
+    [$event_id]
+);
 
 $required_docs = array_map(function ($doc) {
     $doc['display_status'] = ($doc['submission_status'] === 'uploaded') ? 'Uploaded' : 'Pending';
@@ -136,21 +138,14 @@ $required_docs = array_map(function ($doc) {
 }, $required_docs);
 
 /* ================= PROGRESS CALCULATION ================= */
-$total_docs = count($required_docs);
-$uploaded_docs = count(array_filter($required_docs, fn($doc) => $doc['submission_status'] === 'uploaded'));
-$pending_docs = $total_docs - $uploaded_docs;
+$total_docs = (int) ($event['docs_total'] ?? 0);
+$uploaded_docs = (int) ($event['docs_uploaded'] ?? 0);
+$pending_docs = max(0, $total_docs - $uploaded_docs);
 $progress_percentage = $total_docs ? round(($uploaded_docs / $total_docs) * 100) : 0;
 
 $pct = max(0, min(100, (int) $progress_percentage));
 $hue = ($pct / 100) * 120;
 $progress_color = "hsl($hue, 70%, 45%)";
-
-/* ================= DOCUMENT MESSAGES ================= */
-$doc_messages = [
-    'Planned Budget' => 'Budget template is not available. Please contact the organizer.',
-    'List of Participants' => 'No participant list template yet.',
-    'Student Organization Intake Form (OCES Annex A Form)' => 'Form will be provided upon request.'
-];
 
 /* ================= ORGANIZING BODY FORMAT ================= */
 $organizing_body_display = $event['organizing_body'] ?? '';
@@ -384,7 +379,7 @@ if (is_array($decoded_orgs)) {
                                     } elseif (!empty($doc['template_url'])) {
                                         $preview_url = $doc['template_url'];
                                     } else {
-                                        $no_template_msg = $doc_messages[$doc['req_name']] ?? 'No template available for this document.';
+                                        $no_template_msg = 'No template available for this document.';
                                     }
                                     ?>
                                     <div class="doc-item status-<?= strtolower($display_status) ?>">
@@ -412,7 +407,8 @@ if (is_array($decoded_orgs)) {
 
                                             <?php if (!empty($doc['review_status'])): ?>
                                                 <div class="doc-status">
-                                                   <?= htmlspecialchars($display_status) ?> • <?= htmlspecialchars(ucwords(str_replace('_', ' ', $doc['review_status']))) ?>
+                                                    <?= htmlspecialchars($display_status) ?> •
+                                                    <?= htmlspecialchars(ucwords(str_replace('_', ' ', $doc['review_status']))) ?>
                                                 </div>
                                             <?php endif; ?>
 

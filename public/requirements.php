@@ -20,7 +20,7 @@ $event_filter = isset($_GET['event_id']) && $_GET['event_id'] !== '' ? (int) $_G
    - events
    - event_dates
 */
-$sql = "
+$fetchRequirementsSql = "
     SELECT
         er.event_req_id,
         rt.req_name,
@@ -55,27 +55,28 @@ $sql = "
       AND e.archived_at IS NULL
 ";
 
+$requirementParams = [$user_id];
+$requirementTypes = "i";
+
 if ($event_filter) {
-    $sql .= " AND e.event_id = ?";
+    $fetchRequirementsSql .= " AND e.event_id = ?";
+    $requirementParams[] = $event_filter;
+    $requirementTypes .= "i";
 }
 
-$sql .= "
+$fetchRequirementsSql .= "
     ORDER BY
         CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
         ed.start_datetime ASC,
         er.created_at ASC
 ";
 
-$stmt = $conn->prepare($sql);
-
-if ($event_filter) {
-    $stmt->bind_param("ii", $user_id, $event_filter);
-} else {
-    $stmt->bind_param("i", $user_id);
-}
-
-$stmt->execute();
-$result = $stmt->get_result();
+$requirementRows = fetchAll(
+    $conn,
+    $fetchRequirementsSql,
+    $requirementTypes,
+    $requirementParams
+);
 
 $requirements = [];
 
@@ -84,9 +85,7 @@ $requirements = [];
    - events
    - event_dates
 */
-$events_map = [];
-
-$ev_stmt = $conn->prepare("
+$fetchFilterEventsSql = "
     SELECT
         e.event_id,
         e.event_name,
@@ -100,19 +99,24 @@ $ev_stmt = $conn->prepare("
         CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
         ed.start_datetime ASC,
         e.created_at ASC
-");
-$ev_stmt->bind_param("i", $user_id);
-$ev_stmt->execute();
-$ev_res = $ev_stmt->get_result();
+";
 
-while ($row = $ev_res->fetch_assoc()) {
+$eventRows = fetchAll(
+    $conn,
+    $fetchFilterEventsSql,
+    "i",
+    [$user_id]
+);
+
+$events_map = [];
+foreach ($eventRows as $row) {
     $events_map[$row['event_id']] = [
         'name' => $row['event_name'],
         'start' => $row['start_datetime']
     ];
 }
 
-while ($row = $result->fetch_assoc()) {
+foreach ($requirementRows as $row) {
     $requirements[] = [
         'id' => (int) $row['event_req_id'],
         'name' => $row['req_name'],
@@ -196,6 +200,7 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -271,13 +276,13 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
 
                                 return $a_deadline <=> $b_deadline;
                             });
-                        ?>
+                            ?>
                             <div class="event-block">
                                 <?php foreach ($event['requirements'] as $req):
                                     $status = ($req['status'] === 'uploaded') ? 'Uploaded' : 'Pending';
                                     $deadline_source = $req['deadline'] ?: $req['event_start'];
                                     $deadline_ts = $deadline_source ? strtotime($deadline_source) : null;
-                                ?>
+                                    ?>
                                     <a class="req-card" href="view_event.php?id=<?= (int) $event['event_id'] ?>">
                                         <div class="req-item">
                                             <div class="req-title">
@@ -338,4 +343,5 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
 
     <script src="../app/script/requirements.js"></script>
 </body>
+
 </html>

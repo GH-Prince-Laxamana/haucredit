@@ -482,6 +482,47 @@ function syncEventRequirements($event_id, $requirements_map)
 
   $toAdd = array_diff($checklist, array_keys($current));
   $toRemove = array_diff(array_keys($current), $checklist);
+  $toKeep = array_intersect($checklist, array_keys($current));
+
+  if (!empty($toKeep)) {
+    $updateRequirementDeadlineSql = "
+    UPDATE event_requirements
+    SET deadline = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE event_id = ? AND req_template_id = ?
+  ";
+
+    foreach ($toKeep as $reqName) {
+      if (!isset($desiredTemplates[$reqName])) {
+        continue;
+      }
+
+      $template = $desiredTemplates[$reqName];
+      $templateId = (int) $template['req_template_id'];
+      $offset_days = $template['default_due_offset_days'];
+      $basis = $template['default_due_basis'];
+
+      $deadline = null;
+
+      if ($start_datetime !== '' && $offset_days !== null && $basis !== 'manual') {
+        $eventStart = new DateTime($start_datetime);
+
+        if ($basis === 'before_start') {
+          $eventStart->modify("-{$offset_days} days");
+        } elseif ($basis === 'after_start') {
+          $eventStart->modify("+{$offset_days} days");
+        }
+
+        $deadline = $eventStart->format('Y-m-d H:i:s');
+      }
+
+      execQuery(
+        $conn,
+        $updateRequirementDeadlineSql,
+        "sii",
+        [$deadline, $event_id, $templateId]
+      );
+    }
+  }
 
   if (!empty($toRemove)) {
     $deleteEventRequirementSql = "

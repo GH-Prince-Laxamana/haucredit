@@ -30,7 +30,9 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
 /* ================= VALIDATE OWNERSHIP =================
    Ensure the requirement belongs to an event owned by the logged-in user
 */
-$owner_stmt = $conn->prepare("
+$owned_requirement = fetchOne(
+    $conn,
+    "
     SELECT
         er.event_req_id,
         er.event_id,
@@ -41,10 +43,10 @@ $owner_stmt = $conn->prepare("
       AND e.user_id = ?
       AND e.archived_at IS NULL
     LIMIT 1
-");
-$owner_stmt->bind_param("ii", $event_req_id, $_SESSION["user_id"]);
-$owner_stmt->execute();
-$owned_requirement = $owner_stmt->get_result()->fetch_assoc();
+    ",
+    "ii",
+    [$event_req_id, $_SESSION["user_id"]]
+);
 
 if (!$owned_requirement) {
     popup_error("Requirement not found or access denied.");
@@ -99,97 +101,109 @@ try {
     $conn->begin_transaction();
 
     /* ================= MARK OLD FILES AS NOT CURRENT ================= */
-    $old_files_stmt = $conn->prepare("
-        SELECT file_path
-        FROM requirement_files
-        WHERE event_req_id = ?
-          AND is_current = 1
-    ");
-    $old_files_stmt->bind_param("i", $event_req_id);
-    $old_files_stmt->execute();
-    $old_files_result = $old_files_stmt->get_result();
+    $oldFileRows = fetchAll(
+        $conn,
+        "
+    SELECT file_path
+    FROM requirement_files
+    WHERE event_req_id = ?
+      AND is_current = 1
+    ",
+        "i",
+        [$event_req_id]
+    );
 
     $old_paths = [];
-    while ($row = $old_files_result->fetch_assoc()) {
+    foreach ($oldFileRows as $row) {
         if (!empty($row['file_path'])) {
             $old_paths[] = $row['file_path'];
         }
     }
 
-    $mark_old_stmt = $conn->prepare("
-        UPDATE requirement_files
-        SET is_current = 0
-        WHERE event_req_id = ?
-          AND is_current = 1
-    ");
-    $mark_old_stmt->bind_param("i", $event_req_id);
-    $mark_old_stmt->execute();
+    execQuery(
+        $conn,
+        "
+    UPDATE requirement_files
+    SET is_current = 0
+    WHERE event_req_id = ?
+      AND is_current = 1
+    ",
+        "i",
+        [$event_req_id]
+    );
 
     /* ================= INSERT NEW CURRENT FILE ================= */
     $original_file_name = $file['name'];
     $file_size = (int) $file['size'];
     $uploaded_by = (int) $_SESSION["user_id"];
 
-    $insert_file_stmt = $conn->prepare("
-        INSERT INTO requirement_files (
-            event_req_id,
-            file_path,
-            original_file_name,
-            file_type,
-            file_size,
-            uploaded_by,
-            uploaded_at,
-            is_current
-        ) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)
-    ");
-    $insert_file_stmt->bind_param(
+    execQuery(
+        $conn,
+        "
+    INSERT INTO requirement_files (
+        event_req_id,
+        file_path,
+        original_file_name,
+        file_type,
+        file_size,
+        uploaded_by,
+        uploaded_at,
+        is_current
+    ) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)
+    ",
         "isssii",
-        $event_req_id,
-        $file_relative_path,
-        $original_file_name,
-        $mime_type,
-        $file_size,
-        $uploaded_by
+        [$event_req_id, $file_relative_path, $original_file_name, $mime_type, $file_size, $uploaded_by]
     );
-    $insert_file_stmt->execute();
 
     /* ================= UPDATE REQUIREMENT STATUS ================= */
-    $update_req_stmt = $conn->prepare("
-        UPDATE event_requirements
-        SET submission_status = 'uploaded',
-            updated_at = CURRENT_TIMESTAMP
-        WHERE event_req_id = ?
-    ");
-    $update_req_stmt->bind_param("i", $event_req_id);
-    $update_req_stmt->execute();
+    execQuery(
+        $conn,
+        "
+    UPDATE event_requirements
+    SET submission_status = 'uploaded',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE event_req_id = ?
+    ",
+        "i",
+        [$event_req_id]
+    );
 
     /* ================= RECALCULATE EVENT DOC COUNTS ================= */
-    $count_stmt = $conn->prepare("
-        SELECT COUNT(*) AS total_docs
-        FROM event_requirements
-        WHERE event_id = ?
-    ");
-    $count_stmt->bind_param("i", $event_id);
-    $count_stmt->execute();
-    $total_docs = (int) ($count_stmt->get_result()->fetch_assoc()['total_docs'] ?? 0);
+    $totalDocsRow = fetchOne(
+        $conn,
+        "
+    SELECT COUNT(*) AS total_docs
+    FROM event_requirements
+    WHERE event_id = ?
+    ",
+        "i",
+        [$event_id]
+    );
+    $total_docs = (int) ($totalDocsRow['total_docs'] ?? 0);
 
-    $uploaded_count_stmt = $conn->prepare("
-        SELECT COUNT(*) AS uploaded_docs
-        FROM event_requirements
-        WHERE event_id = ?
-          AND submission_status = 'uploaded'
-    ");
-    $uploaded_count_stmt->bind_param("i", $event_id);
-    $uploaded_count_stmt->execute();
-    $uploaded_docs = (int) ($uploaded_count_stmt->get_result()->fetch_assoc()['uploaded_docs'] ?? 0);
+    $uploadedDocsRow = fetchOne(
+        $conn,
+        "
+    SELECT COUNT(*) AS uploaded_docs
+    FROM event_requirements
+    WHERE event_id = ?
+      AND submission_status = 'uploaded'
+    ",
+        "i",
+        [$event_id]
+    );
+    $uploaded_docs = (int) ($uploadedDocsRow['uploaded_docs'] ?? 0);
 
-    $update_event_stmt = $conn->prepare("
-        UPDATE events
-        SET docs_total = ?, docs_uploaded = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE event_id = ?
-    ");
-    $update_event_stmt->bind_param("iii", $total_docs, $uploaded_docs, $event_id);
-    $update_event_stmt->execute();
+    execQuery(
+        $conn,
+        "
+    UPDATE events
+    SET docs_total = ?, docs_uploaded = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE event_id = ?
+    ",
+        "iii",
+        [$total_docs, $uploaded_docs, $event_id]
+    );
 
     $conn->commit();
 
