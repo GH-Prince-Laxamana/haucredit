@@ -635,6 +635,27 @@ if (isset($_POST['create_event'])) {
     }
   }
 
+  $target_metric = trim($_SESSION['target_metric'] ?? '');
+  $start_datetime = trim($_SESSION['start_datetime'] ?? '');
+  $end_datetime = trim($_SESSION['end_datetime'] ?? '');
+
+  if ($target_metric !== '' && !preg_match('/^(100|[1-9]?\d)\%\s+.+$/', $target_metric)) {
+    popup_error("Target Metric must follow this format: 75% Satisfaction Rating");
+  }
+
+  if ($start_datetime !== '' && $end_datetime !== '') {
+    $start_ts = strtotime($start_datetime);
+    $end_ts = strtotime($end_datetime);
+
+    if ($start_ts === false || $end_ts === false) {
+      popup_error("Invalid start or end date/time.");
+    }
+
+    if (($end_ts - $start_ts) < 7200) {
+      popup_error("End Date and Time must be at least 2 hours after the Start Date and Time.");
+    }
+  }
+
   try {
     $conn->begin_transaction();
 
@@ -831,8 +852,7 @@ if (isset($_POST['create_event'])) {
             <div class="field long-field">
               <label for="target_metric" class="field-title">Target Metric</label>
               <small class="hint">
-                Indicate the target metric and the standard value you wish to achieve. (Example: 75% Satisfaction
-                Rating)
+               <span class="hint-important">Format:</span> percentage followed by a description. Example: 75% Satisfaction Rating
               </small>
               <textarea name="target_metric" id="target_metric"
                 rows="2"><?= htmlspecialchars($formData['target_metric'] ?? '') ?></textarea>
@@ -896,7 +916,7 @@ if (isset($_POST['create_event'])) {
 
               <div class="field">
                 <label for="end_datetime" class="field-title">End Date and Time</label>
-                <small class="hint">Indicate the start of egress.</small>
+                <small class="hint">Must be <span class="hint-important">at least 2 hours after</span> the Start Date and Time.</small>
                 <input type="datetime-local" name="end_datetime" id="end_datetime"
                   value="<?= htmlspecialchars($formData['end_datetime']) ?>" required>
               </div>

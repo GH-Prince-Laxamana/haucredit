@@ -65,6 +65,24 @@ function toggleBlocks() {
   }
 }
 
+function isValidTargetMetric(value) {
+  const v = value.trim();
+  if (!v) return false;
+  return /^(100|[1-9]?\d)\%\s+.+$/.test(v);
+}
+
+function hasMinimumTwoHoursGap(startValue, endValue) {
+  if (!startValue || !endValue) return false;
+
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return false;
+
+  const diffMs = end - start;
+  return diffMs >= 2 * 60 * 60 * 1000;
+}
+
 // ===== INITIALIZE TOGGLE ON PAGE LOAD =====
 // Call toggleBlocks when page is shown (handles back/forward navigation)
 window.addEventListener("pageshow", toggleBlocks);
@@ -221,7 +239,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       // Handle text inputs, textareas, etc.
-      if (input.required && !input.value.trim()) valid = false;
+      if (input.required && !input.value.trim()) {
+        valid = false;
+        continue;
+      }
+
+      if (input.id === "target_metric" && input.value.trim()) {
+        if (!isValidTargetMetric(input.value)) valid = false;
+      }
     }
 
     // Validate that at least one radio in each required group is checked
@@ -233,6 +258,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const tagsContainer = container.querySelector("#selectedTags");
     if (tagsContainer && tagsContainer.querySelectorAll(".tag").length === 0)
       valid = false;
+
+    const startInput = document.getElementById("start_datetime");
+    const endInput = document.getElementById("end_datetime");
+
+    if (
+      startInput &&
+      endInput &&
+      isVisible(startInput) &&
+      isVisible(endInput)
+    ) {
+      if (!hasMinimumTwoHoursGap(startInput.value, endInput.value)) {
+        valid = false;
+      }
+    }
 
     return valid;
   }
