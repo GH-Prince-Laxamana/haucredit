@@ -430,6 +430,8 @@ try {
         $collect_payments = "No";
         $overnight = 0;
 
+        $target_metric = "75% Satisfaction Rating";
+
         /* Insert into events core */
         $insertEventSql = "
                         INSERT INTO events (
@@ -519,6 +521,19 @@ try {
             $insertEventLogisticsSql,
             "issi",
             [$event_id, $extraneous, $collect_payments, $overnight]
+        );
+
+        /* Insert into event metric */
+        $insertEventMetricSql = "
+                                    INSERT INTO event_metrics (event_id, target_metric)
+                                    VALUES (?, ?)
+                                    ";
+
+        execQuery(
+            $conn,
+            $insertEventMetricSql,
+            "is",
+            [$event_id, $target_metric]
         );
 
         attachRequirementsToEvent($conn, $event_id, $start_datetime);
