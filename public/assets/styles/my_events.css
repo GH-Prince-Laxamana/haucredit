@@ -17,7 +17,7 @@
 }
 
 .summary-card {
-  background: white;
+  background: linear-gradient(90deg, #ecdfe3, #ece9e2, #ecdfe3);;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -25,19 +25,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border-top: 3px solid var(--burgundy);
-}
-
-.summary-card.summary-active {
-  border-top-color: var(--blue);
-}
-
-.summary-card.summary-pending {
-  border-top-color: var(--orange);
-}
-
-.summary-card.summary-completed {
-  border-top-color: var(--green);
+  position: relative;
+  overflow: hidden;
 }
 
 .summary-num {
@@ -47,16 +36,15 @@
   line-height: 1;
 }
 
-.summary-active .summary-num {
-  color: var(--blue);
-}
-
-.summary-pending .summary-num {
-  color: var(--orange);
-}
-
-.summary-completed .summary-num {
-  color: var(--green);
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #4b0014, #c2a14d, #4b0014);
+  z-index: 2;
 }
 
 .summary-label {
