@@ -1,14 +1,17 @@
 <?php
+// Start session to manage user authentication and temporary form data
 session_start();
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
 send_security_headers();
 
+// Check if user is logged in; redirect to login if not
 if (!isset($_SESSION["user_id"])) {
   header("Location: index.php");
   exit();
 }
 
+// Define the list of form fields used throughout the script for consistency
 $ce_fields = [
   'organizing_body',
   'background',
@@ -29,36 +32,94 @@ $ce_fields = [
   'has_visitors'
 ];
 
+// Get event ID from URL for editing; null if creating new
 $event_id = $_GET['id'] ?? null;
 $editing = !empty($event_id);
 
+// Initialize form data array
 $formData = [];
 
-if ($event_id) {
-  $stmt = $conn->prepare("SELECT * 
-                          FROM events 
-                          WHERE event_id = ? 
-                          AND user_id = ? 
-                          AND archived_at IS NULL
-                          LIMIT 1");
-  $stmt->bind_param("ii", $event_id, $_SESSION["user_id"]);
-  $stmt->execute();
-  $result = $stmt->get_result();
-  $existing_event = $result->fetch_assoc();
+// Helper function to fetch and populate form data for editing or new events
+// Now fetches from multiple tables using JOINs to match the normalized schema
+function fetchFormData($event_id, $ce_fields, $editing) {
+  global $conn;
+  $formData = [];
+  if ($editing) {
+    // Fetch existing event data from events and child tables via JOIN
+    $stmt = $conn->prepare("
+      SELECT 
+        e.organizing_body, et.background, et.activity_type, et.series,
+        e.nature, e.event_name, ed.start_datetime, ed.end_datetime,
+        ep.participants, el.venue_platform, elg.extraneous, elg.collect_payments,
+        em.target_metric, el.distance, ep.participant_range, elg.overnight, ep.has_visitors
+      FROM events e
+      LEFT JOIN event_type et ON e.event_id = et.event_id
+      LEFT JOIN event_dates ed ON e.event_id = ed.event_id
+      LEFT JOIN event_participants ep ON e.event_id = ep.event_id
+      LEFT JOIN event_location el ON e.event_id = el.event_id
+      LEFT JOIN event_logistics elg ON e.event_id = elg.event_id
+      LEFT JOIN event_metrics em ON e.event_id = em.event_id
+      WHERE e.event_id = ? AND e.user_id = ? AND e.archived_at IS NULL
+      LIMIT 1
+    ");
+    $stmt->bind_param("ii", $event_id, $_SESSION["user_id"]);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $existing_event = $result->fetch_assoc();
 
-  if ($existing_event) {
-    foreach ($ce_fields as $field) {
-      $formData[$field] = $existing_event[$field] ?? '';
+    if ($existing_event) {
+      // Populate formData with fetched values
+      foreach ($ce_fields as $field) {
+        $formData[$field] = $existing_event[$field] ?? '';
+      }
+    } else {
+      // Error if event not found or no permission
+      popup_error("Event not found or you don't have permission to edit it.");
     }
   } else {
-    popup_error("Event not found or you don't have permission to edit it.");
+    // For new events, use session data if available
+    foreach ($ce_fields as $field) {
+      $formData[$field] = $_SESSION[$field] ?? '';
+    }
   }
-} else {
-  foreach ($ce_fields as $field) {
-    $formData[$field] = $_SESSION[$field] ?? '';
-  }
+  return $formData;
 }
 
+// Fetch form data using the helper
+$formData = fetchFormData($event_id, $ce_fields, $editing);
+
+// Helper function to fetch requirements templates and descriptions from the DB (system event)
+// This replaces hardcoded arrays for better maintainability
+function fetchRequirementsFromDB() {
+  global $conn;
+  $requirements_templates = [];
+  $requirements_descs = [];
+  try {
+    // Query the system event's requirements for defaults
+    $stmt = $conn->prepare("
+      SELECT r.req_name, rf.template_url, r.req_desc
+      FROM requirements r
+      LEFT JOIN requirement_files rf ON r.req_id = rf.req_id
+      WHERE r.event_id = (SELECT event_id FROM events WHERE is_system_event = 1 LIMIT 1)
+    ");
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+      $requirements_templates[$row['req_name']] = $row['template_url'] ?? '';
+      $requirements_descs[$row['req_name']] = $row['req_desc'] ?? '';
+    }
+  } catch (Exception $e) {
+    // Fallback to empty arrays if DB fetch fails
+    $requirements_templates = [];
+    $requirements_descs = [];
+  }
+  return [$requirements_templates, $requirements_descs];
+}
+
+// Fetch requirements data from DB
+list($requirements_templates, $requirements_descs) = fetchRequirementsFromDB();
+
+// Define the requirements map (unchanged, as it's logic-based)
 $requirements_map = [
   'OSA-Initiated Activity' => [
     'On-campus Activity' => ['Approval Letter from Dean', 'Program Flow and/or Itinerary'],
@@ -86,314 +147,169 @@ $requirements_map = [
   ]
 ];
 
-if (isset($_POST['create_event'])) {
+// Helper function to insert/update event data across tables
+function insertEventData($event_id, $editing) {
+  global $conn;
 
+  // Prepare common data
+  $organizing_body_json = isset($_SESSION['organizing_body']) ? json_encode($_SESSION['organizing_body']) : null;
+  $event_status = "Pending Review";
+
+  if ($editing) {
+    // Update events table
+    $stmt = $conn->prepare("UPDATE events SET organizing_body = ?, nature = ?, event_name = ? WHERE event_id = ? AND user_id = ?");
+    $stmt->bind_param("sssii", $organizing_body_json, $_SESSION['nature'], $_SESSION['event_name'], $event_id, $_SESSION["user_id"]);
+    $stmt->execute();
+
+    // Update child tables
+    $conn->query("UPDATE event_type SET background = '{$_SESSION['background']}', activity_type = '{$_SESSION['activity_type']}', series = '{$_SESSION['series']}' WHERE event_id = $event_id");
+    $conn->query("UPDATE event_dates SET start_datetime = '{$_SESSION['start_datetime']}', end_datetime = '{$_SESSION['end_datetime']}' WHERE event_id = $event_id");
+    $conn->query("UPDATE event_participants SET participants = '{$_SESSION['participants']}', participant_range = '{$_SESSION['participant_range']}', has_visitors = '{$_SESSION['has_visitors']}' WHERE event_id = $event_id");
+    $conn->query("UPDATE event_location SET venue_platform = '{$_SESSION['venue_platform']}', distance = '{$_SESSION['distance']}' WHERE event_id = $event_id");
+    $conn->query("UPDATE event_logistics SET extraneous = '{$_SESSION['extraneous']}', collect_payments = '{$_SESSION['collect_payments']}', overnight = '{$_SESSION['overnight']}' WHERE event_id = $event_id");
+    $conn->query("UPDATE event_metrics SET target_metric = '{$_SESSION['target_metric']}' WHERE event_id = $event_id");
+
+    // Update calendar
+    $end = $_SESSION['end_datetime'] ?: null;
+    $notes = "Event updated via Event Manager";
+    $cal_stmt = $conn->prepare("UPDATE calendar_entries SET title=?, start_datetime=?, end_datetime=?, notes=? WHERE event_id=? AND user_id=?");
+    $cal_stmt->bind_param("ssssii", $_SESSION['event_name'], $_SESSION['start_datetime'], $end, $notes, $event_id, $_SESSION['user_id']);
+    $cal_stmt->execute();
+
+  } else {
+    // Insert into events table
+    $stmt = $conn->prepare("INSERT INTO events (user_id, organizing_body, nature, event_name, event_status) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("issss", $_SESSION["user_id"], $organizing_body_json, $_SESSION['nature'], $_SESSION['event_name'], $event_status);
+    $stmt->execute();
+    $event_id = $conn->insert_id;
+
+    // Insert into child tables
+    $conn->query("INSERT INTO event_type (event_id, background, activity_type, series) VALUES ($event_id, '{$_SESSION['background']}', '{$_SESSION['activity_type']}', '{$_SESSION['series']}')");
+    $conn->query("INSERT INTO event_dates (event_id, start_datetime, end_datetime) VALUES ($event_id, '{$_SESSION['start_datetime']}', '{$_SESSION['end_datetime']}')");
+    $conn->query("INSERT INTO event_participants (event_id, participants, participant_range, has_visitors) VALUES ($event_id, '{$_SESSION['participants']}', '{$_SESSION['participant_range']}', '{$_SESSION['has_visitors']}')");
+    $conn->query("INSERT INTO event_location (event_id, venue_platform, distance) VALUES ($event_id, '{$_SESSION['venue_platform']}', '{$_SESSION['distance']}')");
+    $conn->query("INSERT INTO event_logistics (event_id, extraneous, collect_payments, overnight) VALUES ($event_id, '{$_SESSION['extraneous']}', '{$_SESSION['collect_payments']}', '{$_SESSION['overnight']}')");
+    $conn->query("INSERT INTO event_metrics (event_id, target_metric) VALUES ($event_id, '{$_SESSION['target_metric']}')");
+    $conn->query("INSERT INTO event_documents (event_id, docs_total, docs_uploaded) VALUES ($event_id, 0, 0)");
+
+    // Insert calendar entry
+    $end = $_SESSION['end_datetime'] ?: null;
+    $notes = "Event created via Event Manager";
+    $cal_stmt = $conn->prepare("INSERT INTO calendar_entries (user_id, event_id, title, start_datetime, end_datetime, notes) VALUES (?, ?, ?, ?, ?, ?)");
+    $cal_stmt->bind_param("iissss", $_SESSION["user_id"], $event_id, $_SESSION['event_name'], $_SESSION['start_datetime'], $end, $notes);
+    $cal_stmt->execute();
+  }
+
+  return $event_id;
+}
+
+// Handle form submission
+if (isset($_POST['create_event'])) {
+  // Store form data in session for persistence
   foreach ($ce_fields as $field) {
     $_SESSION[$field] = $_POST[$field] ?? null;
   }
 
-  $organizing_body_json = isset($_SESSION['organizing_body'])
-    ? json_encode($_SESSION['organizing_body'])
-    : null;
+  // Insert/update event data using the helper
+  $event_id = insertEventData($event_id, $editing);
 
-  $event_status = "Pending Review";
-
-  /* =========================
-     UPDATE EVENT
-  ========================= */
-
-  if ($editing) {
-
-    $stmt = $conn->prepare("
-      UPDATE events SET
-        organizing_body = ?, background = ?, activity_type = ?, series = ?, nature = ?,
-        event_name = ?, start_datetime = ?, end_datetime = ?, participants = ?,
-        venue_platform = ?, extraneous = ?, collect_payments = ?, target_metric = ?,
-        distance = ?, participant_range = ?, overnight = ?, has_visitors = ?
-      WHERE event_id = ? AND user_id = ?
-    ");
-
-    $stmt->bind_param(
-      "sssssssssssssssisis",
-      $organizing_body_json,
-      $_SESSION['background'],
-      $_SESSION['activity_type'],
-      $_SESSION['series'],
-      $_SESSION['nature'],
-      $_SESSION['event_name'],
-      $_SESSION['start_datetime'],
-      $_SESSION['end_datetime'],
-      $_SESSION['participants'],
-      $_SESSION['venue_platform'],
-      $_SESSION['extraneous'],
-      $_SESSION['collect_payments'],
-      $_SESSION['target_metric'],
-      $_SESSION['distance'],
-      $_SESSION['participant_range'],
-      $_SESSION['overnight'],
-      $_SESSION['has_visitors'],
-      $event_id,
-      $_SESSION["user_id"]
-    );
-
-    $stmt->execute();
-
-    /* UPDATE CALENDAR */
-
-    $end = $_SESSION['end_datetime'] ?: null;
-    $notes = "Event updated via Event Manager";
-
-    $cal_stmt = $conn->prepare("
-      UPDATE calendar_entries
-      SET title=?, start_datetime=?, end_datetime=?, notes=?
-      WHERE event_id=? AND user_id=?
-    ");
-
-    $cal_stmt->bind_param(
-      "ssssii",
-      $_SESSION['event_name'],
-      $_SESSION['start_datetime'],
-      $end,
-      $notes,
-      $event_id,
-      $_SESSION['user_id']
-    );
-
-    $cal_stmt->execute();
-
-  }
-
-  /* =========================
-     CREATE EVENT
-  ========================= */ else {
-
-    $stmt = $conn->prepare("
-      INSERT INTO events (
-        user_id, organizing_body, background, activity_type, series,
-        nature, event_name, start_datetime, end_datetime,
-        participants, venue_platform, extraneous, collect_payments, target_metric,
-        distance, participant_range, overnight, has_visitors, event_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ");
-
-    $stmt->bind_param(
-      "issssssssssssssssis",
-      $_SESSION["user_id"],
-      $organizing_body_json,
-      $_SESSION['background'],
-      $_SESSION['activity_type'],
-      $_SESSION['series'],
-      $_SESSION['nature'],
-      $_SESSION['event_name'],
-      $_SESSION['start_datetime'],
-      $_SESSION['end_datetime'],
-      $_SESSION['participants'],
-      $_SESSION['venue_platform'],
-      $_SESSION['extraneous'],
-      $_SESSION['collect_payments'],
-      $_SESSION['target_metric'],
-      $_SESSION['distance'],
-      $_SESSION['participant_range'],
-      $_SESSION['overnight'],
-      $_SESSION['has_visitors'],
-      $event_status
-    );
-
-    $stmt->execute();
-    $event_id = $stmt->insert_id;
-
-    /* INSERT CALENDAR ENTRY */
-
-    $end = $_SESSION['end_datetime'] ?: null;
-    $notes = "Event created via Event Manager";
-
-    $cal_stmt = $conn->prepare("
-      INSERT INTO calendar_entries
-      (user_id,event_id,title,start_datetime,end_datetime,notes)
-      VALUES (?,?,?,?,?,?)
-    ");
-
-    $cal_stmt->bind_param(
-      "iissss",
-      $_SESSION["user_id"],
-      $event_id,
-      $_SESSION['event_name'],
-      $_SESSION['start_datetime'],
-      $end,
-      $notes
-    );
-
-    $cal_stmt->execute();
-  }
-
-  /* =========================
-     REQUIREMENTS SYNC
-  ========================= */
-
+  // Section: Sync requirements based on event details
   $background = $_SESSION['background'];
   $activity_type = $_SESSION['activity_type'];
-
   $collect_payments = $_SESSION['collect_payments'] ?? null;
   $extraneous = $_SESSION['extraneous'] ?? null;
   $overnight = $_SESSION['overnight'] ?? null;
 
-  $requirements_templates = [
-    'Approval Letter from Dean' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit',
-    'Program Flow and/or Itinerary' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit',
-    'Parental Consent' => 'https://docs.google.com/document/d/1rCQbqIH1YFUxekaTCkIYTx3wxUnEKoHUxofG5c7K_1s/edit',
-    'Letter of Undertaking' => 'https://docs.google.com/document/d/1vNsUTnyTeYo9sF_p6nvJCOOouWt7O7Du8m9OxbC4LZc/edit',
-    'Planned Budget' => '',
-    'List of Participants' => '',
-    'CHEd Certificate of Compliance' => 'https://docs.google.com/document/d/1gdHMH0iFZpS3OFwoG8w1r8DZoMh_oeXB4nN22kQt21o/edit',
-    'Student Organization Intake Form (OCES Annex A Form)' => 'https://docs.google.com/document/d/1WKsTW9acn0s9jXj4TANrkJBp3WIe9Ilh/edit',
-    'Request Letter for Collection/Selling' => 'https://docs.google.com/document/d/1uA5CrIyGeVlrcw8dBQCpKN2XzyvSOtHU81FmY4XZ6ic/edit',
-    'Medical Clearance of Participants' => '',
-    'Risk Assessment Plan with Emergency Contacts and Emergency Map' => '',
-    'Visitors and Vehicle Lists' => 'https://docs.google.com/document/d/12GynKf48JzB1hPn-xelzkDNYMfDXw3LLqwYkNlavRog/edit',
-    '' => 'https://drive.google.com/file/d/1WKsTW9acn0s9jXj4TANrkJBp3WIe9Ilh/view'
-  ];
-
-  $requirements_descs = [
-    'Approval Letter from Dean' => "Submit this program flow with the adviser's noting signature and approval of your College/School Dean. For Uniwide Institutions, address it to Ms. Iris Ann Castro (OSA Director) through Mr. Paul Ernest D. Carreon (Student Activities Coordinator), and submit it without their signature. There is no need to place the names of Mr. Carreon and Ms. Castro on the approval.",
-
-    'Program Flow and/or Itinerary' => 'If the program is spontaneous (meaning that it does not have a program flow), discuss in outline the guidelines of the event. For Off-Campus Activities, include the Travel Itinerary with the stopovers and indicate the places where you assemble, stop, and arrive (this is different from the event program flow/guidelines)',
-
-    'Parental Consent' => 'Upload as one PDF File. Shall be individually notarized.',
-
-    'Letter of Undertaking' => 'Shall be signed by the adviser. The Person-in-Charge shall always be an employee of the university.',
-
-    'Planned Budget' => 'Discuss the source of budget, projected spending for all resources needed for the activity.',
-
-    'List of Participants' => 'List and sort all students, employees, and guests to attend with their roles to the activity.',
-
-    'CHEd Certificate of Compliance' => 'Shall be notarized. Please view template provided.',
-
-    'Student Organization Intake Form (OCES Annex A Form)' => 'Form required by the Office of Community Extension Services.',
-
-    'Request Letter for Collection/Selling' => 'A letter approved by the College/School Dean should be uploaded here. If you are a uniwide student group, address it to Ms. Iris Ann Castro (OSA Director) through Mr. Paul Ernest D. Carreon (Student Activities Coordinator) submit it without their signature. No need to place our names on the approval.',
-
-    'Medical Clearance of Participants' => 'Medical clearance issued by a licensed physician confirming participants are fit for the activity.',
-
-    'Risk Assessment Plan with Emergency Contacts and Emergency Map' => 'Provide a risk assessment plan including emergency contacts and a map showing the nearest police station, hospital, and LGU units.',
-
-    'Visitors and Vehicle Lists' => 'List of visitors and vehicles entering the campus including names and plate numbers.'
-  ];
-
+  // Build checklist from map
   $checklist = $requirements_map[$background][$activity_type] ?? [];
-
   if ($collect_payments === 'Yes') {
     $checklist[] = 'Request Letter for Collection/Selling';
   }
-
-  /* EXTRANEOUS ACTIVITY */
-
   if ($extraneous === 'Yes') {
     $checklist[] = 'Medical Clearance of Participants';
   }
-
-  /* OVERNIGHT STAY (ONLY OFF-CAMPUS) */
-
   if ($overnight == 1 && strpos($activity_type, 'Off-Campus') !== false) {
     $checklist[] = 'Risk Assessment Plan with Emergency Contacts and Emergency Map';
   }
-
-  /* VISITORS LIST (ONLY ON-CAMPUS) */
-
   if (strpos($activity_type, 'On-campus') !== false) {
     if (!empty($_SESSION['has_visitors']) && $_SESSION['has_visitors'] === 'Yes') {
       $checklist[] = 'Visitors and Vehicle Lists';
     }
   }
-
   $checklist = array_unique($checklist);
 
+  // Get current requirements for the event
   $current_reqs = [];
-
   $stmt = $conn->prepare("SELECT req_name FROM requirements WHERE event_id=?");
   $stmt->bind_param("i", $event_id);
   $stmt->execute();
   $res = $stmt->get_result();
-
   while ($row = $res->fetch_assoc()) {
     $current_reqs[] = $row['req_name'];
   }
 
+  // Determine additions and removals
   $to_add = array_diff($checklist, $current_reqs);
   $to_remove = array_diff($current_reqs, $checklist);
 
-  /* REMOVE OLD */
-
+  // Remove outdated requirements
   if (!empty($to_remove)) {
-
-    $stmt = $conn->prepare(
-      "DELETE FROM requirements WHERE event_id=? AND req_name=?"
-    );
-
+    $stmt = $conn->prepare("DELETE FROM requirements WHERE event_id=? AND req_name=?");
     foreach ($to_remove as $req) {
       $stmt->bind_param("is", $event_id, $req);
       $stmt->execute();
     }
   }
 
-  /* ADD NEW */
-
+  // Add new requirements
   if (!empty($to_add)) {
-
-    $stmt = $conn->prepare(
-      "INSERT INTO requirements (event_id, req_name, template_url, req_desc)
-       VALUES (?, ?, ?, ?)"
-    );
-
+    $stmt = $conn->prepare("INSERT INTO requirements (event_id, req_name, req_desc) VALUES (?, ?, ?)");
     foreach ($to_add as $req) {
-
-      $template = $requirements_templates[$req] ?? null;
       $desc = $requirements_descs[$req] ?? '';
-      $stmt->bind_param("isss", $event_id, $req, $template, $desc);
+      $stmt->bind_param("iss", $event_id, $req, $desc);
       $stmt->execute();
+      $req_id = $conn->insert_id;
+      // Insert file entry with template
+      $file_stmt = $conn->prepare("INSERT INTO requirement_files (req_id, template_url) VALUES (?, ?)");
+      $template = $requirements_templates[$req] ?? '';
+      $file_stmt->bind_param("is", $req_id, $template);
+      $file_stmt->execute();
+      // Insert status
+      $status_stmt = $conn->prepare("INSERT INTO requirement_status (req_id, doc_status) VALUES (?, ?)");
+      $status_stmt->bind_param("is", $req_id, "pending");
+      $status_stmt->execute();
     }
   }
 
-  /* UPDATE DOC COUNT */
-
-  $stmt = $conn->prepare(
-    "SELECT COUNT(*) AS total FROM requirements WHERE event_id=?"
-  );
+  // Update document count in event_documents
+  $stmt = $conn->prepare("SELECT COUNT(*) AS total FROM requirements WHERE event_id=?");
   $stmt->bind_param("i", $event_id);
   $stmt->execute();
-
   $res = $stmt->get_result();
   $docs_total = $res->fetch_assoc()['total'] ?? 0;
-
-  $stmt->close();
-
-  $stmt = $conn->prepare(
-    "UPDATE events SET docs_total=? WHERE event_id=?"
-  );
+  $stmt = $conn->prepare("UPDATE event_documents SET docs_total=? WHERE event_id=?");
   $stmt->bind_param("ii", $docs_total, $event_id);
   $stmt->execute();
 
-  /* CLEAR SESSION */
-
+  // Clear session data
   foreach ($ce_fields as $field) {
     unset($_SESSION[$field]);
   }
 
-  /* REDIRECT */
-
+  // Redirect based on action
   if ($editing) {
     header("Location: view_event.php?id=$event_id");
   } else {
     header("Location: home.php");
   }
-
   exit();
 }
 
+// HTML output starts here (unchanged structure)
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -422,32 +338,23 @@ if (isset($_POST['create_event'])) {
 
       <!-- ===== EVENT FORM ===== -->
       <form method="POST" class="event-form">
-
-        <!-- ===== STEP 1: CLASSIFICATION ===== -->
-        <!-- Collect background and activity type information -->
+        <!-- Step 1: Classification -->
         <details class="step-1 acc" open>
-
           <summary class="acc-head">
-
             <span class="acc-left">
               <span class="acc-dot"><i class="fa-solid fa-magnifying-glass-chart"></i></span>
-
               <span class="acc-text">
                 <label for="organizing_body" class="acc-title">Classification</label>
                 <span class="acc-sub">Background & Activity Type</span>
               </span>
             </span>
-
             <span class="acc-chevron"></span>
           </summary>
-
           <div class="acc-body">
-
             <!-- Organizing Body Selection -->
             <fieldset class="field">
               <label for="organizing_body" class="field-title">Organizing Body</label>
               <small class="hint">Select one or more organizing bodies.</small>
-
               <select id="organizing_body" name="organizing_body[]" multiple hidden>
                 <?php
                 $org_options = [

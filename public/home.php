@@ -1,8 +1,8 @@
 <?php
+// Start session to manage user authentication
 session_start();
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
-
 send_security_headers();
 
 // ===== AUTHENTICATION CHECK =====
@@ -20,28 +20,32 @@ $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
 
 /* ================= EVENTS QUERY ================= */
 // Fetch active events with document progress for the current user
+// Now JOINs with event_dates (for start/end times) and event_location (for venue)
 // Includes calculation of event phase based on completion and timing
 $stmt = $conn->prepare("
     SELECT 
         e.event_id,
         e.event_name,
-        e.start_datetime,
-        e.end_datetime,
-        e.venue_platform,
+        ed.start_datetime,
+        ed.end_datetime,
+        el.venue_platform,
         COUNT(r.req_id) AS total_docs,
-        SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) AS uploaded_docs,
+        SUM(CASE WHEN rs.doc_status = 'uploaded' THEN 1 ELSE 0 END) AS uploaded_docs,
         CASE
-            WHEN SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) < COUNT(r.req_id)
+            WHEN SUM(CASE WHEN rs.doc_status = 'uploaded' THEN 1 ELSE 0 END) < COUNT(r.req_id)
                 THEN 'pending'
-            WHEN e.end_datetime >= NOW()
+            WHEN ed.end_datetime >= NOW()
                 THEN 'active'
             ELSE 'completed'
         END AS event_phase
     FROM events e
+    LEFT JOIN event_dates ed ON e.event_id = ed.event_id
+    LEFT JOIN event_location el ON e.event_id = el.event_id
     LEFT JOIN requirements r ON r.event_id = e.event_id
-    WHERE e.user_id = ? AND e.archived_at IS NULL AND end_datetime >= NOW()
+    LEFT JOIN requirement_status rs ON r.req_id = rs.req_id
+    WHERE e.user_id = ? AND e.archived_at IS NULL AND ed.end_datetime >= NOW()
     GROUP BY e.event_id
-    ORDER BY e.start_datetime ASC
+    ORDER BY ed.start_datetime ASC
     LIMIT 4
 ");
 $stmt->bind_param("i", $user_id);
@@ -77,18 +81,19 @@ foreach ($show_limit_events as $e) {
 
 /* ================= DEADLINES QUERY ================= */
 // Fetch upcoming deadlines for pending requirements
+// Now uses requirement_status.deadline instead of calendar_entries.start_datetime
 $deadline_stmt = $conn->prepare("
     SELECT 
         e.event_id,
         r.req_name,
         r.req_desc,
         e.event_name,
-        c.start_datetime AS deadline
+        rs.deadline
     FROM requirements r
     JOIN events e ON r.event_id = e.event_id
-    JOIN calendar_entries c ON c.event_id = e.event_id
-    WHERE e.user_id = ? AND e.archived_at IS NULL AND r.doc_status = 'pending'
-    ORDER BY c.start_datetime ASC
+    JOIN requirement_status rs ON r.req_id = rs.req_id
+    WHERE e.user_id = ? AND e.archived_at IS NULL AND rs.doc_status = 'pending' AND rs.deadline IS NOT NULL
+    ORDER BY rs.deadline ASC
 ");
 $deadline_stmt->bind_param("i", $user_id);
 $deadline_stmt->execute();
@@ -99,15 +104,15 @@ $show_view_all_deadlines = count($deadlines) > 3;
 $show_limit_deadlines = array_slice($deadlines, 0, 3);
 
 /* ================= ARCHIVED EVENTS COUNT ================= */
-// Count total archived events for the user
+// Count total archived events for the user (unchanged, as it only queries events)
 $archived_stmt = $conn->prepare("SELECT COUNT(*) AS total FROM events WHERE user_id = ? AND archived_at IS NOT NULL");
 $archived_stmt->bind_param("i", $user_id);
 $archived_stmt->execute();
 $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -268,5 +273,4 @@ $archived_events = $archived_stmt->get_result()->fetch_assoc()['total'];
 
     <script src="../app/script/layout.js?v=1"></script>
 </body>
-
 </html>
