@@ -406,14 +406,22 @@ $doc_messages = [
                             </div>
                         </div>
                         <div class="tracker-list">
-                            <div class="t-row"><span>Total Documents</span><span
-                                    class="t-score"><?= $total_docs ?></span></div>
-                            <div class="t-row"><span>Uploaded</span><span class="t-score"><?= $uploaded_docs ?></span>
+                            <div class="t-row">
+                                <span><i class="fa-regular fa-file-lines"></i> Total Documents</span>
+                                <span class="t-score"><?= $total_docs ?></span>
                             </div>
-                            <div class="t-row"><span>Pending</span><span class="t-score"><?= $pending_docs ?></span>
+                            <div class="t-row">
+                                <span><i class="fa-regular fa-circle-check"></i> Uploaded</span>
+                                <span class="t-score"><?= $uploaded_docs ?></span>
                             </div>
-                            <div class="t-row"><span>Completion</span><span
-                                    class="t-score"><?= $progress_percentage ?>%</span></div>
+                            <div class="t-row">
+                                <span><i class="fa-regular fa-clock"></i> Pending</span>
+                                <span class="t-score"><?= $pending_docs ?></span>
+                            </div>
+                            <div class="t-row">
+                                <span><i class="fa-solid fa-chart-line"></i> Completion</span>
+                                <span class="t-score"><?= $progress_percentage ?>%</span>
+                            </div>
                         </div>
                     </aside>
                 </div>

@@ -318,9 +318,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  color: var(--burgundy-light);
 }
-
 
 .filter-bar label {
   font-size: var(--title-smaller-size);
