@@ -1,12 +1,4 @@
 <?php
-/**
- * CALENDAR PAGE (Refactored)
- * - Improved readability
- * - Reduced redundancy
- * - SAME functionality preserved
- * - Compatible with normalized DB (event_id supported)
- */
-
 session_start();
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
@@ -78,38 +70,50 @@ function clamp_date(string $d, string $min, string $max): string
   return date("Y-m-d", max(strtotime($min), min(strtotime($max), $t)));
 }
 
-function wants_json(): bool
-{
-  return isset($_POST["ajax"]) && $_POST["ajax"] === "1";
-}
-
-function send_json_response(int $code, array $data): void
-{
-  header("Content-Type: application/json");
-  http_response_code($code);
-  echo json_encode($data);
-  exit();
-}
-
 /* ================= STATS ================= */
 function stats(mysqli $conn, int $user_id, string $monthStart, string $monthEnd, string $monthStartDate, string $monthEndDate): array
 {
-
-  // total entries
-  $stmt = $conn->prepare("SELECT COUNT(*) c FROM calendar_entries WHERE user_id=? AND start_datetime<=? AND COALESCE(end_datetime,start_datetime)>=?");
+  $stmt = $conn->prepare("
+    SELECT COUNT(*) c
+    FROM calendar_entries
+    WHERE user_id = ?
+      AND start_datetime <= ?
+      AND COALESCE(end_datetime, start_datetime) >= ?
+  ");
   $stmt->bind_param("iss", $user_id, $monthEnd, $monthStart);
   $stmt->execute();
   $entries = (int) ($stmt->get_result()->fetch_assoc()["c"] ?? 0);
 
-  // total days covered
-  $stmt2 = $conn->prepare("SELECT COALESCE(SUM(CASE WHEN LEAST(DATE(COALESCE(end_datetime,start_datetime)),?) < GREATEST(DATE(start_datetime),?) THEN 0 ELSE DATEDIFF(LEAST(DATE(COALESCE(end_datetime,start_datetime)),?),GREATEST(DATE(start_datetime),?))+1 END),0) days FROM calendar_entries WHERE user_id=? AND start_datetime<=? AND COALESCE(end_datetime,start_datetime)>=?");
+  $stmt2 = $conn->prepare("
+    SELECT COALESCE(
+      SUM(
+        CASE
+          WHEN LEAST(DATE(COALESCE(end_datetime, start_datetime)), ?) < GREATEST(DATE(start_datetime), ?)
+            THEN 0
+          ELSE DATEDIFF(
+            LEAST(DATE(COALESCE(end_datetime, start_datetime)), ?),
+            GREATEST(DATE(start_datetime), ?)
+          ) + 1
+        END
+      ), 0
+    ) days
+    FROM calendar_entries
+    WHERE user_id = ?
+      AND start_datetime <= ?
+      AND COALESCE(end_datetime, start_datetime) >= ?
+  ");
   $stmt2->bind_param("ssssiss", $monthEndDate, $monthStartDate, $monthEndDate, $monthStartDate, $user_id, $monthEnd, $monthStart);
   $stmt2->execute();
   $entry_days = (int) ($stmt2->get_result()->fetch_assoc()["days"] ?? 0);
 
-  // upcoming
   $now = date("Y-m-d H:i:s");
-  $stmt3 = $conn->prepare("SELECT COUNT(*) c FROM calendar_entries WHERE user_id=? AND start_datetime BETWEEN ? AND ? AND start_datetime>=?");
+  $stmt3 = $conn->prepare("
+    SELECT COUNT(*) c
+    FROM calendar_entries
+    WHERE user_id = ?
+      AND start_datetime BETWEEN ? AND ?
+      AND start_datetime >= ?
+  ");
   $stmt3->bind_param("isss", $user_id, $monthStart, $monthEnd, $now);
   $stmt3->execute();
   $upcoming = (int) ($stmt3->get_result()->fetch_assoc()["c"] ?? 0);
@@ -121,18 +125,13 @@ function stats(mysqli $conn, int $user_id, string $monthStart, string $monthEnd,
 $error_msg = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-
   if (!hash_equals($csrf_token, $_POST["csrf_token"] ?? "")) {
-    $msg = "Invalid request. Please try again.";
-    wants_json() ? send_json_response(400, ["success" => false, "error" => $msg]) : $error_msg = $msg;
-
+    $error_msg = "Invalid request. Please try again.";
   } else {
-
     $action = $_POST["action"] ?? "";
 
     /* ===== ADD / EDIT ===== */
-    if (in_array($action, ["add_entry", "edit_entry"])) {
-
+    if (in_array($action, ["add_entry", "edit_entry"], true)) {
       $title = trim($_POST["title"] ?? "");
       $start_date = trim($_POST["start_date"] ?? "");
       $start_time = trim($_POST["start_time"] ?? "");
@@ -140,77 +139,97 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $end_time = trim($_POST["end_time"] ?? "");
       $notes = trim($_POST["notes"] ?? "");
 
-      if (!$title || !$start_date || !$start_time) {
-        $msg = "Please fill in Title, Start Date, and Start Time.";
-        wants_json() ? send_json_response(400, ["success" => false, "error" => $msg]) : $error_msg = $msg;
+      if ($title === "" || $start_date === "" || $start_time === "") {
+        $error_msg = "Please fill in Title, Start Date, and Start Time.";
       } else {
-
         $start_dt = dt_from_date_time($start_date, $start_time);
         $end_dt = null;
 
-        if ($end_date && $end_time) {
+        if ($end_date !== "" && $end_time !== "") {
           $tmp = dt_from_date_time($end_date, $end_time);
           if (strtotime($tmp) < strtotime($start_dt)) {
-            $msg = "End date/time must not be earlier than Start date/time.";
-            wants_json() ? send_json_response(400, ["success" => false, "error" => $msg]) : $error_msg = $msg;
+            $error_msg = "End date/time must not be earlier than Start date/time.";
           } else {
             $end_dt = $tmp;
           }
         }
 
-        if (!$error_msg) {
-
+        if ($error_msg === "") {
           if ($action === "add_entry") {
-            $stmt = $conn->prepare("INSERT INTO calendar_entries (user_id,title,start_datetime,end_datetime,notes) VALUES (?,?,?,?,?)");
+            $stmt = $conn->prepare("
+              INSERT INTO calendar_entries (user_id, event_id, title, start_datetime, end_datetime, notes)
+              VALUES (?, NULL, ?, ?, ?, ?)
+            ");
             $stmt->bind_param("issss", $user_id, $title, $start_dt, $end_dt, $notes);
             $stmt->execute();
-            $entry_id = (int) $conn->insert_id;
-            $mode = "add";
           } else {
             $entry_id = (int) ($_POST["entry_id"] ?? 0);
-            $stmt = $conn->prepare("UPDATE calendar_entries SET title=?,start_datetime=?,end_datetime=?,notes=? WHERE entry_id=? AND user_id=? LIMIT 1");
-            $stmt->bind_param("ssssii", $title, $start_dt, $end_dt, $notes, $entry_id, $user_id);
-            $stmt->execute();
-            $mode = "edit";
+
+            $check = $conn->prepare("
+              SELECT event_id
+              FROM calendar_entries
+              WHERE entry_id = ?
+                AND user_id = ?
+              LIMIT 1
+            ");
+            $check->bind_param("ii", $entry_id, $user_id);
+            $check->execute();
+            $entryRow = $check->get_result()->fetch_assoc();
+
+            if (!$entryRow) {
+              $error_msg = "Calendar entry not found.";
+            } elseif (!empty($entryRow["event_id"])) {
+              $error_msg = "Event-linked entries cannot be edited here.";
+            } else {
+              $stmt = $conn->prepare("
+                UPDATE calendar_entries
+                SET title = ?, start_datetime = ?, end_datetime = ?, notes = ?
+                WHERE entry_id = ?
+                  AND user_id = ?
+                LIMIT 1
+              ");
+              $stmt->bind_param("ssssii", $title, $start_dt, $end_dt, $notes, $entry_id, $user_id);
+              $stmt->execute();
+            }
           }
 
-          if (wants_json()) {
-            $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDate);
-            send_json_response(200, ["success" => true, "mode" => $mode, "entry_id" => $entry_id, "stats" => $s]);
+          if ($error_msg === "") {
+            header("Location: calendar.php?y=$year&m=$month");
+            exit();
           }
-
-          header("Location: calendar.php?y=$year&m=$month");
-          exit();
         }
       }
     }
 
     /* ===== DELETE ===== */
     if ($action === "delete_entry") {
-
       $entry_id = (int) ($_POST["entry_id"] ?? 0);
 
       if ($entry_id > 0) {
-
-        // prevent deletion if linked to event
-        $check = $conn->prepare("SELECT event_id FROM calendar_entries WHERE entry_id=? AND user_id=?");
+        $check = $conn->prepare("
+          SELECT event_id
+          FROM calendar_entries
+          WHERE entry_id = ?
+            AND user_id = ?
+          LIMIT 1
+        ");
         $check->bind_param("ii", $entry_id, $user_id);
         $check->execute();
         $row = $check->get_result()->fetch_assoc();
 
-        if (!empty($row["event_id"])) {
-          $msg = "Event-linked entries cannot be deleted here.";
-          wants_json() ? send_json_response(403, ["success" => false, "error" => $msg]) : $error_msg = $msg;
+        if (!$row) {
+          $error_msg = "Calendar entry not found.";
+        } elseif (!empty($row["event_id"])) {
+          $error_msg = "Event-linked entries cannot be deleted here.";
         } else {
-
-          $stmt = $conn->prepare("DELETE FROM calendar_entries WHERE entry_id=? AND user_id=? LIMIT 1");
+          $stmt = $conn->prepare("
+            DELETE FROM calendar_entries
+            WHERE entry_id = ?
+              AND user_id = ?
+            LIMIT 1
+          ");
           $stmt->bind_param("ii", $entry_id, $user_id);
           $stmt->execute();
-
-          if (wants_json()) {
-            $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDate);
-            send_json_response(200, ["success" => true, "deleted_id" => $entry_id, "stats" => $s]);
-          }
 
           header("Location: calendar.php?y=$year&m=$month");
           exit();
@@ -221,7 +240,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 
 /* ================= FETCH ENTRIES ================= */
-$stmt = $conn->prepare("SELECT entry_id,title,start_datetime,end_datetime,notes,event_id FROM calendar_entries WHERE user_id=? AND start_datetime<=? AND COALESCE(end_datetime,start_datetime)>=? ORDER BY start_datetime ASC");
+$stmt = $conn->prepare("
+  SELECT
+    ce.entry_id,
+    ce.title,
+    ce.start_datetime,
+    ce.end_datetime,
+    ce.notes,
+    ce.event_id,
+    e.event_name
+  FROM calendar_entries ce
+  LEFT JOIN events e
+    ON ce.event_id = e.event_id
+  WHERE ce.user_id = ?
+    AND ce.start_datetime <= ?
+    AND COALESCE(ce.end_datetime, ce.start_datetime) >= ?
+  ORDER BY ce.start_datetime ASC
+");
 $stmt->bind_param("iss", $user_id, $monthEnd, $monthStart);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -230,7 +265,6 @@ $byDay = [];
 $allEntries = [];
 
 while ($row = $res->fetch_assoc()) {
-
   $id = (int) $row["entry_id"];
   $start_dt = $row["start_datetime"];
   $end_dt_real = $row["end_datetime"];
@@ -245,7 +279,6 @@ while ($row = $res->fetch_assoc()) {
   $renderEnd = clamp_date($endDate, $monthStartDate, $monthEndDate);
 
   for ($cur = strtotime($renderStart); $cur <= strtotime($renderEnd); $cur = strtotime("+1 day", $cur)) {
-
     $dayKey = date("Y-m-d", $cur);
 
     $isStart = $dayKey === $startDate;
@@ -271,10 +304,8 @@ while ($row = $res->fetch_assoc()) {
 
 $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDate);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -284,8 +315,8 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
   <link rel="stylesheet" href="assets/styles/calendar_styles.css" />
 </head>
 
-<body data-month-start="<?php echo htmlspecialchars($monthStartDate); ?>"
-  data-month-end="<?php echo htmlspecialchars($monthEndDate); ?>">
+<body data-month-start="<?= htmlspecialchars($monthStartDate); ?>"
+  data-month-end="<?= htmlspecialchars($monthEndDate); ?>">
 
   <div class="app">
     <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
@@ -308,7 +339,7 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
         <div class="cal-card">
 
           <?php if ($error_msg !== ""): ?>
-            <div class="cal-alert" role="alert"><?php echo htmlspecialchars($error_msg); ?></div>
+            <div class="cal-alert" role="alert"><?= htmlspecialchars($error_msg); ?></div>
           <?php endif; ?>
 
           <div class="cal-top">
@@ -323,11 +354,9 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
 
           <div class="cal-monthrow">
             <div class="cal-month">
-              <strong><?php echo htmlspecialchars($monthName . " " . $year); ?></strong>
-              <a class="cal-navbtn" href="?y=<?php echo $prevY; ?>&m=<?php echo $prevM; ?>"
-                aria-label="Previous month"><i class="fa-solid fa-caret-left"></i></a>
-              <a class="cal-navbtn" href="?y=<?php echo $nextY; ?>&m=<?php echo $nextM; ?>" aria-label="Next month"><i
-                  class="fa-solid fa-caret-right"></i></a>
+              <strong><?= htmlspecialchars($monthName . " " . $year); ?></strong>
+              <a class="cal-navbtn" href="?y=<?= $prevY; ?>&m=<?= $prevM; ?>" aria-label="Previous month"><i class="fa-solid fa-caret-left"></i></a>
+              <a class="cal-navbtn" href="?y=<?= $nextY; ?>&m=<?= $nextM; ?>" aria-label="Next month"><i class="fa-solid fa-caret-right"></i></a>
             </div>
           </div>
 
@@ -335,8 +364,9 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
             <div class="cal-grid">
               <?php
               $weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-              foreach ($weekdays as $wd)
+              foreach ($weekdays as $wd) {
                 echo '<div class="cal-cell head">' . htmlspecialchars($wd) . '</div>';
+              }
 
               $totalCells = 42;
               $prevMonthTs = strtotime("-1 month", $firstDayTs);
@@ -353,7 +383,7 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
                 if ($dayNum < 1) {
                   $classes .= " muted";
                   $label = $daysInPrev + $dayNum;
-                } else if ($dayNum <= $daysInMonth) {
+                } elseif ($dayNum <= $daysInMonth) {
                   $label = $dayNum;
                   $dateKey = sprintf("%04d-%02d-%02d", $year, $month, $dayNum);
                   $isValidMonth = true;
@@ -375,48 +405,53 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
                   foreach ($byDay[$dateKey] as $p) {
                     $spanClass = "";
                     if ($p["spans"]) {
-                      if ($p["isStart"] && !$p["isEnd"])
-                        $spanClass = " span-start";
-                      else if ($p["isEnd"] && !$p["isStart"])
-                        $spanClass = " span-end";
-                      else if ($p["isMid"])
-                        $spanClass = " span-mid";
-                      else
-                        $spanClass = " span-one";
+                      if ($p["isStart"] && !$p["isEnd"]) $spanClass = " span-start";
+                      elseif ($p["isEnd"] && !$p["isStart"]) $spanClass = " span-end";
+                      elseif ($p["isMid"]) $spanClass = " span-mid";
+                      else $spanClass = " span-one";
                     }
 
                     $e = $allEntries[$p["entry_id"]];
                     $startISO = date("Y-m-d\\TH:i", strtotime($e["start_datetime"]));
                     $endISO = $e["end_datetime"] ? date("Y-m-d\\TH:i", strtotime($e["end_datetime"])) : "";
+                    $isLinkedEvent = !empty($e["event_id"]);
 
-                    echo '<div class="pill pill-link' . htmlspecialchars($spanClass) . '"'
+                    echo '<div class="pill pill-link' . htmlspecialchars($spanClass) . ($isLinkedEvent ? ' pill-event' : '') . '"'
                       . ' data-entry-id="' . (int) $p["entry_id"] . '"'
                       . ' data-title="' . htmlspecialchars($e["title"], ENT_QUOTES, "UTF-8") . '"'
                       . ' data-start="' . htmlspecialchars($startISO, ENT_QUOTES, "UTF-8") . '"'
                       . ' data-end="' . htmlspecialchars($endISO, ENT_QUOTES, "UTF-8") . '"'
-                      . ' data-notes="' . htmlspecialchars($e["notes"], ENT_QUOTES, "UTF-8") . '">';
+                      . ' data-notes="' . htmlspecialchars($e["notes"] ?? "", ENT_QUOTES, "UTF-8") . '"'
+                      . ' data-event-id="' . (int) ($e["event_id"] ?? 0) . '"'
+                      . ' data-event-name="' . htmlspecialchars($e["event_name"] ?? "", ENT_QUOTES, "UTF-8") . '">';
 
                     echo '<div class="pill-title">' . htmlspecialchars($p["title"]) . '</div>';
-                    if ($p["time"] !== "")
+                    if ($p["time"] !== "") {
                       echo '<div class="pill-time">' . htmlspecialchars($p["time"]) . '</div>';
+                    }
 
                     echo '<div class="pill-actions">';
-                    echo '<button type="button" class="pill-btn edit" title="Edit"><i class="fa-solid fa-pen"></i></button>';
 
-                    echo '<form method="post" class="pill-del">';
-                    echo '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($csrf_token) . '">';
-                    echo '<input type="hidden" name="action" value="delete_entry">';
-                    echo '<input type="hidden" name="entry_id" value="' . (int) $p["entry_id"] . '">';
-                    echo '<input type="hidden" name="ajax" value="1">';
-                    echo '<button type="submit" class="pill-btn del" title="Delete"><i class="fa-solid fa-trash-can"></i></button>';
-                    echo '</form>';
+                    if ($isLinkedEvent) {
+                      echo '<a href="view_event.php?id=' . (int) $e["event_id"] . '" class="pill-btn edit" title="View Event"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>';
+                    } else {
+                      echo '<button type="button" class="pill-btn edit" title="Edit"><i class="fa-solid fa-pen"></i></button>';
+
+                      echo '<form method="post" class="pill-del" onsubmit="return confirm(\'Delete this entry?\')">';
+                      echo '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($csrf_token) . '">';
+                      echo '<input type="hidden" name="action" value="delete_entry">';
+                      echo '<input type="hidden" name="entry_id" value="' . (int) $p["entry_id"] . '">';
+                      echo '<button type="submit" class="pill-btn del" title="Delete"><i class="fa-solid fa-trash-can"></i></button>';
+                      echo '</form>';
+                    }
 
                     echo '</div></div>';
                   }
                 }
 
-                if ($isToday)
+                if ($isToday) {
                   echo '<div class="today" aria-hidden="true"></div>';
+                }
                 echo '</div>';
               }
               ?>
@@ -439,7 +474,6 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
     </main>
   </div>
 
-  <!-- MODAL -->
   <div class="cal-modal" id="calModal" aria-hidden="true">
     <div class="cal-modal__backdrop" id="closeAdd"></div>
 
@@ -448,11 +482,10 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
         <h3 id="modalTitle">Add Calendar Entry</h3>
       </div>
 
-      <form class="cal-form" method="post" action="calendar.php?y=<?php echo $year; ?>&m=<?php echo $month; ?>">
-        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+      <form class="cal-form" method="post" action="calendar.php?y=<?= $year; ?>&m=<?= $month; ?>">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
         <input type="hidden" name="action" id="formAction" value="add_entry">
         <input type="hidden" name="entry_id" id="entryId" value="">
-        <input type="hidden" name="ajax" value="1">
 
         <label class="cal-label">
           Title
@@ -497,5 +530,4 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
   <script src="../app/script/layout.js?v=1"></script>
   <script src="../app/script/calendar.js?v=1"></script>
 </body>
-
 </html>

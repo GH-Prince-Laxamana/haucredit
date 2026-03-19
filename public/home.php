@@ -13,12 +13,17 @@ $user_id = (int) $_SESSION['user_id'];
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
 
-/* ================= EVENTS QUERY =================
+/* ================= ALL ACTIVE / UPCOMING EVENTS QUERY =================
    Uses:
    - events
    - event_dates
    - event_location
+   - event_metrics
    - docs_total / docs_uploaded from events
+         AND (
+            ed.end_datetime IS NULL
+            OR ed.end_datetime >= NOW()
+          )
 */
 $stmt = $conn->prepare("
     SELECT
@@ -30,41 +35,42 @@ $stmt = $conn->prepare("
         ed.start_datetime,
         ed.end_datetime,
         el.venue_platform,
+        em.target_metric,
         CASE
-            WHEN e.docs_uploaded < e.docs_total THEN 'pending'
-            WHEN ed.end_datetime >= NOW() THEN 'active'
+            WHEN e.docs_total > 0 AND e.docs_uploaded < e.docs_total THEN 'pending'
+            WHEN ed.end_datetime IS NOT NULL AND ed.end_datetime >= NOW() THEN 'active'
             ELSE 'completed'
         END AS event_phase
     FROM events e
     LEFT JOIN event_dates ed ON e.event_id = ed.event_id
     LEFT JOIN event_location el ON e.event_id = el.event_id
+    LEFT JOIN event_metrics em ON e.event_id = em.event_id
     WHERE e.user_id = ?
       AND e.archived_at IS NULL
-      AND (
-            ed.end_datetime IS NULL
-            OR ed.end_datetime >= NOW()
-          )
-    ORDER BY ed.start_datetime ASC
-    LIMIT 4
+    ORDER BY
+        CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
+        ed.start_datetime ASC
 ");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$events = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$all_events = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 /* ================= PROGRESS CALCULATIONS ================= */
-$total_docs_all = array_sum(array_map(fn($e) => (int) ($e['docs_total'] ?? 0), $events));
-$uploaded_docs_all = array_sum(array_map(fn($e) => (int) ($e['docs_uploaded'] ?? 0), $events));
+$total_docs_all = array_sum(array_map(fn($e) => (int) ($e['docs_total'] ?? 0), $all_events));
+$uploaded_docs_all = array_sum(array_map(fn($e) => (int) ($e['docs_uploaded'] ?? 0), $all_events));
 $overall_progress = $total_docs_all > 0 ? round(($uploaded_docs_all / $total_docs_all) * 100) : 0;
 
-$show_view_all = count($events) > 3;
-$show_limit_events = array_slice($events, 0, 3);
+/* ================= EVENT DISPLAY ================= */
+$total_active_events = count($all_events);
+$show_view_all = $total_active_events > 3;
+$show_limit_events = array_slice($all_events, 0, 3);
 
 /* ================= EVENT PHASE COUNTS ================= */
 $active = 0;
 $pending = 0;
 $completed = 0;
 
-foreach ($show_limit_events as $e) {
+foreach ($all_events as $e) {
     switch ($e['event_phase']) {
         case 'active':
             $active++;
@@ -96,7 +102,7 @@ $deadline_stmt = $conn->prepare("
         ON er.event_id = e.event_id
     INNER JOIN requirement_templates rt
         ON er.req_template_id = rt.req_template_id
-    INNER JOIN event_dates ed
+    LEFT JOIN event_dates ed
         ON e.event_id = ed.event_id
     WHERE e.user_id = ?
       AND e.archived_at IS NULL
@@ -163,7 +169,7 @@ $archived_events = (int) ($archived_stmt->get_result()->fetch_assoc()['total'] ?
                     <?php
                     $stats = [
                         [
-                            'count' => count($events),
+                            'count' => $total_active_events,
                             'label' => 'Active Events',
                             'icon' => 'fa-regular fa-calendar-days',
                             'link' => 'my_events.php'

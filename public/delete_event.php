@@ -2,90 +2,111 @@
 session_start();
 require_once "../app/database.php";
 
-// ===== AUTHENTICATION CHECK =====
-// Ensure user is logged in before allowing event deletion
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
 }
 
-// ===== REQUEST VALIDATION =====
-// Only process POST requests with event_id parameter
-if (isset($_POST['event_id'])) {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['event_id'])) {
+    popup_error("Invalid request.");
+}
 
-    // Extract and sanitize event ID from POST data
-    $event_id = (int) $_POST['event_id'];
-    $user_id = $_SESSION['user_id'];
+$event_id = (int) $_POST['event_id'];
+$user_id = (int) $_SESSION['user_id'];
 
-    // ===== OWNERSHIP VERIFICATION =====
-    // Confirm the event belongs to the logged-in user to prevent unauthorized deletion
-    $check = $conn->prepare("
-        SELECT event_id
-        FROM events
-        WHERE event_id = ? AND user_id = ?
+if ($event_id <= 0) {
+    popup_error("Invalid event.");
+}
+
+/* ================= OWNERSHIP + ARCHIVE CHECK ================= */
+$checkStmt = $conn->prepare("
+    SELECT event_id
+    FROM events
+    WHERE event_id = ?
+      AND user_id = ?
+      AND archived_at IS NOT NULL
+    LIMIT 1
+");
+$checkStmt->bind_param("ii", $event_id, $user_id);
+$checkStmt->execute();
+$eventRow = $checkStmt->get_result()->fetch_assoc();
+
+if (!$eventRow) {
+    popup_error("Unauthorized action or event is not archived.");
+}
+
+/* ================= COLLECT FILE PATHS =================
+   Current DB path:
+   events -> event_requirements -> requirement_files
+*/
+$filePaths = [];
+
+$fileStmt = $conn->prepare("
+    SELECT DISTINCT rf.file_path
+    FROM requirement_files rf
+    INNER JOIN event_requirements er
+        ON rf.event_req_id = er.event_req_id
+    INNER JOIN events e
+        ON er.event_id = e.event_id
+    WHERE e.event_id = ?
+      AND e.user_id = ?
+      AND rf.file_path IS NOT NULL
+      AND rf.file_path != ''
+");
+$fileStmt->bind_param("ii", $event_id, $user_id);
+$fileStmt->execute();
+$fileRes = $fileStmt->get_result();
+
+while ($row = $fileRes->fetch_assoc()) {
+    $filePaths[] = $row['file_path'];
+}
+
+/* ================= DELETE EVENT =================
+   Cascades will remove:
+   - event_type
+   - event_dates
+   - event_participants
+   - event_location
+   - event_logistics
+   - event_metrics
+   - event_requirements
+   - requirement_files
+
+   calendar_entries.event_id becomes NULL because of ON DELETE SET NULL
+*/
+try {
+    $conn->begin_transaction();
+
+    $deleteEventStmt = $conn->prepare("
+        DELETE FROM events
+        WHERE event_id = ?
+          AND user_id = ?
+          AND archived_at IS NOT NULL
+        LIMIT 1
     ");
-    $check->bind_param("ii", $event_id, $user_id);
-    $check->execute();
-    $result = $check->get_result();
+    $deleteEventStmt->bind_param("ii", $event_id, $user_id);
+    $deleteEventStmt->execute();
 
-    // If no matching event found, deny access
-    if ($result->num_rows === 0) {
-        popup_error("Unauthorized action.");
+    if ($deleteEventStmt->affected_rows === 0) {
+        throw new Exception("Event could not be deleted.");
     }
 
-    // ===== FILE CLEANUP =====
-    // Retrieve all file paths associated with this event's requirements
-    $files = $conn->prepare("
-        SELECT file_path
-        FROM requirements
-        WHERE event_id = ?
-        AND file_path IS NOT NULL
-        AND file_path != ''
-    ");
+    $conn->commit();
 
-    $files->bind_param("i", $event_id);
-    $files->execute();
-    $res = $files->get_result();
+    /* ================= DELETE PHYSICAL FILES AFTER COMMIT ================= */
+    foreach ($filePaths as $relativePath) {
+        $fullPath = __DIR__ . "/../" . ltrim($relativePath, "/");
 
-    // Delete each physical file from the server to free up storage
-    while ($row = $res->fetch_assoc()) {
-        $file = "../" . $row['file_path'];
-
-        // Only delete if file exists on disk
-        if (is_file($file)) {
-            unlink($file);
+        if (is_file($fullPath)) {
+            @unlink($fullPath);
         }
     }
 
-    // ===== DATABASE DELETION =====
-    // Use transaction to ensure atomicity of deletion operations
-    try {
-        // Start transaction to group related operations
-        $conn->begin_transaction();
-
-        // Delete the event record (requirements will be auto-deleted via FK CASCADE)
-        $deleteEvent = $conn->prepare("
-            DELETE FROM events
-            WHERE event_id = ?
-            AND user_id = ?
-            AND archived_at IS NOT NULL
-        ");
-
-        $deleteEvent->bind_param("ii", $event_id, $user_id);
-        $deleteEvent->execute();
-
-        // Commit transaction if all operations succeeded
-        $conn->commit();
-
-    } catch (Exception $e) {
-        // Rollback transaction on any error to maintain data integrity
-        $conn->rollback();
-        popup_error("Deletion failed.");
-    }
-
-    // ===== REDIRECT =====
-    // Send user back to home page after successful deletion
-    header("Location: home.php");
-    exit();
+} catch (Exception $e) {
+    $conn->rollback();
+    popup_error("Deletion failed: " . $e->getMessage());
 }
+
+header("Location: archived_events.php");
+exit();
 ?>
