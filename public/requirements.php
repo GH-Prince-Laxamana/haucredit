@@ -156,7 +156,6 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -164,6 +163,7 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
 
     <link rel="stylesheet" href="assets/styles/layout.css">
     <link rel="stylesheet" href="assets/styles/requirements.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
 <body>
@@ -186,12 +186,26 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
 
             <!-- ===== PROGRESS TRACKER ===== -->
             <!-- Card displaying overall completion progress -->
-            <div class="progress-card">
-                <h3>Completion Progress</h3>
-                <p><?= $uploaded ?> / <?= $total ?> Uploaded</p>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width:<?= $percent ?>%"></div>
-                    <p><?= $percent ?>%</p>
+            <div class="progress-card enhanced">
+                <div class="progress-header">
+                    <h3><i class="fa-solid fa-chart-pie"></i> Completion Progress</h3>
+                    <span class="progress-badge"><?= $percent ?>% Complete</span>
+                </div>
+                <div class="progress-stats">
+                    <div class="progress-stat-item">
+                        <span class="stat-label">Uploaded</span>
+                        <span class="stat-number"><?= $uploaded ?></span>
+                    </div>
+                    <div class="progress-stat-item">
+                        <span class="stat-label">Total</span>
+                        <span class="stat-number"><?= $total ?></span>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width:<?= $percent ?>%; background: linear-gradient(90deg, #4b0014, #c2a14d);"></div>
+                    </div>
+                    <span class="progress-percentage"><?= $percent ?>%</span>
                 </div>
             </div>
 
@@ -223,10 +237,31 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                             <p><?= $group['date']->format('F j, Y') ?></p>
                         </div>
 
-                        <!-- Display message if no requirements for this date -->
-                        <?php if (empty($group['items'])): ?>
-                            <p class="empty-msg">No requirements for this day.</p>
-                        <?php endif; ?>
+                    <?php if (empty($group['items'])): ?>
+                    <div class="empty-timeline">
+                        <div class="empty-icon-small">
+                            <?php if ($group['title'] === 'Yesterday'): ?>
+                                <i class="fa-regular fa-face-smile"></i>
+                            <?php elseif ($group['title'] === 'Today'): ?>
+                                <i class="fa-regular fa-clock"></i>
+                            <?php else: ?>
+                                <i class="fa-regular fa-calendar"></i>
+                            <?php endif; ?>
+                        </div>
+                        <div class="empty-content">
+                            <h4>No requirements for <?= strtolower($group['title']) ?></h4>
+                            <p>
+                                <?php if ($group['title'] === 'Yesterday'): ?>
+                                    You were all caught up yesterday!
+                                <?php elseif ($group['title'] === 'Today'): ?>
+                                    No requirements due today. Enjoy your day!
+                                <?php else: ?>
+                                    No requirements scheduled for tomorrow yet.
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
                         <!-- ===== EVENT BLOCKS ===== -->
                         <!-- Loop through events within this date group -->

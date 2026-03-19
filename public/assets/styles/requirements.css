@@ -2,6 +2,7 @@
    REQUIREMENTS PAGE
 ========================= */
 
+
 .req-page {
   width: 100%;
   display: flex;
@@ -11,9 +12,11 @@
   box-sizing: border-box;
 }
 
+
 /* =========================
    DATE GROUP
 ========================= */
+
 
 .req-group {
   width: 100%;
@@ -25,14 +28,18 @@
   box-sizing: border-box;
 }
 
+
 /* DATE HEADER */
+
 
 .req-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 5px;
+  position: relative;
 }
+
 
 .req-head h2 {
   font-size: var(--title-section-smaller-size);
@@ -40,45 +47,64 @@
   color: var(--burgundy);
 }
 
+
 .req-head p {
   font-size: var(--title-smaller-size);
   color: var(--text-secondary);
 }
 
+
+.today-badge {
+  display: inline-flex;
+  padding: 4px 12px;
+  background: rgba(75, 0, 20, 0.1);
+  color: var(--burgundy);
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 12px;
+}
+
+
 /* =========================
    EVENT BLOCK
 ========================= */
+
 
 .event-block {
   width: 100%;
   margin-top: 18px;
 }
 
-/* EVENT HEADER */
 
-.event-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  padding: 10px 15px 10px 0;
-  border-radius: 12px;
-  margin-bottom: 12px;
+.event-block-header {
+  padding: 8px 0 8px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed rgba(194, 161, 77, 0.3);
 }
 
-.event-header h3 {
+
+.event-block-header h3 {
   font-size: var(--title-smaller-size);
   font-weight: 700;
-  color: black;
+  color: var(--burgundy);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.deadline-text {
-  color: var(--orange);
+
+.event-block-header h3::before {
+  content: '📅';
+  font-size: 14px;
+  opacity: 0.7;
 }
+
 
 /* =========================
    REQUIREMENT CARD ROW
 ========================= */
+
 
 .req-card {
   display: grid;
@@ -86,34 +112,62 @@
   align-items: center;
   gap: 16px;
 
+
   padding: 16px 15px;
   border-radius: 12px;
   background: var(--surface-2);
   margin-bottom: 12px;
+
 
   transition: all .2s ease;
   border: 1px solid var(--border);
   text-decoration: none;
 }
 
+
 .req-card:hover {
   background: var(--offwhite);
   cursor: pointer;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(75, 0, 20, 0.08);
 }
+
 
 /* =========================
    TEXT
 ========================= */
 
+
 .req-title {
   font-size: var(--title-smaller-size);
   font-weight: 600;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+
+
+.req-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+
+.req-sub i {
+  font-size: 11px;
+  color: var(--gold);
+}
+
 
 /* =========================
    STATUS
 ========================= */
+
 
 .status {
   font-size: var(--sub-title-size);
@@ -124,77 +178,138 @@
   text-align: center;
 }
 
+
 .status.uploaded {
   background: #e8f5e9;
   color: var(--green);
 }
+
 
 .status.pending {
   background: #fff4e5;
   color: var(--orange);
 }
 
-.empty-msg {
-  font-size: var(--title-smaller-size);
-  color: #999;
-  padding: 12px 0;
-}
-
-
 /* =========================
-   PROGRESS CARD
+   ENHANCED PROGRESS CARD
 ========================= */
-
 .progress-card {
   width: 100%;
-  background: var(--surface);
+  background: white;
   border-radius: var(--radius);
   padding: 26px 24px;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   box-shadow: var(--shadow);
   margin-bottom: 28px;
   box-sizing: border-box;
 }
 
+
+.progress-card.enhanced {
+  background: linear-gradient(135deg, #efdfdf 0%, #fcf9f5 100%);
+}
+
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+
 .progress-card h3 {
   font-size: var(--title-section-smaller-size);
   font-weight: 700;
-  margin-bottom: 8px;
+  color: var(--burgundy);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+.progress-card h3 i {
+  color: var(--gold);
+}
+
+
+.progress-badge {
+  padding: 6px 14px;
+  background: rgba(75, 0, 20, 0.08);
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--burgundy);
 }
 
-.progress-card p {
-  font-size: var(--title-smaller-size);
-  color: var(--text-secondary);
-  margin: 2px 0;
+
+.progress-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
 }
 
+
+.progress-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+
+.progress-stat-item .stat-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+
+.progress-stat-item .stat-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--burgundy);
+}
+
+
+.progress-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+
 .progress-bar {
-  width: 100%;
-  height: 20px;
+  flex: 1;
+  height: 10px;
   background: #ececec;
   border-radius: 20px;
   overflow: hidden;
-  margin: 10px 0;
-  position: relative;
-  display: flex;
-  justify-content: space-between;
 }
+
 
 .progress-fill {
   height: 100%;
-  background: var(--burgundy);
   transition: width .4s ease;
-  border-radius: 20px 0 0 20px;
+  border-radius: 20px;
+  position: relative;
+  background: linear-gradient(90deg, #4b0014, #c2a14d);
+  box-shadow: 0 0 15px rgba(194, 161, 77, 0.6), 
+              0 0 30px rgba(75, 0, 20, 0.4);
 }
 
-.progress-bar p {
-   margin: 2px 10px;
+
+.progress-percentage {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--burgundy);
+  min-width: 45px;
 }
 
 /* =========================
    FILTER BAR
 ========================= */
+
 
 .filter-bar {
   width: 100%;
@@ -203,26 +318,299 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  color: var(--burgundy-light);
 }
+
 
 .filter-bar label {
   font-size: var(--title-smaller-size);
   font-weight: 600;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+
+
+.filter-bar label i {
+  color: var(--gold);
+}
+
 
 .filter-bar select {
   flex: 1;
-  padding: 5px 5px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   font-size: var(--title-smaller-size);
   font-weight: 500;
   color: var(--text-primary);
   cursor: pointer;
   transition: all .2s ease;
+  background: white;
 }
+
 
 .filter-bar select:hover {
   border-color: var(--burgundy-light);
+  box-shadow: 0 2px 8px rgba(75, 0, 20, 0.05);
 }
+
+
+/* =========================
+   ENHANCED EMPTY STATES
+========================= */
+
+
+.empty-msg {
+  font-size: var(--title-smaller-size);
+  color: #999;
+  padding: 12px 0;
+}
+
+
+.empty-timeline {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: #faf8f5;
+  border-radius: 16px;
+  margin: 16px 0;
+  border: 1px dashed rgba(194, 161, 77, 0.3);
+}
+
+
+.empty-icon-small {
+  width: 48px;
+  height: 48px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(75, 0, 20, 0.05);
+}
+
+
+.empty-icon-small i {
+  font-size: 24px;
+  color: var(--burgundy);
+  opacity: 0.6;
+}
+
+
+.empty-content h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--burgundy);
+  margin: 0 0 4px 0;
+}
+
+
+.empty-content p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+
+/* Global Empty State */
+.empty-requirements {
+  text-align: center;
+  padding: 64px 24px;
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  margin-top: 24px;
+}
+
+
+.empty-icon {
+  font-size: 64px;
+  color: var(--burgundy);
+  opacity: 0.5;
+  margin-bottom: 20px;
+}
+
+
+.empty-requirements h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--burgundy);
+  margin-bottom: 8px;
+}
+
+
+.empty-requirements p {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+
+.empty-suggestions {
+  background: #faf8f5;
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 350px;
+  margin: 0 auto 24px;
+  text-align: left;
+}
+
+
+.empty-suggestions p {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--burgundy);
+  margin-bottom: 12px;
+}
+
+
+.empty-suggestions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+
+.empty-suggestions li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+
+.empty-suggestions li i {
+  width: 20px;
+  color: var(--gold);
+}
+
+
+.empty-requirements .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: var(--burgundy);
+  color: white;
+  text-decoration: none;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+
+.empty-requirements .btn-primary:hover {
+  background: var(--burgundy-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(75, 0, 20, 0.15);
+}
+
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+
+@media (max-width: 1023px) {
+  .requirements-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+ 
+  .action-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+
+@media (max-width: 767px) {
+  .requirements-summary {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+ 
+  .summary-card {
+    padding: 16px;
+  }
+ 
+  .summary-icon {
+    width: 40px;
+    height: 40px;
+  }
+ 
+  .summary-icon i {
+    font-size: 20px;
+  }
+ 
+  .summary-value {
+    font-size: 22px;
+  }
+ 
+  .summary-label {
+    font-size: 12px;
+  }
+ 
+  .action-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+ 
+  .action-card {
+    flex-direction: row;
+    justify-content: center;
+  }
+ 
+  .progress-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+ 
+  .progress-stats {
+    gap: 16px;
+  }
+ 
+  .empty-timeline {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+}
+
+
+@media (max-width: 479px) {
+  .req-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+ 
+  .status {
+    width: 100%;
+  }
+ 
+  .filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+ 
+  .filter-bar select {
+    width: 100%;
+  }
+ 
+  .req-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+}
+
