@@ -2,76 +2,79 @@
 session_start();
 require_once "../app/database.php";
 
-// ===== AUTHENTICATION CHECK =====
-// Ensure user is logged in before displaying events
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
 }
 
-// ===== USER DATA EXTRACTION =====
-// Retrieve and sanitize username from session
+$user_id = (int) $_SESSION["user_id"];
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
-/* ================= EVENTS QUERY ================= */
-// Fetch all active events for the current user with document progress and phase calculation
-// Phase logic: pending (incomplete docs), active (complete docs + future end), completed (past end)
-$stmt = $conn->prepare("
-    SELECT 
+/* ================= EVENTS QUERY =================
+   Uses:
+   - events
+   - event_type
+   - event_dates
+   - event_location
+   - docs_total / docs_uploaded from events
+*/
+$fetchUserEventsSql = "
+    SELECT
         e.event_id,
         e.event_name,
-        e.activity_type,
         e.nature,
         e.organizing_body,
-        e.venue_platform,
-        e.start_datetime,
-        e.end_datetime,
-        e.participants,
         e.event_status,
         e.created_at,
+        e.docs_total,
+        e.docs_uploaded,
 
-        COUNT(r.req_id) AS docs_total,
-        SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) AS docs_uploaded,
+        et.activity_type,
+
+        ed.start_datetime,
+        ed.end_datetime,
+
+        el.venue_platform,
 
         CASE
-            WHEN SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) < COUNT(r.req_id)
-                THEN 'pending'
-            WHEN e.end_datetime >= NOW()
-                THEN 'active'
+            WHEN e.docs_total > 0 AND e.docs_uploaded < e.docs_total THEN 'pending'
+            WHEN ed.end_datetime IS NOT NULL AND ed.end_datetime >= NOW() THEN 'active'
             ELSE 'completed'
         END AS event_phase
 
     FROM events e
-    LEFT JOIN requirements r ON e.event_id = r.event_id
-    WHERE e.user_id = ? AND e.archived_at IS NULL
-    GROUP BY e.event_id
+    LEFT JOIN event_type et
+        ON e.event_id = et.event_id
+    LEFT JOIN event_dates ed
+        ON e.event_id = ed.event_id
+    LEFT JOIN event_location el
+        ON e.event_id = el.event_id
+    WHERE e.user_id = ?
+      AND e.archived_at IS NULL
 
-    ORDER BY 
-    CASE
-        WHEN SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) < COUNT(r.req_id)
-            THEN 1
-        WHEN e.end_datetime >= NOW()
-            THEN 2
-        ELSE 3
-    END,
-    e.start_datetime DESC
-");
+    ORDER BY
+        CASE
+            WHEN e.docs_total > 0 AND e.docs_uploaded < e.docs_total THEN 1
+            WHEN ed.end_datetime IS NOT NULL AND ed.end_datetime >= NOW() THEN 2
+            ELSE 3
+        END,
+        CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
+        ed.start_datetime DESC,
+        e.created_at DESC
+";
 
-$stmt->bind_param("i", $_SESSION["user_id"]);
-$stmt->execute();
-$result = $stmt->get_result();
-
-// ===== STORE EVENTS IN ARRAY =====
-// Collect all event data into an array for processing
-$events = [];
-while ($row = $result->fetch_assoc()) {
-    $events[] = $row;
-}
+$events = fetchAll(
+    $conn,
+    $fetchUserEventsSql,
+    "i",
+    [$user_id]
+);
 
 /* ================= SUMMARY COUNTS ================= */
-// Calculate total events and count by phase for summary display
 $total_events = count($events);
-$active = $pending = $completed = 0;
+$active = 0;
+$pending = 0;
+$completed = 0;
 
 foreach ($events as $e) {
     switch ($e['event_phase']) {
@@ -102,13 +105,11 @@ foreach ($events as $e) {
 
 <body>
     <div class="app">
-        <!-- Sidebar overlay for mobile navigation -->
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
         <?php include 'assets/includes/general_nav.php' ?>
 
         <main class="main">
-            <!-- ===== PAGE HEADER ===== -->
             <header class="topbar">
                 <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
 
@@ -119,13 +120,11 @@ foreach ($events as $e) {
 
                 <div class="action-btns">
                     <a href="archived_events.php" class="btn-secondary">Archived Events</a>
-                    <a href="create_event.php" class="btn-primary">Create Event</a>
+                    <a href="create_event.php" class="btn-primary"><i class="fa-solid fa-plus"></i> Create Event</a>
                 </div>
             </header>
 
             <section class="content my-events-page">
-                <!-- ===== SUMMARY CARDS ===== -->
-                <!-- Display overview statistics for events -->
                 <div class="summary-strip">
                     <div class="summary-card">
                         <span class="summary-num"><?= $total_events ?></span>
@@ -148,8 +147,6 @@ foreach ($events as $e) {
                     </div>
                 </div>
 
-                <!-- ===== SEARCH AND FILTER CONTROLS ===== -->
-                <!-- Provide search and filter functionality for events -->
                 <div class="list-toolbar">
                     <div class="search-wrap">
                         <span class="search-icon">
@@ -168,53 +165,46 @@ foreach ($events as $e) {
                     </div>
                 </div>
 
-                <!-- ===== EVENT CARDS GRID ===== -->
-                <!-- Display individual event cards with details and actions -->
                 <div class="events-grid" id="eventsGrid">
                     <?php foreach ($events as $event): ?>
                         <?php
-                        // Calculate document upload progress percentage
-                        $pct = $event['docs_total'] > 0
-                            ? round(($event['docs_uploaded'] / $event['docs_total']) * 100)
-                            : 0;
+                        $docs_total = (int) ($event['docs_total'] ?? 0);
+                        $docs_uploaded = (int) ($event['docs_uploaded'] ?? 0);
+                        $pct = $docs_total > 0 ? round(($docs_uploaded / $docs_total) * 100) : 0;
 
-                        // Create searchable text blob for filtering
+                        $org_clean = $event['organizing_body'] ?? '';
+                        $decoded_orgs = json_decode($org_clean, true);
+                        if (is_array($decoded_orgs)) {
+                            $org_clean = implode(', ', $decoded_orgs);
+                        } else {
+                            $org_clean = str_replace(['[', ']', '"', "'"], '', $org_clean);
+                            $org_clean = str_replace(',', ', ', $org_clean);
+                        }
+
                         $search_blob = strtolower(
-                            $event['event_name'] . ' ' .
-                            $event['activity_type'] . ' ' .
-                            $event['nature'] . ' ' .
-                            $event['organizing_body'] . ' ' .
-                            $event['venue_platform'] . ' ' .
-                            date('M j Y', strtotime($event['start_datetime'])) . ' ' .
-                            date('M j Y', strtotime($event['end_datetime']))
+                            ($event['event_name'] ?? '') . ' ' .
+                            ($event['activity_type'] ?? '') . ' ' .
+                            ($event['nature'] ?? '') . ' ' .
+                            $org_clean . ' ' .
+                            ($event['venue_platform'] ?? '') . ' ' .
+                            (!empty($event['start_datetime']) ? date('M j Y', strtotime($event['start_datetime'])) : '') . ' ' .
+                            (!empty($event['end_datetime']) ? date('M j Y', strtotime($event['end_datetime'])) : '')
                         );
 
-                        // Clean up organizing body display (remove JSON artifacts)
-                        $org_clean = str_replace(
-                            ['[', ']', '"', "'"],
-                            '',
-                            $event['organizing_body']
-                        );
-
-                        $org_clean = str_replace(',', ', ', $org_clean);
-
-                        $pct_color_ref = max(0, min(100, (int) $pct)); // clamp 0–100
-                    
-                        $hue = ($pct_color_ref / 100) * 120; // 0 = red, 120 = green
-                    
+                        $pct_color_ref = max(0, min(100, (int) $pct));
+                        $hue = ($pct_color_ref / 100) * 120;
                         $progress_color = "hsl($hue, 70%, 45%)";
                         ?>
 
-                        <article class="event-card" data-status="<?= $event['event_phase'] ?>"
+                        <article class="event-card" data-status="<?= htmlspecialchars($event['event_phase']) ?>"
                             data-search="<?= htmlspecialchars($search_blob) ?>">
 
-                            <!-- Card Top Section -->
                             <div class="event-card-top">
                                 <span class="event-type-tag">
-                                    <?= htmlspecialchars($event['activity_type']) ?>
+                                    <?= htmlspecialchars($event['activity_type'] ?? 'N/A') ?>
                                 </span>
 
-                                <span class="event-status status-<?= $event['event_phase'] ?>">
+                                <span class="event-status status-<?= htmlspecialchars($event['event_phase']) ?>">
                                     <span class="status-dot"></span>
                                     <span class="status-text">
                                         <?= ucfirst($event['event_phase']) ?>
@@ -222,7 +212,6 @@ foreach ($events as $e) {
                                 </span>
                             </div>
 
-                            <!-- Card Body Section -->
                             <div class="event-card-body">
                                 <h3 class="event-title">
                                     <?= htmlspecialchars($event['event_name']) ?>
@@ -240,7 +229,7 @@ foreach ($events as $e) {
                                         <span class="meta-icon">
                                             <i class="fa-solid fa-location-dot"></i>
                                         </span>
-                                        <span><?= htmlspecialchars($event['venue_platform']) ?></span>
+                                        <span><?= htmlspecialchars($event['venue_platform'] ?? 'No venue set') ?></span>
                                     </div>
 
                                     <div class="meta-row">
@@ -249,49 +238,53 @@ foreach ($events as $e) {
                                         </span>
 
                                         <span>
-                                            <?= date('M j, Y', strtotime($event['start_datetime'])) ?>
+                                            <?php if (!empty($event['start_datetime'])): ?>
+                                                <?= date('M j, Y', strtotime($event['start_datetime'])) ?>
+                                            <?php else: ?>
+                                                No schedule set
+                                            <?php endif; ?>
 
-                                            <?php if ($event['start_datetime'] !== $event['end_datetime']): ?>
+                                            <?php if (!empty($event['start_datetime']) && !empty($event['end_datetime']) && $event['start_datetime'] !== $event['end_datetime']): ?>
                                                 – <?= date('M j, Y', strtotime($event['end_datetime'])) ?>
                                             <?php endif; ?>
                                         </span>
                                     </div>
                                 </div>
 
-                                <!-- Documents Progress Section -->
                                 <div class="doc-progress">
                                     <div class="doc-progress-label">
                                         <span>Documents</span>
-                                        <span>
-                                            <?= $event['docs_uploaded'] ?>/<?= $event['docs_total'] ?> uploaded
-                                        </span>
+                                        <span><?= $docs_uploaded ?>/<?= $docs_total ?> uploaded</span>
                                     </div>
 
                                     <div class="progress-bar">
-                                        <div class="progress-fill" style="width: <?= $pct ?>%; --progress-color: <?= $progress_color ?>"></div>
+                                        <div class="progress-fill"
+                                            style="width: <?= $pct ?>%; --progress-color: <?= $progress_color ?>">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Card Footer Section -->
                             <footer class="event-card-footer">
                                 <span class="event-created">
                                     Created <?= date('M j, Y', strtotime($event['created_at'])) ?>
                                 </span>
 
                                 <div class="card-actions">
-                                    <a href="create_event.php?id=<?= $event['event_id'] ?>"
-                                        class="btn-secondary btn-edit">Edit</a>
-                                    <a href="view_event.php?id=<?= $event['event_id'] ?>"
-                                        class="btn-primary btn-view">View</a>
+                                    <a href="create_event.php?id=<?= (int) $event['event_id'] ?>"
+                                        class="btn-secondary btn-edit">
+                                        Edit
+                                    </a>
+                                    <a href="view_event.php?id=<?= (int) $event['event_id'] ?>"
+                                        class="btn-primary btn-view">
+                                        View
+                                    </a>
                                 </div>
                             </footer>
                         </article>
                     <?php endforeach; ?>
                 </div>
 
-                <!-- ===== EMPTY STATE ===== -->
-                <!-- Display when no events match the current filters -->
                 <div class="empty-state" id="emptyState" <?= empty($events) ? '' : 'hidden' ?>>
                     <div class="empty-icon">
                         <i class="fa-solid fa-file-circle-xmark"></i>

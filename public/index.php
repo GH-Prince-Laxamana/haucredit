@@ -6,75 +6,72 @@ require_once("../app/security_headers.php");
 send_security_headers();
 
 // ===== SELF-REFERENCING FORM ACTION =====
-// Generate a safe, self-referencing URL for the form action to prevent XSS
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 
 // ===== ERROR MESSAGE VARIABLE =====
-// Initialize variable to store login error messages
 $error = "";
 
 // ===== REDIRECT IF ALREADY LOGGED IN =====
-// Check if user is already authenticated and redirect to dashboard
 if (isset($_SESSION["user_id"])) {
     header("Location: home.php");
     exit();
 }
 
 // ===== FORM SUBMISSION HANDLING =====
-// Process POST requests for user login attempts
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-
-    // Extract and sanitize form input data
     $stud_num = trim($_POST["stud_num"] ?? "");
     $password = trim($_POST["password"] ?? "");
 
     // ===== INPUT VALIDATION =====
-    // Check if required fields are empty
     if ($stud_num === "" || $password === "") {
         $error = "Please fill in all fields.";
     } else {
 
         // ===== USER LOOKUP =====
-        // Query database to find user by student number
-        $stmt = mysqli_prepare(
+        $fetchUserByStudentNumberSql = "
+            SELECT user_id, user_name, user_password, org_body
+            FROM users
+            WHERE stud_num = ?
+            LIMIT 1
+        ";
+
+        $row = fetchOne(
             $conn,
-            "SELECT user_id, user_name, user_password, org_body
-             FROM users
-             WHERE stud_num = ?
-             LIMIT 1"
+            $fetchUserByStudentNumberSql,
+            "s",
+            [$stud_num]
         );
 
-        mysqli_stmt_bind_param($stmt, "s", $stud_num);
-        mysqli_stmt_execute($stmt);
-        $result = mysqli_stmt_get_result($stmt);
-
         // ===== PASSWORD VERIFICATION =====
-        // Check if user exists and verify password
-        if ($row = mysqli_fetch_assoc($result)) {
-
+        if ($row) {
             $stored = $row["user_password"];
             $login_ok = false;
 
-            // First, try password_verify for hashed passwords
             if (password_verify($password, $stored)) {
                 $login_ok = true;
             } elseif ($password === $stored) {
                 // Fallback for plain text passwords (migration support)
                 $login_ok = true;
 
-                // Hash the plain text password for future logins
                 $new_hash = password_hash($password, PASSWORD_DEFAULT);
 
-                $upd = mysqli_prepare($conn, "UPDATE users SET user_password = ? WHERE user_id = ?");
-                mysqli_stmt_bind_param($upd, "si", $new_hash, $row["user_id"]);
-                mysqli_stmt_execute($upd);
-                mysqli_stmt_close($upd);
+                $updateUserPasswordSql = "
+                    UPDATE users
+                    SET user_password = ?
+                    WHERE user_id = ?
+                ";
+
+                execQuery(
+                    $conn,
+                    $updateUserPasswordSql,
+                    "si",
+                    [$new_hash, $row["user_id"]]
+                );
             }
 
             // ===== SUCCESSFUL LOGIN =====
-            // Set session data and redirect if authentication successful
             if ($login_ok) {
-                session_regenerate_id(true); // Prevent session fixation attacks
+                session_regenerate_id(true);
 
                 $_SESSION["user_id"] = $row["user_id"];
                 $_SESSION["username"] = $row["user_name"];
@@ -89,8 +86,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         } else {
             $error = "Invalid student number or password.";
         }
-
-        mysqli_stmt_close($stmt);
     }
 }
 ?>
@@ -166,7 +161,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 <!-- ===== ERROR MESSAGE DISPLAY ===== -->
                 <?php if ($error !== ""): ?>
-                    <div class="notice error"><?= htmlspecialchars($error, ENT_QUOTES, "UTF-8") ?></div>
+                        <div class="notice error"><?= htmlspecialchars($error, ENT_QUOTES, "UTF-8") ?></div>
                 <?php endif; ?>
 
                 <!-- ===== REGISTRATION LINK ===== -->

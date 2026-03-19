@@ -131,10 +131,10 @@
 
 .cal-cell.head {
   min-height: 36px;
-  background: rgba(75, 0, 20, .06);
+  background: var(--burgundy);
   font-size: var(--sub-title-size);
   font-weight: 900;
-  color: rgba(0, 0, 0, .60);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -527,10 +527,10 @@
   padding: 10px 10px;
   border: 1px solid rgba(0, 0, 0, .08);
   border-radius: 12px;
-  background: rgba(75, 0, 20, .05);
+  background: var(--burgundy);
   font-weight: 900;
   font-size: var(--sub-title-size);
-  color: rgba(0, 0, 0, .65);
+  color: #fff;
   text-align: center;
 }
 
@@ -563,9 +563,9 @@
   padding: 10px 12px;
   border: 1px solid rgba(0, 0, 0, .08);
   border-radius: 14px;
-  background: rgba(75, 0, 20, .05);
+  background: var(--burgundy);
   font-weight: 900;
-  color: rgba(0, 0, 0, .65);
+  color: #fff;
   margin-bottom: 10px;
 }
 
