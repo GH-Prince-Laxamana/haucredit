@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once "../app/database.php";
+require_once "../app/security_headers.php";
+require_once "../app/query_builder_functions.php";
+send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
@@ -8,12 +11,115 @@ if (!isset($_SESSION["user_id"])) {
 }
 
 $user_id = (int) $_SESSION["user_id"];
-$username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
-
 $event_id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
 if ($event_id <= 0) {
     popup_error("Invalid event ID.");
+}
+
+/* ================= HELPERS ================= */
+function formatSubmissionStatus(string $status): string
+{
+    return match ($status) {
+        'uploaded' => 'Submitted',
+        'pending' => 'Pending',
+        default => ucwords(str_replace('_', ' ', $status))
+    };
+}
+
+function formatReviewStatus(string $status): string
+{
+    return match ($status) {
+        'not_reviewed' => 'Not Reviewed',
+        'needs_revision' => 'Needs Revision',
+        default => ucwords(str_replace('_', ' ', $status))
+    };
+}
+
+function formatDateTimeValue(?string $value): string
+{
+    if (empty($value)) {
+        return 'N/A';
+    }
+
+    $ts = strtotime($value);
+    return $ts ? date('F j, Y g:i A', $ts) : 'N/A';
+}
+
+function buildPreviewUrl(array $doc): array
+{
+    $has_upload = !empty($doc['file_path']);
+    $preview_url = '';
+    $no_template_msg = '';
+
+    if ($has_upload) {
+        $preview_url = '../' . ltrim($doc['file_path'], '/');
+    } elseif (!empty($doc['template_url'])) {
+        $preview_url = $doc['template_url'];
+    } else {
+        $no_template_msg = 'No template available for this document.';
+    }
+
+    return [$preview_url, $no_template_msg, $has_upload];
+}
+
+function parseMetric(?string $metric): ?array
+{
+    if (empty($metric)) {
+        return null;
+    }
+
+    $metric = trim($metric);
+
+    if (!preg_match('/^(100|[1-9]?\d)\%\s+(.+)$/', $metric, $matches)) {
+        return null;
+    }
+
+    $percent = (int) $matches[1];
+    $label = trim($matches[2]);
+
+    if ($label === '') {
+        return null;
+    }
+
+    return [
+        'percent' => $percent,
+        'label' => $label,
+        'normalized_label' => strtolower(preg_replace('/\s+/', ' ', $label))
+    ];
+}
+
+function getMetricAchievementStatus(?string $target_metric, ?string $actual_metric): array
+{
+    $target = parseMetric($target_metric);
+    $actual = parseMetric($actual_metric);
+
+    if ($target === null || $actual === null) {
+        return [
+            'label' => 'Not Yet Evaluated',
+            'class' => 'metric-neutral'
+        ];
+    }
+
+    if ($target['normalized_label'] !== $actual['normalized_label']) {
+        return [
+            'label' => 'Metric Type Mismatch',
+            'class' => 'metric-mismatch',
+            'details' => 'Target uses "' . $target['label'] . '" but actual uses "' . $actual['label'] . '".'
+        ];
+    }
+
+    if ($actual['percent'] >= $target['percent']) {
+        return [
+            'label' => 'Target Achieved',
+            'class' => 'metric-achieved'
+        ];
+    }
+
+    return [
+        'label' => 'Target Not Achieved',
+        'class' => 'metric-not-achieved'
+    ];
 }
 
 /* ================= EVENT DATA FETCH ================= */
@@ -72,17 +178,13 @@ $fetchEventSql = "
     LIMIT 1
 ";
 
-$event = fetchOne(
-    $conn,
-    $fetchEventSql,
-    "ii",
-    [$event_id, $user_id]
-);
+$event = fetchOne($conn, $fetchEventSql, "ii", [$event_id, $user_id]);
 
 if (!$event) {
     popup_error("Event not found or you don't have permission to view it.");
 }
 
+/* ================= EVENT STATE ================= */
 $is_archived = !empty($event['archived_at']);
 
 $days_remaining = null;
@@ -96,6 +198,7 @@ if ($is_archived) {
 $fetchRequiredDocsSql = "
     SELECT
         er.event_req_id,
+        er.event_id,
         er.submission_status,
         er.review_status,
         er.deadline,
@@ -113,7 +216,12 @@ $fetchRequiredDocsSql = "
         rf.original_file_name,
         rf.file_type,
         rf.file_size,
-        rf.uploaded_at
+        rf.uploaded_at,
+
+        nrd.narrative_report_id,
+        nrd.narrative,
+        nrd.video_documentation_link,
+        nrd.submitted_at
 
     FROM event_requirements er
     INNER JOIN requirement_templates rt
@@ -121,19 +229,25 @@ $fetchRequiredDocsSql = "
     LEFT JOIN requirement_files rf
         ON er.event_req_id = rf.event_req_id
        AND rf.is_current = 1
+    LEFT JOIN narrative_report_details nrd
+        ON er.event_req_id = nrd.event_req_id
     WHERE er.event_id = ?
-    ORDER BY er.created_at ASC, rt.req_name ASC
+    ORDER BY
+        CASE WHEN er.deadline IS NULL THEN 1 ELSE 0 END,
+        er.deadline ASC,
+        rt.req_name ASC
 ";
 
-$required_docs = fetchAll(
-    $conn,
-    $fetchRequiredDocsSql,
-    "i",
-    [$event_id]
-);
+$required_docs = fetchAll($conn, $fetchRequiredDocsSql, "i", [$event_id]);
 
 $required_docs = array_map(function ($doc) {
-    $doc['display_status'] = ($doc['submission_status'] === 'uploaded') ? 'Uploaded' : 'Pending';
+    $submission_status = $doc['submission_status'] ?? 'pending';
+    $review_status = $doc['review_status'] ?? 'not_reviewed';
+
+    $doc['is_narrative_report'] = (($doc['req_name'] ?? '') === 'Narrative Report');
+    $doc['display_submission_status'] = formatSubmissionStatus($submission_status);
+    $doc['display_review_status'] = formatReviewStatus($review_status);
+
     return $doc;
 }, $required_docs);
 
@@ -153,6 +267,11 @@ $decoded_orgs = json_decode($organizing_body_display, true);
 if (is_array($decoded_orgs)) {
     $organizing_body_display = implode(", ", $decoded_orgs);
 }
+
+$metric_status = getMetricAchievementStatus(
+    $event['target_metric'] ?? null,
+    $event['actual_metric'] ?? null
+);
 ?>
 
 <!DOCTYPE html>
@@ -190,30 +309,22 @@ if (is_array($decoded_orgs)) {
 
                         <?php if ($is_archived): ?>
                             <input type="hidden" name="action" value="restore">
-                            <button type="submit" class="btn-primary btn-restore">
-                                Restore Event
-                            </button>
+                            <button type="submit" class="btn-primary btn-restore">Restore Event</button>
                         <?php else: ?>
                             <input type="hidden" name="action" value="archive">
-                            <button type="submit" class="btn-primary btn-danger">
-                                Archive Event
-                            </button>
+                            <button type="submit" class="btn-primary btn-danger">Archive Event</button>
                         <?php endif; ?>
                     </form>
 
                     <?php if (!$is_archived): ?>
-                        <a href="create_event.php?id=<?= (int) $event['event_id'] ?>" class="btn-primary">
-                            Edit Event
-                        </a>
+                        <a href="create_event.php?id=<?= (int) $event['event_id'] ?>" class="btn-primary">Edit Event</a>
                     <?php endif; ?>
                 </div>
             </header>
 
             <section class="content view-event-page">
                 <div class="action-btns">
-                    <button type="button" class="btn-secondary" onclick="history.back()">
-                        Back
-                    </button>
+                    <button type="button" class="btn-secondary" onclick="history.back()">Back</button>
                 </div>
 
                 <div class="status-banner status-<?= strtolower(str_replace(' ', '-', $event['event_status'])) ?>">
@@ -294,6 +405,12 @@ if (is_array($decoded_orgs)) {
                                     </p>
                                 </div>
                                 <div class="detail-item">
+                                    <label>Metric Result</label>
+                                    <p class="<?= htmlspecialchars($metric_status['class']) ?>">
+                                        <?= htmlspecialchars($metric_status['label']) ?>
+                                    </p>
+                                </div>
+                                <div class="detail-item">
                                     <label>Extraneous Activity</label>
                                     <p><?= htmlspecialchars($event['extraneous'] ?? 'N/A') ?></p>
                                 </div>
@@ -309,15 +426,11 @@ if (is_array($decoded_orgs)) {
                             <div class="detail-grid">
                                 <div class="detail-item">
                                     <label>Start Date & Time</label>
-                                    <p>
-                                        <?= !empty($event['start_datetime']) ? date('F j, Y g:i A', strtotime($event['start_datetime'])) : 'N/A' ?>
-                                    </p>
+                                    <p><?= formatDateTimeValue($event['start_datetime'] ?? null) ?></p>
                                 </div>
                                 <div class="detail-item">
                                     <label>End Date & Time</label>
-                                    <p>
-                                        <?= !empty($event['end_datetime']) ? date('F j, Y g:i A', strtotime($event['end_datetime'])) : 'N/A' ?>
-                                    </p>
+                                    <p><?= formatDateTimeValue($event['end_datetime'] ?? null) ?></p>
                                 </div>
                                 <div class="detail-item full-width">
                                     <label>Venue / Platform</label>
@@ -367,25 +480,16 @@ if (is_array($decoded_orgs)) {
                                     or download the template when available.
                                 </p>
 
-                                <?php foreach ($required_docs as $doc):
-                                    $has_upload = !empty($doc['file_path']);
-                                    $display_status = $doc['display_status'];
-
-                                    $preview_url = '';
-                                    $no_template_msg = '';
-
-                                    if ($has_upload) {
-                                        $preview_url = '../' . ltrim($doc['file_path'], '/');
-                                    } elseif (!empty($doc['template_url'])) {
-                                        $preview_url = $doc['template_url'];
-                                    } else {
-                                        $no_template_msg = 'No template available for this document.';
-                                    }
+                                <?php foreach ($required_docs as $doc): ?>
+                                    <?php
+                                    $is_narrative_report = !empty($doc['is_narrative_report']);
+                                    $has_narrative_content = !empty($doc['narrative']) || !empty($doc['video_documentation_link']);
+                                    [$preview_url, $no_template_msg, $has_upload] = buildPreviewUrl($doc);
                                     ?>
-                                    <div class="doc-item status-<?= strtolower($display_status) ?>">
+                                    <div class="doc-item status-<?= strtolower($doc['submission_status'] ?? 'pending') ?>">
 
                                         <div class="doc-checkbox">
-                                            <?php if ($display_status === 'Uploaded'): ?>
+                                            <?php if (($doc['submission_status'] ?? 'pending') === 'uploaded'): ?>
                                                 <i class="fa-solid fa-file-circle-check"></i>
                                             <?php else: ?>
                                                 <i class="fa-solid fa-hourglass-half"></i>
@@ -405,55 +509,98 @@ if (is_array($decoded_orgs)) {
                                                 <?php endif; ?>
                                             </h4>
 
-                                            <?php if (!empty($doc['review_status'])): ?>
-                                                <div class="doc-status">
-                                                    <?= htmlspecialchars($display_status) ?> •
-                                                    <?= htmlspecialchars(ucwords(str_replace('_', ' ', $doc['review_status']))) ?>
-                                                </div>
-                                            <?php endif; ?>
+                                            <div class="doc-status">
+                                                <?= htmlspecialchars($doc['display_submission_status']) ?> •
+                                                <?= htmlspecialchars($doc['display_review_status']) ?>
+                                            </div>
 
                                             <?php if (!empty($doc['deadline'])): ?>
                                                 <div class="doc-status doc-deadline">
-                                                    Deadline: <?= date('F j, Y g:i A', strtotime($doc['deadline'])) ?>
+                                                    Deadline: <?= formatDateTimeValue($doc['deadline']) ?>
                                                 </div>
                                             <?php endif; ?>
 
                                             <?php if (!empty($doc['remarks'])): ?>
-                                                <div class="doc-status doc-remarks">
-                                                    Remarks: <?= htmlspecialchars($doc['remarks']) ?>
+                                                <div class="doc-remarks-box">
+                                                    <strong>Remarks</strong>
+                                                    <p><?= nl2br(htmlspecialchars($doc['remarks'])) ?></p>
                                                 </div>
+                                            <?php endif; ?>
+
+                                            <?php if ($is_narrative_report): ?>
+                                                <?php if (!empty($doc['submitted_at'])): ?>
+                                                    <div class="doc-status">
+                                                        Submitted: <?= formatDateTimeValue($doc['submitted_at']) ?>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <?php if (!empty($doc['video_documentation_link'])): ?>
+                                                    <div class="doc-meta-line">
+                                                        Video Link:
+                                                        <a class="doc-inline-link"
+                                                            href="<?= htmlspecialchars($doc['video_documentation_link']) ?>"
+                                                            target="_blank" rel="noopener noreferrer">
+                                                            Open Link
+                                                        </a>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <?php if (!empty($doc['narrative'])): ?>
+                                                    <div class="doc-narrative-preview">
+                                                        <strong>Narrative Preview</strong>
+                                                        <p><?= nl2br(htmlspecialchars(mb_strimwidth($doc['narrative'], 0, 300, '...'))) ?>
+                                                        </p>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <?php if (!$has_narrative_content && empty($doc['template_url'])): ?>
+                                                    <div class="doc-status">No submission yet.</div>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <?php if ($has_upload && !empty($doc['original_file_name'])): ?>
+                                                    <div class="doc-status">
+                                                        File: <?= htmlspecialchars($doc['original_file_name']) ?>
+                                                    </div>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
 
                                         <div class="doc-actions">
-                                            <button type="button" class="btn-file" onclick="previewDocument(
-                                                    '<?= htmlspecialchars($preview_url, ENT_QUOTES) ?>',
-                                                    '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
-                                                    '<?= htmlspecialchars($no_template_msg, ENT_QUOTES) ?>'
-                                                )">
-                                                View
-                                            </button>
+                                            <?php if ($is_narrative_report): ?>
+                                                <a href="narrative_report_submission.php?event_id=<?= (int) $event_id ?>"
+                                                    class="btn-file">
+                                                    <?= ($doc['submission_status'] ?? 'pending') === 'uploaded' ? 'View / Edit' : 'Open' ?>
+                                                </a>
+                                            <?php else: ?>
+                                                <button type="button" class="btn-file" onclick="previewDocument(
+                                                        '<?= htmlspecialchars($preview_url, ENT_QUOTES) ?>',
+                                                        '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
+                                                        '<?= htmlspecialchars($no_template_msg, ENT_QUOTES) ?>'
+                                                    )">
+                                                    View
+                                                </button>
 
-                                            <?php if (!$is_archived && $display_status !== 'Uploaded'): ?>
-                                                <form action="create_requirement.php" method="POST"
-                                                    enctype="multipart/form-data" class="upload-form">
-                                                    <input type="hidden" name="event_req_id"
-                                                        value="<?= (int) $doc['event_req_id'] ?>">
-                                                    <label class="btn-file">
-                                                        Upload
-                                                        <input type="file" name="document" hidden required
-                                                            onchange="this.form.submit()">
-                                                    </label>
-                                                </form>
-                                            <?php endif; ?>
+                                                <?php if (!$is_archived && ($doc['submission_status'] ?? 'pending') !== 'uploaded'): ?>
+                                                    <form action="create_requirement.php" method="POST"
+                                                        enctype="multipart/form-data" class="upload-form">
+                                                        <input type="hidden" name="event_req_id"
+                                                            value="<?= (int) $doc['event_req_id'] ?>">
+                                                        <label class="btn-file">
+                                                            Upload
+                                                            <input type="file" name="document" hidden required
+                                                                onchange="this.form.submit()">
+                                                        </label>
+                                                    </form>
+                                                <?php endif; ?>
 
-                                            <?php if ($has_upload && !$is_archived): ?>
-                                                <form data-confirm="Remove uploaded document?" action="delete_requirement.php"
-                                                    method="POST">
-                                                    <input type="hidden" name="event_req_id"
-                                                        value="<?= (int) $doc['event_req_id'] ?>">
-                                                    <button type="submit" class="btn-file btn-danger">Remove</button>
-                                                </form>
+                                                <?php if ($has_upload && !$is_archived): ?>
+                                                    <form data-confirm="Remove uploaded document?" action="delete_requirement.php"
+                                                        method="POST">
+                                                        <input type="hidden" name="event_req_id"
+                                                            value="<?= (int) $doc['event_req_id'] ?>">
+                                                        <button type="submit" class="btn-file btn-danger">Remove</button>
+                                                    </form>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -461,7 +608,6 @@ if (is_array($decoded_orgs)) {
                             </div>
                         </div>
                     </section>
-
                 </div>
 
                 <div class="col-right">
@@ -513,6 +659,7 @@ if (is_array($decoded_orgs)) {
             </div>
             <div class="modal-body">
                 <iframe id="docFrame" src="" frameborder="0"></iframe>
+                <p id="modalMessage" style="display:none; padding:1rem; text-align:center; color:#555;"></p>
             </div>
         </div>
     </div>
@@ -523,26 +670,18 @@ if (is_array($decoded_orgs)) {
             const modal = document.getElementById('docPreviewModal');
             const frame = document.getElementById('docFrame');
             const title = document.getElementById('modalTitle');
+            const msgEl = document.getElementById('modalMessage');
 
             title.textContent = name;
 
             if (!url || noTemplateMsg) {
                 frame.style.display = 'none';
-
-                let msgEl = document.getElementById('modalMessage');
-                if (!msgEl) {
-                    msgEl = document.createElement('p');
-                    msgEl.id = 'modalMessage';
-                    msgEl.style.padding = '1rem';
-                    msgEl.style.textAlign = 'center';
-                    msgEl.style.color = '#555';
-                    document.querySelector('#docPreviewModal .modal-body').appendChild(msgEl);
-                }
-                msgEl.textContent = noTemplateMsg;
+                frame.src = '';
+                msgEl.style.display = 'block';
+                msgEl.textContent = noTemplateMsg || 'No preview available.';
             } else {
-                let msgEl = document.getElementById('modalMessage');
-                if (msgEl) msgEl.textContent = '';
-
+                msgEl.style.display = 'none';
+                msgEl.textContent = '';
                 frame.style.display = 'block';
                 frame.src = url;
             }
@@ -553,9 +692,12 @@ if (is_array($decoded_orgs)) {
         function closePreview() {
             const modal = document.getElementById('docPreviewModal');
             const frame = document.getElementById('docFrame');
+            const msgEl = document.getElementById('modalMessage');
 
             modal.classList.remove('active');
             frame.src = "";
+            msgEl.style.display = 'none';
+            msgEl.textContent = '';
         }
 
         document.addEventListener("keydown", function (e) {

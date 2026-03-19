@@ -397,6 +397,32 @@ function saveEventData($event_id, $editing)
 }
 
 /* ================= HELPER: SYNC REQUIREMENTS ================= */
+function computeRequirementDeadline($start_datetime, $end_datetime, $offset_days, $basis)
+{
+  if ($offset_days === null || $basis === 'manual') {
+    return null;
+  }
+
+  $baseDate = null;
+
+  if (in_array($basis, ['before_start', 'after_start'], true) && $start_datetime !== '') {
+    $baseDate = new DateTime($start_datetime);
+  } elseif (in_array($basis, ['before_end', 'after_end'], true) && $end_datetime !== '') {
+    $baseDate = new DateTime($end_datetime);
+  }
+
+  if (!$baseDate) {
+    return null;
+  }
+
+  if ($basis === 'before_start' || $basis === 'before_end') {
+    $baseDate->modify("-{$offset_days} days");
+  } elseif ($basis === 'after_start' || $basis === 'after_end') {
+    $baseDate->modify("+{$offset_days} days");
+  }
+
+  return $baseDate->format('Y-m-d H:i:s');
+}
 function syncEventRequirements($event_id, $requirements_map)
 {
   global $conn;
@@ -408,6 +434,7 @@ function syncEventRequirements($event_id, $requirements_map)
   $overnight = $_SESSION['overnight'] ?? null;
   $has_visitors = $_SESSION['has_visitors'] ?? null;
   $start_datetime = $_SESSION['start_datetime'] ?? '';
+  $end_datetime = $_SESSION['end_datetime'] ?? '';
 
   $checklist = $requirements_map[$background][$activity_type] ?? [];
 
@@ -426,6 +453,8 @@ function syncEventRequirements($event_id, $requirements_map)
   if (strpos($activity_type, 'On-campus') !== false && $has_visitors === 'Yes') {
     $checklist[] = 'Visitors and Vehicle Lists';
   }
+
+  $checklist[] = 'Narrative Report';
 
   $checklist = array_values(array_unique($checklist));
 
@@ -498,18 +527,33 @@ function syncEventRequirements($event_id, $requirements_map)
       $offset_days = $template['default_due_offset_days'];
       $basis = $template['default_due_basis'];
 
-      $deadline = null;
+      $deadline = computeRequirementDeadline($start_datetime, $end_datetime, $offset_days, $basis);
 
-      if ($start_datetime !== '' && $offset_days !== null && $basis !== 'manual') {
-        $eventStart = new DateTime($start_datetime);
+      if ($reqName === 'Narrative Report') {
+        $eventReqRow = fetchOne(
+          $conn,
+          "
+    SELECT event_req_id
+    FROM event_requirements
+    WHERE event_id = ? AND req_template_id = ?
+    LIMIT 1
+    ",
+          "ii",
+          [$event_id, $templateId]
+        );
 
-        if ($basis === 'before_start') {
-          $eventStart->modify("-{$offset_days} days");
-        } elseif ($basis === 'after_start') {
-          $eventStart->modify("+{$offset_days} days");
+        if ($eventReqRow) {
+          execQuery(
+            $conn,
+            "
+      INSERT INTO narrative_report_details (event_req_id)
+      VALUES (?)
+      ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
+      ",
+            "i",
+            [(int) $eventReqRow['event_req_id']]
+          );
         }
-
-        $deadline = $eventStart->format('Y-m-d H:i:s');
       }
 
       execQuery(
@@ -560,19 +604,7 @@ function syncEventRequirements($event_id, $requirements_map)
       $offset_days = $template['default_due_offset_days'];
       $basis = $template['default_due_basis'];
 
-      $deadline = null;
-
-      if ($start_datetime !== '' && $offset_days !== null && $basis !== 'manual') {
-        $eventStart = new DateTime($start_datetime);
-
-        if ($basis === 'before_start') {
-          $eventStart->modify("-{$offset_days} days");
-        } elseif ($basis === 'after_start') {
-          $eventStart->modify("+{$offset_days} days");
-        }
-
-        $deadline = $eventStart->format('Y-m-d H:i:s');
-      }
+      $deadline = computeRequirementDeadline($start_datetime, $end_datetime, $offset_days, $basis);
 
       execQuery(
         $conn,
@@ -580,6 +612,33 @@ function syncEventRequirements($event_id, $requirements_map)
         "iis",
         [$event_id, $templateId, $deadline]
       );
+
+      if ($reqName === 'Narrative Report') {
+        $eventReqRow = fetchOne(
+          $conn,
+          "
+    SELECT event_req_id
+    FROM event_requirements
+    WHERE event_id = ? AND req_template_id = ?
+    LIMIT 1
+    ",
+          "ii",
+          [$event_id, $templateId]
+        );
+
+        if ($eventReqRow) {
+          execQuery(
+            $conn,
+            "
+      INSERT INTO narrative_report_details (event_req_id)
+      VALUES (?)
+      ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
+      ",
+            "i",
+            [(int) $eventReqRow['event_req_id']]
+          );
+        }
+      }
     }
   }
 
@@ -852,7 +911,8 @@ if (isset($_POST['create_event'])) {
             <div class="field long-field">
               <label for="target_metric" class="field-title">Target Metric</label>
               <small class="hint">
-               <span class="hint-important">Format:</span> percentage followed by a description. Example: 75% Satisfaction Rating
+                <span class="hint-important">Format:</span> percentage followed by a description. Example: 75%
+                Satisfaction Rating
               </small>
               <textarea name="target_metric" id="target_metric"
                 rows="2"><?= htmlspecialchars($formData['target_metric'] ?? '') ?></textarea>
@@ -916,7 +976,8 @@ if (isset($_POST['create_event'])) {
 
               <div class="field">
                 <label for="end_datetime" class="field-title">End Date and Time</label>
-                <small class="hint">Must be <span class="hint-important">at least 2 hours after</span> the Start Date and Time.</small>
+                <small class="hint">Must be <span class="hint-important">at least 2 hours after</span> the Start Date
+                  and Time.</small>
                 <input type="datetime-local" name="end_datetime" id="end_datetime"
                   value="<?= htmlspecialchars($formData['end_datetime']) ?>" required>
               </div>

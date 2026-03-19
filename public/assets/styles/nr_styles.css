@@ -1,0 +1,59 @@
+/* Narrative Report UI */
+.doc-info a {
+    color: var(--gold);
+    text-decoration: none;
+    word-break: break-word;
+}
+
+.doc-info a:hover {
+    text-decoration: underline;
+}
+
+.doc-narrative-preview,
+.doc-remarks-box {
+    margin-top: 4px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: #faf8f4;
+}
+
+.doc-narrative-preview strong,
+.doc-remarks-box strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--burgundy);
+    font-size: var(--sub-title-size);
+}
+
+.doc-narrative-preview p,
+.doc-remarks-box p {
+    margin: 0;
+    font-size: var(--title-smaller-size);
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: normal;
+    word-break: break-word;
+}
+
+.doc-inline-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.doc-meta-line {
+    font-size: var(--title-smaller-size);
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+#modalMessage {
+    display: none;
+    padding: 24px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: var(--title-smaller-size);
+    line-height: 1.6;
+}

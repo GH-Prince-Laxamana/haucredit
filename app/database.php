@@ -6,6 +6,7 @@ $requirements_map = require_once "config/requirements_map.php";
 $org_options = require_once "config/org_options.php";
 $activity_types = require_once "config/activity_types.php";
 $series_options = require_once "config/series_options.php";
+$requirement_list = require_once "config/requirement_list.php";
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
@@ -26,50 +27,6 @@ try {
     $conn->select_db($db_name);
 
     $conn->begin_transaction();
-
-    function attachRequirementsToEvent(mysqli $conn, int $event_id, string $start_datetime): void
-    {
-        $templatesSelect = fetchAll(
-            $conn,
-            "
-                SELECT req_template_id, default_due_offset_days, default_due_basis
-                FROM requirement_templates
-                WHERE is_active = 1
-                ORDER BY req_template_id ASC
-                "
-        );
-
-        $eventRequirementsInsertSql = "
-                INSERT INTO event_requirements (
-                    event_id, req_template_id, submission_status, review_status, deadline
-                ) VALUES (?, ?, 'pending', 'not_reviewed', ?)
-                ON DUPLICATE KEY UPDATE
-                    deadline = VALUES(deadline),
-                    updated_at = CURRENT_TIMESTAMP
-                ";
-
-        foreach ($templatesSelect as $tpl) {
-            $tpl_id = (int) $tpl['req_template_id'];
-            $offset_days = $tpl['default_due_offset_days'];
-            $basis = $tpl['default_due_basis'];
-
-            $deadline = null;
-
-            if ($offset_days !== null && $basis !== 'manual') {
-                $eventStart = new DateTime($start_datetime);
-
-                if ($basis === 'before_start') {
-                    $eventStart->modify("-{$offset_days} days");
-                } elseif ($basis === 'after_start') {
-                    $eventStart->modify("+{$offset_days} days");
-                }
-
-                $deadline = $eventStart->format('Y-m-d H:i:s');
-            }
-
-            execQuery($conn, $eventRequirementsInsertSql, "iis", [$event_id, $tpl_id, $deadline]);
-        }
-    }
 
     $tables = [
 
@@ -199,7 +156,7 @@ try {
             req_desc TEXT NULL,
             template_url VARCHAR(255) NULL,
             default_due_offset_days INT NOT NULL DEFAULT 7,
-            default_due_basis ENUM('before_start','after_start','manual') NOT NULL DEFAULT 'before_start',
+            default_due_basis ENUM('before_start','after_start','before_end','after_end','manual') NOT NULL DEFAULT 'before_start',
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -250,6 +207,20 @@ try {
             INDEX idx_req_file_event_req (event_req_id),
             INDEX idx_req_file_current (is_current)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        "CREATE TABLE IF NOT EXISTS narrative_report_details (
+    narrative_report_id INT AUTO_INCREMENT PRIMARY KEY,
+    event_req_id INT NOT NULL UNIQUE,
+
+    narrative TEXT NULL,
+    video_documentation_link VARCHAR(500) NULL,
+    submitted_at DATETIME NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (event_req_id) REFERENCES event_requirements(event_req_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
         /* ================= CALENDAR ================= */
         "CREATE TABLE IF NOT EXISTS calendar_entries (
@@ -311,50 +282,9 @@ try {
     }
 
     /* ================= DEFAULT REQUIREMENT TEMPLATES ================= */
-    $default_requirements = [
-        'Approval Letter from Dean',
-        'Program Flow and/or Itinerary',
-        'Parental Consent',
-        'Letter of Undertaking',
-        'Planned Budget',
-        'List of Participants',
-        'CHEd Certificate of Compliance',
-        'Student Organization Intake Form (OCES Annex A Form)',
-        'Request Letter for Collection/Selling',
-        'Medical Clearance of Participants',
-        'Risk Assessment Plan with Emergency Contacts and Emergency Map',
-        'Visitors and Vehicle Lists'
-    ];
-
-    $default_requirements_descs = [
-        'Approval Letter from Dean' => "Submit this program flow with the adviser's noting signature and approval of your College/School Dean. For Uniwide Institutions, address it to Ms. Iris Ann Castro (OSA Director) through Mr. Paul Ernest D. Carreon (Student Activities Coordinator), and submit it without their signature. There is no need to place the names of Mr. Carreon and Ms. Castro on the approval.",
-        'Program Flow and/or Itinerary' => 'If the program is spontaneous (meaning that it does not have a program flow), discuss in outline the guidelines of the event. For Off-Campus Activities, include the Travel Itinerary with the stopovers and indicate the places where you assemble, stop, and arrive.',
-        'Parental Consent' => 'Upload as one PDF file. Shall be individually notarized.',
-        'Letter of Undertaking' => 'Shall be signed by the adviser. The Person-in-Charge shall always be an employee of the university.',
-        'Planned Budget' => 'Discuss the source of budget and projected spending for all resources needed for the activity.',
-        'List of Participants' => 'List and sort all students, employees, and guests attending, together with their roles in the activity.',
-        'CHEd Certificate of Compliance' => 'Shall be notarized. Please view template provided.',
-        'Student Organization Intake Form (OCES Annex A Form)' => 'Form required by the Office of Community Extension Services.',
-        'Request Letter for Collection/Selling' => 'A letter approved by the College/School Dean should be uploaded here.',
-        'Medical Clearance of Participants' => 'Medical clearance issued by a licensed physician confirming participants are fit for the activity.',
-        'Risk Assessment Plan with Emergency Contacts and Emergency Map' => 'Provide a risk assessment plan including emergency contacts and a map showing the nearest police station, hospital, and LGU units.',
-        'Visitors and Vehicle Lists' => 'List of visitors and vehicles entering the campus including names and plate numbers.'
-    ];
-
-    $requirements_templates = [
-        'Approval Letter from Dean' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit',
-        'Program Flow and/or Itinerary' => 'https://docs.google.com/document/d/1cfTUM6YD0Lpf6DCZl0LjNTTeeBXtAmgUgM2eQBj7QOI/edit',
-        'Parental Consent' => 'https://docs.google.com/document/d/1rCQbqIH1YFUxekaTCkIYTx3wxUnEKoHUxofG5c7K_1s/edit',
-        'Letter of Undertaking' => 'https://docs.google.com/document/d/1vNsUTnyTeYo9sF_p6nvJCOOouWt7O7Du8m9OxbC4LZc/edit',
-        'Planned Budget' => null,
-        'List of Participants' => null,
-        'CHEd Certificate of Compliance' => 'https://docs.google.com/document/d/1gdHMH0iFZpS3OFwoG8w1r8DZoMh_oeXB4nN22kQt21o/edit',
-        'Student Organization Intake Form (OCES Annex A Form)' => 'https://docs.google.com/document/d/1WKsTW9acn0s9jXj4TANrkJBp3WIe9Ilh/edit',
-        'Request Letter for Collection/Selling' => 'https://docs.google.com/document/d/1uA5CrIyGeVlrcw8dBQCpKN2XzyvSOtHU81FmY4XZ6ic/edit',
-        'Medical Clearance of Participants' => null,
-        'Risk Assessment Plan with Emergency Contacts and Emergency Map' => null,
-        'Visitors and Vehicle Lists' => 'https://docs.google.com/document/d/12GynKf48JzB1hPn-xelzkDNYMfDXw3LLqwYkNlavRog/edit'
-    ];
+    $default_requirements = $requirement_list['default_requirements'];
+    $default_requirements_descs = $requirement_list['default_requirements_descs'];
+    $requirements_templates = $requirement_list['requirements_templates'];
 
     $templateUpsertSql = "
             INSERT INTO requirement_templates (
@@ -374,6 +304,10 @@ try {
         $template_url = $requirements_templates[$req_name] ?? null;
         $offset_days = 7;
         $basis = 'before_start';
+
+        if ($req_name === 'Narrative Report') {
+            $basis = 'after_end';
+        }
 
         execQuery(
             $conn,
@@ -536,7 +470,87 @@ try {
             [$event_id, $target_metric]
         );
 
-        attachRequirementsToEvent($conn, $event_id, $start_datetime);
+        $getTemplatesResult = fetchAll(
+            $conn,
+            "
+    SELECT req_template_id, req_name, default_due_offset_days, default_due_basis
+    FROM requirement_templates
+    WHERE is_active = 1
+    ORDER BY req_template_id ASC
+    "
+        );
+
+        $insertEventRequirementSql = "
+    INSERT INTO event_requirements (
+        event_id, req_template_id, submission_status, review_status, deadline
+    ) VALUES (?, ?, 'pending', 'not_reviewed', ?)
+    ON DUPLICATE KEY UPDATE
+        deadline = VALUES(deadline),
+        updated_at = CURRENT_TIMESTAMP
+";
+
+        foreach ($getTemplatesResult as $tpl) {
+            $tpl_id = (int) $tpl['req_template_id'];
+            $req_name = $tpl['req_name'] ?? '';
+            $offset_days = $tpl['default_due_offset_days'];
+            $basis = $tpl['default_due_basis'];
+
+            $deadline = null;
+
+            if ($offset_days !== null && $basis !== 'manual') {
+                $baseDate = null;
+
+                if (in_array($basis, ['before_start', 'after_start'], true) && $start_datetime !== '') {
+                    $baseDate = new DateTime($start_datetime);
+                } elseif (in_array($basis, ['before_end', 'after_end'], true) && $end_datetime !== '') {
+                    $baseDate = new DateTime($end_datetime);
+                }
+
+                if ($baseDate) {
+                    if ($basis === 'before_start' || $basis === 'before_end') {
+                        $baseDate->modify("-{$offset_days} days");
+                    } elseif ($basis === 'after_start' || $basis === 'after_end') {
+                        $baseDate->modify("+{$offset_days} days");
+                    }
+
+                    $deadline = $baseDate->format('Y-m-d H:i:s');
+                }
+            }
+
+            execQuery(
+                $conn,
+                $insertEventRequirementSql,
+                "iis",
+                [$event_id, $tpl_id, $deadline]
+            );
+
+            if ($req_name === 'Narrative Report') {
+                $eventReqRow = fetchOne(
+                    $conn,
+                    "
+            SELECT event_req_id
+            FROM event_requirements
+            WHERE event_id = ? AND req_template_id = ?
+            LIMIT 1
+            ",
+                    "ii",
+                    [$event_id, $tpl_id]
+                );
+
+                if ($eventReqRow) {
+                    execQuery(
+                        $conn,
+                        "
+                INSERT INTO narrative_report_details (event_req_id)
+                VALUES (?)
+                ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
+                ",
+                        "i",
+                        [(int) $eventReqRow['event_req_id']]
+                    );
+                }
+            }
+        }
 
         /* Insert independent calendar entry linked to event */
         $notes = "Default debug event";
