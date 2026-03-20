@@ -1,4 +1,5 @@
 <?php
+// series_options
 return [
     'College Days',
     'University Days',
