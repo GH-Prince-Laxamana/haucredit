@@ -311,6 +311,7 @@ foreach ($requirements as $doc) {
     <title>Manage Event - HAUCREDIT</title>
     <link rel="stylesheet" href="assets/styles/layout.css" />
     <link rel="stylesheet" href="assets/styles/view_event.css" />
+    <script src="https://kit.fontawesome.com/1f718fe609.js" crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -634,6 +635,7 @@ foreach ($requirements as $doc) {
                 </div>
 
                 <div class="col-right">
+                    <!-- ORIGINAL PROGRESS TRACKER - UNCHANGED -->
                     <aside class="tracker-card">
                         <h2>Progress Tracker</h2>
                         <div class="ring"
@@ -655,64 +657,262 @@ foreach ($requirements as $doc) {
                         </div>
                     </aside>
 
-                    <section class="detail-card" style="margin-top: 1rem;">
+                    <section class="detail-card decision-card" style="margin-top: 1rem;">
                         <div class="card-header">
                             <h2><i class="fa-solid fa-gavel"></i> Event Decision</h2>
                         </div>
 
                         <div class="card-body">
-                            <form action="admin_update_event_status.php" method="POST">
+                            <!-- Status Overview -->
+                            <div class="decision-status-grid">
+                                <div class="decision-status-item">
+                                    <div class="decision-status-label">Pre-event Requirements</div>
+                                    <div class="decision-status-value <?= $allPreEventReviewedOkay ? 'status-ready' : 'status-incomplete' ?>">
+                                        <?php if ($allPreEventReviewedOkay): ?>
+                                            <i class="fa-solid fa-circle-check"></i> Ready
+                                        <?php else: ?>
+                                            <i class="fa-solid fa-circle-xmark"></i> Incomplete
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <div class="decision-status-item">
+                                    <div class="decision-status-label">Narrative Report</div>
+                                    <div class="decision-status-value <?= $narrativeApproved ? 'status-ready' : 'status-incomplete' ?>">
+                                        <?php if ($narrativeApproved): ?>
+                                            <i class="fa-solid fa-circle-check"></i> Approved
+                                        <?php else: ?>
+                                            <i class="fa-solid fa-circle-xmark"></i> Not Approved
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <div class="decision-status-item full-width-status">
+                                    <div class="decision-status-label">Current Event Status</div>
+                                    <div class="decision-status-value status-badge-display">
+                                        <span class="status-badge-decision status-<?= htmlspecialchars(normalizeStatusClass($event_status)) ?>">
+                                            <?= htmlspecialchars($event_status) ?>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Admin Remarks Form -->
+                            <form action="admin_update_event_status.php" method="POST" class="decision-form">
                                 <input type="hidden" name="event_id" value="<?= (int) $event_id ?>">
 
                                 <div class="field long-field">
-                                    <label class="field-title">Event-Level Admin Remarks</label>
-                                    <textarea name="admin_remarks" rows="4"
+                                    <label class="field-title">
+                                        <i class="fa-solid fa-message"></i> Event-Level Admin Remarks
+                                    </label>
+                                    <textarea name="admin_remarks" rows="4" class="decision-textarea"
                                         placeholder="Write final remarks for this event..."><?= htmlspecialchars($event['admin_remarks'] ?? '') ?></textarea>
                                 </div>
 
-                                <div class="step-actions" style="justify-content:flex-end; flex-wrap:wrap;">
-                                    <button type="submit" name="action" value="save_remarks" class="btn-secondary">
-                                        Save Remarks
+                                <div class="decision-actions">
+                                    <button type="submit" name="action" value="save_remarks" class="btn-decision btn-save">
+                                        <i class="fa-solid fa-floppy-disk"></i> Save Remarks
                                     </button>
 
                                     <?php if (canReturnEventForRevision($event_status)): ?>
-                                        <button type="submit" name="action" value="needs_revision"
-                                            class="btn-primary btn-danger">
-                                            Mark Event Needs Revision
+                                        <button type="submit" name="action" value="needs_revision" class="btn-decision btn-revision">
+                                            <i class="fa-solid fa-rotate-left"></i> Mark Needs Revision
                                         </button>
                                     <?php endif; ?>
 
                                     <?php if (canApproveEvent($event_status)): ?>
-                                        <button type="submit" name="action" value="approve" class="btn-primary">
-                                            Approve Event
+                                        <button type="submit" name="action" value="approve" class="btn-decision btn-approve">
+                                            <i class="fa-solid fa-circle-check"></i> Approve Event
                                         </button>
                                     <?php endif; ?>
 
                                     <?php if (canCompleteEvent($event_status, $narrativeApproved)): ?>
-                                        <button type="submit" name="action" value="complete" class="btn-primary">
-                                            Mark as Completed
+                                        <button type="submit" name="action" value="complete" class="btn-decision btn-complete">
+                                            <i class="fa-solid fa-flag-checkered"></i> Mark as Completed
                                         </button>
                                     <?php endif; ?>
                                 </div>
                             </form>
-
-                            <div class="tracker-list" style="margin-top: 1rem;">
-                                <div class="t-row">
-                                    <span>Pre-event Requirements</span>
-                                    <span
-                                        class="t-score"><?= $allPreEventReviewedOkay ? 'Ready' : 'Incomplete' ?></span>
-                                </div>
-                                <div class="t-row">
-                                    <span>Narrative Report Approved</span>
-                                    <span class="t-score"><?= $narrativeApproved ? 'Yes' : 'No' ?></span>
-                                </div>
-                                <div class="t-row">
-                                    <span>Current Status</span>
-                                    <span class="t-score"><?= htmlspecialchars($event_status) ?></span>
-                                </div>
-                            </div>
                         </div>
                     </section>
+
+                    <style>
+                        /* Event Decision Card Styles */
+                        .decision-card {
+                            border: 2px solid var(--border);
+                        }
+
+                        .decision-status-grid {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 16px;
+                            margin-bottom: 24px;
+                            padding-bottom: 20px;
+                            border-bottom: 2px solid var(--border);
+                        }
+
+                        .decision-status-item {
+                            background: #fafaf9;
+                            border-radius: 10px;
+                            padding: 14px 16px;
+                            border: 1px solid var(--border);
+                        }
+
+                        .decision-status-item.full-width-status {
+                            grid-column: 1 / -1;
+                        }
+
+                        .decision-status-label {
+                            font-size: 11px;
+                            font-weight: 700;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                            color: var(--text-secondary);
+                            margin-bottom: 6px;
+                        }
+
+                        .decision-status-value {
+                            font-size: 14px;
+                            font-weight: 700;
+                            display: flex;
+                            align-items: center;
+                            gap: 6px;
+                        }
+
+                        .decision-status-value.status-ready {
+                            color: #16a34a;
+                        }
+
+                        .decision-status-value.status-incomplete {
+                            color: #dc2626;
+                        }
+
+                        .decision-status-value.status-badge-display {
+                            color: var(--text-primary);
+                        }
+
+                        .status-badge-decision {
+                            display: inline-flex;
+                            align-items: center;
+                            padding: 6px 14px;
+                            border-radius: 8px;
+                            font-size: 13px;
+                            font-weight: 700;
+                            text-transform: capitalize;
+                        }
+
+                        .status-badge-decision.status-pending-review {
+                            background: rgba(245, 158, 11, 0.15);
+                            color: #d97706;
+                        }
+
+                        .status-badge-decision.status-needs-revision {
+                            background: rgba(239, 68, 68, 0.15);
+                            color: #dc2626;
+                        }
+
+                        .status-badge-decision.status-approved {
+                            background: rgba(16, 185, 129, 0.15);
+                            color: #059669;
+                        }
+
+                        .status-badge-decision.status-completed {
+                            background: rgba(59, 130, 246, 0.15);
+                            color: #2563eb;
+                        }
+
+                        .decision-form {
+                            margin: 0;
+                        }
+
+                        .decision-textarea {
+                            font-size: 14px;
+                            line-height: 1.6;
+                        }
+
+                        .decision-actions {
+                            display: flex;
+                            gap: 10px;
+                            flex-wrap: wrap;
+                            margin-top: 16px;
+                        }
+
+                        .btn-decision {
+                            flex: 1;
+                            min-width: 140px;
+                            padding: 11px 18px;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            font-weight: 600;
+                            border: 2px solid;
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 8px;
+                            font-family: inherit;
+                        }
+
+                        .btn-save {
+                            background: white;
+                            border-color: var(--border);
+                            color: var(--text-primary);
+                        }
+
+                        .btn-save:hover {
+                            background: #f5f5f5;
+                            border-color: var(--gold);
+                            color: var(--gold);
+                        }
+
+                        .btn-revision {
+                            background: rgba(239, 68, 68, 0.1);
+                            border-color: #dc2626;
+                            color: #dc2626;
+                        }
+
+                        .btn-revision:hover {
+                            background: #dc2626;
+                            color: white;
+                        }
+
+                        .btn-approve {
+                            background: rgba(16, 185, 129, 0.1);
+                            border-color: #059669;
+                            color: #059669;
+                        }
+
+                        .btn-approve:hover {
+                            background: #059669;
+                            color: white;
+                        }
+
+                        .btn-complete {
+                            background: rgba(59, 130, 246, 0.1);
+                            border-color: #2563eb;
+                            color: #2563eb;
+                        }
+
+                        .btn-complete:hover {
+                            background: #2563eb;
+                            color: white;
+                        }
+
+                        @media (max-width: 640px) {
+                            .decision-status-grid {
+                                grid-template-columns: 1fr;
+                            }
+
+                            .decision-actions {
+                                flex-direction: column;
+                            }
+
+                            .btn-decision {
+                                width: 100%;
+                            }
+                        }
+                    </style>
                 </div>
 
                 <?php include 'assets/includes/footer.php' ?>

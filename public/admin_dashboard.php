@@ -13,9 +13,7 @@ if (($_SESSION["role"] ?? "") !== "admin") {
 
 $admin_name = htmlspecialchars($_SESSION["username"] ?? "Admin", ENT_QUOTES, "UTF-8");
 
-/* ================= HELPERS ================= */
-function normalizeStatusClass(string $status): string
-{
+function normalizeStatusClass(string $status): string {
     return strtolower(str_replace(' ', '-', $status));
 }
 
@@ -27,400 +25,459 @@ $countStatusesSql = "
         SUM(CASE WHEN event_status = 'Approved' THEN 1 ELSE 0 END) AS approved_count,
         SUM(CASE WHEN event_status = 'Completed' THEN 1 ELSE 0 END) AS completed_count
     FROM events
-    WHERE archived_at IS NULL
-      AND is_system_event = 0
+    WHERE archived_at IS NULL AND is_system_event = 0
 ";
-
 $statusCounts = fetchOne($conn, $countStatusesSql);
 
-$countUsersSql = "
-    SELECT COUNT(*) AS total_users
-    FROM users
-    WHERE role = 'user'
-";
+$countUsersSql = "SELECT COUNT(*) AS total_users FROM users WHERE role = 'user'";
 $userCountRow = fetchOne($conn, $countUsersSql);
 
 $countUpcomingReviewSql = "
     SELECT COUNT(*) AS total
     FROM events e
     LEFT JOIN event_dates ed ON e.event_id = ed.event_id
-    WHERE e.archived_at IS NULL
-      AND e.is_system_event = 0
+    WHERE e.archived_at IS NULL AND e.is_system_event = 0
       AND e.event_status IN ('Pending Review', 'Needs Revision')
-      AND ed.start_datetime IS NOT NULL
-      AND ed.start_datetime >= NOW()
+      AND ed.start_datetime IS NOT NULL AND ed.start_datetime >= NOW()
 ";
 $reviewDeadlineRow = fetchOne($conn, $countUpcomingReviewSql);
 
 /* ================= RECENT EVENT SUBMISSIONS ================= */
 $fetchRecentEventsSql = "
-    SELECT
-        e.event_id,
-        e.event_name,
-        e.event_status,
-        e.docs_total,
-        e.docs_uploaded,
-        e.created_at,
-        e.updated_at,
-        e.organizing_body,
-
-        u.user_name,
-        u.org_body,
-
-        ed.start_datetime,
-        el.venue_platform
+    SELECT e.event_id, e.event_name, e.event_status, e.docs_total, e.docs_uploaded,
+           e.created_at, e.updated_at, e.organizing_body,
+           u.user_name, u.org_body,
+           ed.start_datetime, el.venue_platform
     FROM events e
-    INNER JOIN users u
-        ON e.user_id = u.user_id
-    LEFT JOIN event_dates ed
-        ON e.event_id = ed.event_id
-    LEFT JOIN event_location el
-        ON e.event_id = el.event_id
-    WHERE e.archived_at IS NULL
-      AND e.is_system_event = 0
+    INNER JOIN users u ON e.user_id = u.user_id
+    LEFT JOIN event_dates ed ON e.event_id = ed.event_id
+    LEFT JOIN event_location el ON e.event_id = el.event_id
+    WHERE e.archived_at IS NULL AND e.is_system_event = 0
       AND e.event_status IN ('Pending Review', 'Needs Revision', 'Approved')
-    ORDER BY e.created_at DESC
-    LIMIT 5
+    ORDER BY e.created_at DESC LIMIT 5
 ";
-
 $recent_events = fetchAll($conn, $fetchRecentEventsSql);
 
 /* ================= EVENTS REQUIRING ATTENTION ================= */
 $fetchAttentionEventsSql = "
-    SELECT
-        e.event_id,
-        e.event_name,
-        e.event_status,
-        e.docs_total,
-        e.docs_uploaded,
-        e.updated_at,
-
-        u.user_name,
-        u.org_body,
-
-        ed.start_datetime
+    SELECT e.event_id, e.event_name, e.event_status, e.docs_total, e.docs_uploaded,
+           e.updated_at, u.user_name, u.org_body, ed.start_datetime
     FROM events e
-    INNER JOIN users u
-        ON e.user_id = u.user_id
-    LEFT JOIN event_dates ed
-        ON e.event_id = ed.event_id
-    WHERE e.archived_at IS NULL
-      AND e.is_system_event = 0
+    INNER JOIN users u ON e.user_id = u.user_id
+    LEFT JOIN event_dates ed ON e.event_id = ed.event_id
+    WHERE e.archived_at IS NULL AND e.is_system_event = 0
       AND e.event_status IN ('Pending Review', 'Needs Revision')
     ORDER BY
-        CASE e.event_status
-            WHEN 'Needs Revision' THEN 1
-            WHEN 'Pending Review' THEN 2
-            ELSE 3
-        END,
+        CASE e.event_status WHEN 'Needs Revision' THEN 1 WHEN 'Pending Review' THEN 2 ELSE 3 END,
         CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
-        ed.start_datetime ASC,
-        e.updated_at ASC
+        ed.start_datetime ASC, e.updated_at ASC
     LIMIT 6
 ";
-
 $attention_events = fetchAll($conn, $fetchAttentionEventsSql);
 
 /* ================= USERS PREVIEW ================= */
 $fetchUsersPreviewSql = "
-    SELECT
-        u.user_id,
-        u.user_name,
-        u.user_email,
-        u.org_body,
-        u.user_reg_date,
-        COUNT(e.event_id) AS total_events
+    SELECT u.user_id, u.user_name, u.user_email, u.org_body, u.user_reg_date,
+           COUNT(e.event_id) AS total_events
     FROM users u
-    LEFT JOIN events e
-        ON u.user_id = e.user_id
-       AND e.archived_at IS NULL
-       AND e.is_system_event = 0
+    LEFT JOIN events e ON u.user_id = e.user_id AND e.archived_at IS NULL AND e.is_system_event = 0
     WHERE u.role = 'user'
     GROUP BY u.user_id, u.user_name, u.user_email, u.org_body, u.user_reg_date
-    ORDER BY u.user_reg_date DESC
-    LIMIT 5
+    ORDER BY u.user_reg_date DESC LIMIT 5
 ";
-
 $users_preview = fetchAll($conn, $fetchUsersPreviewSql);
-
-/* ================= REVIEW DEADLINES ================= */
-$fetchReviewDeadlinesSql = "
-    SELECT
-        e.event_id,
-        e.event_name,
-        e.event_status,
-        u.user_name,
-        u.org_body,
-        ed.start_datetime
-    FROM events e
-    INNER JOIN users u
-        ON e.user_id = u.user_id
-    LEFT JOIN event_dates ed
-        ON e.event_id = ed.event_id
-    WHERE e.archived_at IS NULL
-      AND e.is_system_event = 0
-      AND e.event_status IN ('Pending Review', 'Needs Revision')
-      AND ed.start_datetime IS NOT NULL
-    ORDER BY ed.start_datetime ASC
-    LIMIT 5
-";
-
-$review_deadlines = fetchAll($conn, $fetchReviewDeadlinesSql);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - HAUCREDIT</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/home_styles.css" />
-    <link rel="stylesheet" href="assets/styles/admin_dashboard.css" />
+    <link rel="stylesheet" href="assets/styles/layout.css">
+    <link rel="stylesheet" href="assets/styles/home_styles.css">
+    <style>
+        /* ===== STAT CARDS ===== */
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(75, 0, 20, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: var(--burgundy);
+            flex-shrink: 0;
+        }
+
+        .stat-number {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--burgundy);
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* ===== DASHBOARD GRID ===== */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* ===== CARDS ===== */
+        .dashboard-card {
+            background: white;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            background: #fdfcfa;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--burgundy);
+            margin: 0;
+        }
+
+        .card-header a {
+            color: var(--gold);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .card-header a:hover { text-decoration: underline; }
+
+        /* ===== EVENT ROWS ===== */
+        .event-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            gap: 12px;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+
+        .event-row:last-child { border-bottom: none; }
+        .event-row:hover { background: #faf9f6; }
+
+        .event-row-info { flex: 1; min-width: 0; }
+
+        .event-row-title {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .event-row-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* ===== STATUS BADGES ===== */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.7;
+        }
+
+        .badge-pending-review  { background: rgba(245,158,11,0.12); color: #d97706; }
+        .badge-needs-revision  { background: rgba(239,68,68,0.12);  color: #dc2626; }
+        .badge-approved        { background: rgba(16,185,129,0.12); color: #059669; }
+        .badge-completed       { background: rgba(59,130,246,0.12); color: #2563eb; }
+        .badge-draft           { background: rgba(156,163,175,0.1); color: #6b7280; }
+
+        /* ===== USER ROWS ===== */
+        .user-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .user-row:last-child { border-bottom: none; }
+
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--burgundy);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .user-row-info { flex: 1; }
+
+        .user-row-name {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .user-row-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .user-events-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: rgba(75,0,20,0.07);
+            color: var(--burgundy);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1200px) {
+            .dashboard-stats { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 900px) {
+            .dashboard-stats { grid-template-columns: repeat(2, 1fr); }
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .dashboard-stats { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
-
 <body>
-    <div class="app">
-        <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+<div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+    <?php include 'assets/includes/admin_nav.php'; ?>
 
-        <?php include 'assets/includes/admin_nav.php'; ?>
+    <main class="main">
+        <div class="topbar">
+            <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
+            <div class="title-wrap">
+                <h1>Admin Dashboard</h1>
+                <p>Welcome back, <?= $admin_name ?></p>
+            </div>
+            <div class="home-top-actions">
+                <a class="btn-primary" href="create_event.php">
+                    <i class="fa-solid fa-plus"></i> Create Event
+                </a>
+            </div>
+        </div>
 
-        <main class="main">
-            <header class="topbar">
-                <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
-
-                <div class="title-wrap">
-                    <h1>Admin Dashboard</h1>
-                    <p>Welcome back, <?= $admin_name ?></p>
+        <!-- Stat Cards -->
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+                <div>
+                    <div class="stat-number"><?= (int)($statusCounts['pending_review_count'] ?? 0) ?></div>
+                    <div class="stat-label">Pending Review</div>
                 </div>
-            </header>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-rotate-right"></i></div>
+                <div>
+                    <div class="stat-number"><?= (int)($statusCounts['needs_revision_count'] ?? 0) ?></div>
+                    <div class="stat-label">Needs Revision</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+                <div>
+                    <div class="stat-number"><?= (int)($statusCounts['approved_count'] ?? 0) ?></div>
+                    <div class="stat-label">Approved</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-flag-checkered"></i></div>
+                <div>
+                    <div class="stat-number"><?= (int)($statusCounts['completed_count'] ?? 0) ?></div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                <div>
+                    <div class="stat-number"><?= (int)($userCountRow['total_users'] ?? 0) ?></div>
+                    <div class="stat-label">Users</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fa-solid fa-bell"></i></div>
+                <div>
+                    <div class="stat-number"><?= (int)($reviewDeadlineRow['total'] ?? 0) ?></div>
+                    <div class="stat-label">Review Queue</div>
+                </div>
+            </div>
+        </div>
 
-            <section class="home-content">
-
-                <section class="home-stats-grid">
-                    <article class="home-stat-card">
-                        <div class="home-stat-header">
-                            <div class="home-stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Left: Recent Submissions -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h2><i class="fa-solid fa-clock-rotate-left" style="margin-right:8px;opacity:0.6;"></i>Recent Submissions</h2>
+                    <a href="admin_events.php">View All →</a>
+                </div>
+                <?php if (!empty($recent_events)): ?>
+                    <?php foreach ($recent_events as $event):
+                        $status = $event['event_status'];
+                        $badge = match($status) {
+                            'Pending Review' => 'badge-pending-review',
+                            'Needs Revision' => 'badge-needs-revision',
+                            'Approved'       => 'badge-approved',
+                            'Completed'      => 'badge-completed',
+                            default          => 'badge-draft',
+                        };
+                    ?>
+                    <a class="event-row" href="admin_manage_event.php?id=<?= (int)$event['event_id'] ?>">
+                        <div class="event-row-info">
+                            <div class="event-row-title"><?= htmlspecialchars($event['event_name']) ?></div>
+                            <div class="event-row-meta">
+                                <?= htmlspecialchars($event['user_name']) ?> &bull;
+                                <?= htmlspecialchars($event['org_body']) ?>
+                                <?php if (!empty($event['start_datetime'])): ?>
+                                    &bull; <?= date('M j, Y', strtotime($event['start_datetime'])) ?>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <p class="home-stat-value"><?= (int) ($statusCounts['pending_review_count'] ?? 0) ?></p>
-                        <p class="home-stat-label">Pending Review</p>
-                    </article>
+                        <span class="status-badge <?= $badge ?>"><?= htmlspecialchars($status) ?></span>
+                    </a>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="padding:32px;text-align:center;color:var(--text-secondary);font-size:14px;">No recent submissions.</div>
+                <?php endif; ?>
+            </div>
 
-                    <article class="home-stat-card">
-                        <div class="home-stat-header">
-                            <div class="home-stat-icon"><i class="fa-solid fa-rotate-right"></i></div>
+            <!-- Right: Attention + Users -->
+            <div>
+                <!-- Events Requiring Attention -->
+                <div class="dashboard-card" style="margin-bottom:20px;">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;opacity:0.6;"></i>Needs Attention</h2>
+                        <a href="admin_events.php?status=Pending+Review">View All →</a>
+                    </div>
+                    <?php if (!empty($attention_events)): ?>
+                        <?php foreach ($attention_events as $event):
+                            $status = $event['event_status'];
+                            $badge = match($status) {
+                                'Pending Review' => 'badge-pending-review',
+                                'Needs Revision' => 'badge-needs-revision',
+                                default          => 'badge-draft',
+                            };
+                        ?>
+                        <a class="event-row" href="admin_manage_event.php?id=<?= (int)$event['event_id'] ?>">
+                            <div class="event-row-info">
+                                <div class="event-row-title"><?= htmlspecialchars($event['event_name']) ?></div>
+                                <div class="event-row-meta">
+                                    <?= htmlspecialchars($event['org_body']) ?>
+                                    <?php if (!empty($event['start_datetime'])): ?>
+                                        &bull; <?= date('M j', strtotime($event['start_datetime'])) ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <span class="status-badge <?= $badge ?>"><?= htmlspecialchars($status) ?></span>
+                        </a>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div style="padding:24px;text-align:center;color:var(--text-secondary);font-size:14px;">All caught up!</div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Users Preview -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-users" style="margin-right:8px;opacity:0.6;"></i>Recent Users</h2>
+                        <a href="admin_users.php">View All →</a>
+                    </div>
+                    <?php if (!empty($users_preview)): ?>
+                        <?php foreach ($users_preview as $user):
+                            $initial = strtoupper(substr($user['user_name'] ?? 'U', 0, 1));
+                        ?>
+                        <div class="user-row">
+                            <div class="user-avatar"><?= $initial ?></div>
+                            <div class="user-row-info">
+                                <div class="user-row-name"><?= htmlspecialchars($user['user_name']) ?></div>
+                                <div class="user-row-meta"><?= htmlspecialchars($user['org_body'] ?? '—') ?></div>
+                            </div>
+                            <span class="user-events-badge"><?= (int)$user['total_events'] ?> events</span>
                         </div>
-                        <p class="home-stat-value"><?= (int) ($statusCounts['needs_revision_count'] ?? 0) ?></p>
-                        <p class="home-stat-label">Needs Revision</p>
-                    </article>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div style="padding:24px;text-align:center;color:var(--text-secondary);font-size:14px;">No users found.</div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
 
-                    <article class="home-stat-card">
-                        <div class="home-stat-header">
-                            <div class="home-stat-icon"><i class="fa-solid fa-circle-check"></i></div>
-                        </div>
-                        <p class="home-stat-value"><?= (int) ($statusCounts['approved_count'] ?? 0) ?></p>
-                        <p class="home-stat-label">Approved</p>
-                    </article>
-
-                    <article class="home-stat-card">
-                        <div class="home-stat-header">
-                            <div class="home-stat-icon"><i class="fa-solid fa-flag-checkered"></i></div>
-                        </div>
-                        <p class="home-stat-value"><?= (int) ($statusCounts['completed_count'] ?? 0) ?></p>
-                        <p class="home-stat-label">Completed</p>
-                    </article>
-
-                    <article class="home-stat-card">
-                        <div class="home-stat-header">
-                            <div class="home-stat-icon"><i class="fa-solid fa-users"></i></div>
-                        </div>
-                        <p class="home-stat-value"><?= (int) ($userCountRow['total_users'] ?? 0) ?></p>
-                        <p class="home-stat-label">Users</p>
-                    </article>
-
-                    <article class="home-stat-card">
-                        <div class="home-stat-header">
-                            <div class="home-stat-icon"><i class="fa-solid fa-calendar-exclamation"></i></div>
-                        </div>
-                        <p class="home-stat-value"><?= (int) ($reviewDeadlineRow['total'] ?? 0) ?></p>
-                        <p class="home-stat-label">Review Queue</p>
-                    </article>
-                </section>
-
-                <section class="home-section">
-                    <header class="home-section-header">
-                        <h2 class="home-section-title">Recent Event Submissions</h2>
-                        <a href="admin_events.php" class="btn-secondary btn-smaller">View All</a>
-                    </header>
-
-                    <ul class="events-table">
-                        <?php if (!empty($recent_events)): ?>
-                            <?php foreach ($recent_events as $event): ?>
-                                <?php
-                                $total_docs = (int) ($event['docs_total'] ?? 0);
-                                $uploaded_docs = (int) ($event['docs_uploaded'] ?? 0);
-                                $progress = $total_docs > 0 ? round(($uploaded_docs / $total_docs) * 100) : 0;
-                                $status_class = normalizeStatusClass($event['event_status'] ?? 'Pending Review');
-                                ?>
-                                <li>
-                                    <a class="event-card-container" href="admin_manage_event.php?id=<?= (int) $event['event_id'] ?>">
-                                        <article class="event-card">
-                                            <div class="event-main">
-                                                <div class="event-info">
-                                                    <div class="event-title"><?= htmlspecialchars($event['event_name']) ?></div>
-                                                    <div class="event-sub">
-                                                        <?= htmlspecialchars($event['user_name']) ?> •
-                                                        <?= htmlspecialchars($event['org_body']) ?>
-                                                    </div>
-                                                    <div class="event-sub">
-                                                        <?= htmlspecialchars($event['venue_platform'] ?? 'No venue set') ?> •
-                                                        <?php if (!empty($event['start_datetime'])): ?>
-                                                            <?= date("F j, g:i A", strtotime($event['start_datetime'])) ?>
-                                                        <?php else: ?>
-                                                            No schedule set
-                                                        <?php endif; ?>
-                                                    </div>
-                                                </div>
-
-                                                <div class="event-progress">
-                                                    <span
-                                                        class="home-progress-text"><?= $uploaded_docs ?>/<?= $total_docs ?></span>
-                                                </div>
-                                            </div>
-
-                                            <span class="home-status-badge <?= htmlspecialchars($status_class) ?>">
-                                                <?= htmlspecialchars($event['event_status']) ?>
-                                            </span>
-                                        </article>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <li>No recent event submissions.</li>
-                        <?php endif; ?>
-                    </ul>
-                </section>
-
-                <section class="home-section">
-                    <header class="home-section-header">
-                        <h2 class="home-section-title">Events Requiring Attention</h2>
-                        <a href="admin_events.php?filter=attention" class="btn-secondary btn-smaller">Open Queue</a>
-                    </header>
-
-                    <ul class="events-table">
-                        <?php if (!empty($attention_events)): ?>
-                            <?php foreach ($attention_events as $event): ?>
-                                <?php $status_class = normalizeStatusClass($event['event_status'] ?? 'Pending Review'); ?>
-                                <li>
-                                    <a class="event-card-container" href="admin_manage_event.php?id=<?= (int) $event['event_id'] ?>">
-                                        <article class="event-card">
-                                            <div class="event-main">
-                                                <div class="event-info">
-                                                    <div class="event-title"><?= htmlspecialchars($event['event_name']) ?></div>
-                                                    <div class="event-sub">
-                                                        <?= htmlspecialchars($event['user_name']) ?> •
-                                                        <?= htmlspecialchars($event['org_body']) ?>
-                                                    </div>
-                                                    <div class="event-sub">
-                                                        Starts:
-                                                        <?php if (!empty($event['start_datetime'])): ?>
-                                                            <?= date("F j, Y g:i A", strtotime($event['start_datetime'])) ?>
-                                                        <?php else: ?>
-                                                            No schedule set
-                                                        <?php endif; ?>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <span class="home-status-badge <?= htmlspecialchars($status_class) ?>">
-                                                <?= htmlspecialchars($event['event_status']) ?>
-                                            </span>
-                                        </article>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <li>No events currently require attention.</li>
-                        <?php endif; ?>
-                    </ul>
-                </section>
-
-                <section class="home-section">
-                    <header class="home-section-header">
-                        <h2 class="home-section-title">Users Preview</h2>
-                        <a href="admin_users.php" class="btn-secondary btn-smaller">View All</a>
-                    </header>
-
-                    <ul class="events-table">
-                        <?php if (!empty($users_preview)): ?>
-                            <?php foreach ($users_preview as $user): ?>
-                                <li>
-                                    <a class="event-card-container" href="admin_users.php">
-                                        <article class="event-card">
-                                            <div class="event-main">
-                                                <div class="event-info">
-                                                    <div class="event-title"><?= htmlspecialchars($user['user_name']) ?></div>
-                                                    <div class="event-sub"><?= htmlspecialchars($user['user_email']) ?></div>
-                                                    <div class="event-sub">
-                                                        <?= htmlspecialchars($user['org_body']) ?> •
-                                                        <?= (int) $user['total_events'] ?> events
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </article>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <li>No users found.</li>
-                        <?php endif; ?>
-                    </ul>
-                </section>
-
-                <!-- <section class="home-section">
-                    <header class="home-section-header">
-                        <h2 class="home-section-title">Upcoming Review Deadlines</h2>
-                        <a href="admin_events.php?sort=start" class="btn-secondary btn-smaller">View All</a>
-                    </header>
-
-                    <ul>
-                        <?php if (!empty($review_deadlines)): ?>
-                            <?php foreach ($review_deadlines as $item): ?>
-                                <?php $status_class = normalizeStatusClass($item['event_status'] ?? 'Pending Review'); ?>
-                                <li>
-                                    <a class="req-card" href="admin_manage_event.php?id=<?= (int) $item['event_id'] ?>">
-                                        <div class="req-item">
-                                            <div class="req-title"><?= htmlspecialchars($item['event_name']) ?></div>
-                                            <div class="req-sub">
-                                                <?= htmlspecialchars($item['user_name']) ?> •
-                                                <?= htmlspecialchars($item['org_body']) ?> •
-                                                <?php if (!empty($item['start_datetime'])): ?>
-                                                    <strong><?= date("F j, g:i A", strtotime($item['start_datetime'])) ?></strong>
-                                                <?php else: ?>
-                                                    <strong>No schedule set</strong>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                        <span class="status <?= htmlspecialchars($status_class) ?>">
-                                            <?= htmlspecialchars($item['event_status']) ?>
-                                        </span>
-                                    </a>
-                                </li>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <li>No upcoming review deadlines.</li>
-                        <?php endif; ?>
-                    </ul>
-                </section> -->
-
-            </section>
-
-            <?php include 'assets/includes/footer.php' ?>
-        </main>
-    </div>
-
-    <script src="../app/script/layout.js?v=1"></script>
+        <?php include 'assets/includes/footer.php'; ?>
+    </main>
+</div>
+<script src="../app/script/layout.js?v=1"></script>
 </body>
-
 </html>

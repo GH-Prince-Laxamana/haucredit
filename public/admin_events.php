@@ -14,400 +14,726 @@ if (($_SESSION["role"] ?? "") !== "admin") {
 $admin_name = htmlspecialchars($_SESSION["username"] ?? "Admin", ENT_QUOTES, "UTF-8");
 
 $status_filter = trim($_GET['status'] ?? 'all');
-$org_filter = trim($_GET['org'] ?? '');
-$search = trim($_GET['search'] ?? '');
+$org_filter    = trim($_GET['org'] ?? '');
+$search        = trim($_GET['search'] ?? '');
+$page          = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$per_page      = 10;
+$offset        = ($page - 1) * $per_page;
 
-/* ================= HELPERS ================= */
-function normalizeStatusClass(string $status): string
-{
-    return strtolower(str_replace(' ', '-', $status));
-}
-
-function isValidStatusFilter(string $status): bool
-{
-    $allowed = ['all', 'Draft', 'Pending Review', 'Needs Revision', 'Approved', 'Completed'];
-    return in_array($status, $allowed, true);
-}
-
-if (!isValidStatusFilter($status_filter)) {
-    $status_filter = 'all';
-}
+$allowed_statuses = ['all', 'Draft', 'Pending Review', 'Needs Revision', 'Approved', 'Completed'];
+if (!in_array($status_filter, $allowed_statuses)) $status_filter = 'all';
 
 /* ================= SUMMARY COUNTS ================= */
 $statusCountsSql = "
     SELECT
         COUNT(*) AS total_events,
-        SUM(CASE WHEN e.event_status = 'Draft' THEN 1 ELSE 0 END) AS draft_count,
-        SUM(CASE WHEN e.event_status = 'Pending Review' THEN 1 ELSE 0 END) AS pending_review_count,
-        SUM(CASE WHEN e.event_status = 'Needs Revision' THEN 1 ELSE 0 END) AS needs_revision_count,
-        SUM(CASE WHEN e.event_status = 'Approved' THEN 1 ELSE 0 END) AS approved_count,
-        SUM(CASE WHEN e.event_status = 'Completed' THEN 1 ELSE 0 END) AS completed_count
-    FROM events e
-    WHERE e.archived_at IS NULL
-      AND e.is_system_event = 0
+        SUM(CASE WHEN event_status = 'Pending Review' THEN 1 ELSE 0 END) AS pending_review,
+        SUM(CASE WHEN event_status = 'Needs Revision' THEN 1 ELSE 0 END) AS needs_revision,
+        SUM(CASE WHEN event_status = 'Approved'       THEN 1 ELSE 0 END) AS approved,
+        SUM(CASE WHEN event_status = 'Completed'      THEN 1 ELSE 0 END) AS completed
+    FROM events
+    WHERE archived_at IS NULL AND is_system_event = 0
 ";
-
 $statusCounts = fetchOne($conn, $statusCountsSql);
 
-/* ================= ORG FILTER OPTIONS ================= */
+$total_events   = (int)($statusCounts['total_events']   ?? 0);
+$pending_review = (int)($statusCounts['pending_review'] ?? 0);
+$needs_revision = (int)($statusCounts['needs_revision'] ?? 0);
+$approved       = (int)($statusCounts['approved']       ?? 0);
+$completed      = (int)($statusCounts['completed']      ?? 0);
+$pending_total  = $pending_review + $needs_revision;
+
+/* ================= ORG OPTIONS ================= */
 $orgOptionsSql = "
     SELECT DISTINCT u.org_body
     FROM users u
-    INNER JOIN events e
-        ON u.user_id = e.user_id
-    WHERE e.archived_at IS NULL
-      AND e.is_system_event = 0
-      AND u.role = 'user'
-      AND u.org_body IS NOT NULL
-      AND u.org_body != ''
+    INNER JOIN events e ON u.user_id = e.user_id
+    WHERE e.archived_at IS NULL AND e.is_system_event = 0
+      AND u.role = 'user' AND u.org_body IS NOT NULL AND u.org_body != ''
     ORDER BY u.org_body ASC
 ";
-
 $orgOptions = fetchAll($conn, $orgOptionsSql);
 
 /* ================= EVENT LIST ================= */
-$fetchEventsSql = "
-    SELECT
-        e.event_id,
-        e.event_name,
-        e.event_status,
-        e.docs_total,
-        e.docs_uploaded,
-        e.created_at,
-        e.updated_at,
-        e.organizing_body,
-        e.admin_remarks,
-
-        u.user_name,
-        u.user_email,
-        u.org_body,
-
-        et.activity_type_id,
-        et.background_id,
-        cat.activity_type_name AS activity_type,
-        cbo.background_name AS background,
-
-        ed.start_datetime,
-        ed.end_datetime,
-
-        el.venue_platform
+$baseSql = "
     FROM events e
-    INNER JOIN users u
-        ON e.user_id = u.user_id
-    LEFT JOIN event_type et
-        ON e.event_id = et.event_id
-    LEFT JOIN config_activity_types cat
-        ON et.activity_type_id = cat.activity_type_id
-    LEFT JOIN config_background_options cbo
-        ON et.background_id = cbo.background_id
-    LEFT JOIN event_dates ed
-        ON e.event_id = ed.event_id
-    LEFT JOIN event_location el
-        ON e.event_id = el.event_id
-    WHERE e.archived_at IS NULL
-      AND e.is_system_event = 0
+    INNER JOIN users u ON e.user_id = u.user_id
+    LEFT JOIN event_dates ed ON e.event_id = ed.event_id
+    LEFT JOIN event_location el ON e.event_id = el.event_id
+    LEFT JOIN event_type et ON e.event_id = et.event_id
+    LEFT JOIN config_activity_types cat ON et.activity_type_id = cat.activity_type_id
+    WHERE e.archived_at IS NULL AND e.is_system_event = 0
 ";
 
-$params = [];
-$types = "";
+$params = []; $types = "";
 
 if ($status_filter !== 'all') {
-    $fetchEventsSql .= " AND e.event_status = ?";
-    $params[] = $status_filter;
-    $types .= "s";
+    $baseSql .= " AND e.event_status = ?";
+    $params[] = $status_filter; $types .= "s";
 }
-
 if ($org_filter !== '') {
-    $fetchEventsSql .= " AND u.org_body = ?";
-    $params[] = $org_filter;
-    $types .= "s";
+    $baseSql .= " AND u.org_body = ?";
+    $params[] = $org_filter; $types .= "s";
 }
-
 if ($search !== '') {
-    $fetchEventsSql .= "
-        AND (
-            e.event_name LIKE ?
-            OR u.user_name LIKE ?
-            OR u.user_email LIKE ?
-            OR u.org_body LIKE ?
-            OR cat.activity_type_name LIKE ?
-            OR cbo.background_name LIKE ?
-            OR el.venue_platform LIKE ?
-        )
-    ";
-    $like = "%" . $search . "%";
-    array_push($params, $like, $like, $like, $like, $like, $like, $like);
-    $types .= "sssssss";
+    $baseSql .= " AND (e.event_name LIKE ? OR u.user_name LIKE ? OR u.org_body LIKE ?)";
+    $like = "%$search%";
+    $params[] = $like; $params[] = $like; $params[] = $like; $types .= "sss";
 }
 
-$fetchEventsSql .= "
+$countResult = fetchOne($conn, "SELECT COUNT(*) AS total $baseSql", $types, $params);
+$total_rows  = (int)($countResult['total'] ?? 0);
+$total_pages = max(1, ceil($total_rows / $per_page));
+
+$eventsSql = "
+    SELECT e.event_id, e.event_name, e.event_status, e.docs_total, e.docs_uploaded,
+           e.created_at, u.user_name, u.org_body,
+           ed.start_datetime, el.venue_platform,
+           cat.activity_type_name AS activity_type,
+           (SELECT COUNT(*) FROM event_requirements er WHERE er.event_id = e.event_id AND er.submission_status = 'Pending') AS pending_requirements,
+           (SELECT COUNT(*) FROM event_requirements er WHERE er.event_id = e.event_id AND er.review_status = 'Approved') AS approved_requirements,
+           (SELECT COUNT(*) FROM event_requirements er WHERE er.event_id = e.event_id) AS total_requirements
+    $baseSql
     ORDER BY
-        CASE e.event_status
-            WHEN 'Needs Revision' THEN 1
-            WHEN 'Pending Review' THEN 2
-            WHEN 'Approved' THEN 3
-            WHEN 'Completed' THEN 4
-            WHEN 'Draft' THEN 5
-            ELSE 6
-        END,
-        CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
-        ed.start_datetime ASC,
+        CASE e.event_status WHEN 'Needs Revision' THEN 1 WHEN 'Pending Review' THEN 2 WHEN 'Approved' THEN 3 WHEN 'Completed' THEN 4 ELSE 5 END,
         e.created_at DESC
+    LIMIT ? OFFSET ?
 ";
-
-$events = fetchAll($conn, $fetchEventsSql, $types, $params);
+$params[] = $per_page; $params[] = $offset; $types .= "ii";
+$events = fetchAll($conn, $eventsSql, $types, $params);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Events - HAUCREDIT</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/home_styles.css" />
-    <link rel="stylesheet" href="assets/styles/my_events.css" />
+    <link rel="stylesheet" href="assets/styles/layout.css">
+    <link rel="stylesheet" href="assets/styles/home_styles.css">
+    <style>
+        /* ===== STAT CARDS ===== */
+        .events-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+        }
+
+        .stat-number {
+            font-size: 30px;
+            font-weight: 800;
+            color: var(--burgundy);
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* ===== TOOLBAR ===== */
+        .events-toolbar {
+            background: white;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .toolbar-top {
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .toolbar-top::-webkit-scrollbar { display: none; }
+
+        .tab-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 14px 14px;
+            border: none;
+            border-bottom: 2px solid transparent;
+            background: transparent;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            transition: all 0.18s ease;
+            text-decoration: none;
+            margin-bottom: -1px;
+        }
+
+        .tab-btn:hover { color: var(--burgundy); }
+
+        .tab-btn.active {
+            color: var(--burgundy);
+            border-bottom-color: var(--burgundy);
+        }
+
+        .tab-count {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            background: #f0ede8;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .tab-btn.active .tab-count {
+            background: rgba(75,0,20,0.08);
+            color: var(--burgundy);
+        }
+
+        .toolbar-search {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .search-wrap i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 9px 12px 9px 34px;
+            border: 1px solid var(--border-fields);
+            border-radius: 9px;
+            font-size: 13px;
+            font-family: inherit;
+            background: white;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(194,161,77,0.12);
+        }
+
+        .filter-select {
+            padding: 9px 12px;
+            border: 1px solid var(--border-fields);
+            border-radius: 9px;
+            font-size: 13px;
+            font-family: inherit;
+            background: white;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        .btn-filter {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 16px;
+            border-radius: 9px;
+            border: 1px solid var(--border-fields);
+            background: white;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+
+        .btn-filter:hover {
+            border-color: var(--gold);
+            color: var(--text-primary);
+        }
+
+        /* ===== TABLE ===== */
+        .events-table-container {
+            background: white;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .events-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .events-table thead {
+            background: #fdfcfa;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .events-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .events-table th:first-child,
+        .events-table td:first-child {
+            padding-left: 20px;
+            width: 44px;
+        }
+
+        .events-table td {
+            padding: 14px 16px;
+            font-size: 14px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .events-table tbody tr:last-child td { border-bottom: none; }
+        .events-table tbody tr:hover td { background: #faf9f6; }
+
+        .row-check {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--burgundy);
+            cursor: pointer;
+        }
+
+        .event-name-cell {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .event-color-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .event-name-text { font-weight: 700; color: var(--text-primary); }
+
+        .org-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 7px;
+            background: #f5f2ed;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .org-badge i { font-size: 11px; color: var(--gold); }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 11px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.7;
+        }
+
+        .badge-pending-review  { background: rgba(245,158,11,0.12); color: #d97706; }
+        .badge-needs-revision  { background: rgba(239,68,68,0.12);  color: #dc2626; }
+        .badge-approved        { background: rgba(16,185,129,0.12); color: #059669; }
+        .badge-completed       { background: rgba(59,130,246,0.12); color: #2563eb; }
+        .badge-draft           { background: rgba(156,163,175,0.1); color: #6b7280; }
+
+        .req-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 11px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .req-pending   { background: rgba(245,158,11,0.1);  color: #d97706; }
+        .req-approved  { background: rgba(16,185,129,0.1);  color: #059669; }
+        .req-rejected  { background: rgba(239,68,68,0.1);   color: #dc2626; }
+        .req-neutral   { background: #f0ede8;                color: var(--text-secondary); }
+        .req-completed { background: rgba(59,130,246,0.1);  color: #2563eb; }
+
+        .btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            background: #f5f2ed;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            font-family: inherit;
+            text-decoration: none;
+            transition: all 0.18s ease;
+        }
+
+        .btn-view:hover {
+            background: var(--burgundy);
+            color: white;
+            border-color: var(--burgundy);
+        }
+
+        /* ===== PAGINATION ===== */
+        .pagination-wrap {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            background: white;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .pagination-info { font-size: 13px; color: var(--text-secondary); }
+        .pagination { display: flex; gap: 4px; }
+
+        .page-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: #f5f2ed;
+            border: 1px solid var(--border);
+            transition: all 0.18s;
+        }
+
+        .page-btn:hover, .page-btn.active {
+            background: var(--burgundy);
+            color: white;
+            border-color: var(--burgundy);
+        }
+
+        .page-btn.disabled { opacity: 0.35; pointer-events: none; }
+
+        .empty-state {
+            text-align: center;
+            padding: 64px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i { font-size: 40px; color: #ccc; margin-bottom: 14px; display: block; }
+
+        @media (max-width: 1100px) { .events-stats { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) {
+            .events-table th:nth-child(5),
+            .events-table td:nth-child(5) { display: none; }
+        }
+        @media (max-width: 480px) { .events-stats { grid-template-columns: 1fr; } }
+    </style>
 </head>
-
 <body>
-    <div class="app">
-        <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+<div class="app">
+    <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
+    <?php include 'assets/includes/admin_nav.php'; ?>
 
-        <?php include 'assets/includes/admin_nav.php'; ?>
+    <main class="main">
+        <div class="topbar">
+            <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
+            <div class="title-wrap">
+                <h1>Events</h1>
+                <p>Manage and review all event submissions</p>
+            </div>
+            <div class="home-top-actions">
+                <a class="btn-primary" href="create_event.php">
+                    <i class="fa-solid fa-plus"></i> Create Event
+                </a>
+            </div>
+        </div>
 
-        <main class="main">
-            <header class="topbar">
-                <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
+        <!-- Stat Cards (no icons) -->
+        <div class="events-stats">
+            <div class="stat-card">
+                <div class="stat-number"><?= $total_events ?></div>
+                <div class="stat-label">Total Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number"><?= $pending_total ?></div>
+                <div class="stat-label">Pending Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number"><?= $approved ?></div>
+                <div class="stat-label">Approved Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number"><?= $completed ?></div>
+                <div class="stat-label">Completed Events</div>
+            </div>
+        </div>
 
-                <div class="title-wrap">
-                    <h1>Event Management</h1>
-                    <p>Review and manage all submitted events.</p>
-                </div>
-            </header>
-
-            <section class="content my-events-page">
-                <div class="summary-strip">
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($statusCounts['total_events'] ?? 0) ?></span>
-                        <span class="summary-label">All Events</span>
-                    </div>
-
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($statusCounts['pending_review_count'] ?? 0) ?></span>
-                        <span class="summary-label">Pending Review</span>
-                    </div>
-
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($statusCounts['needs_revision_count'] ?? 0) ?></span>
-                        <span class="summary-label">Needs Revision</span>
-                    </div>
-
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($statusCounts['approved_count'] ?? 0) ?></span>
-                        <span class="summary-label">Approved</span>
-                    </div>
-
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($statusCounts['completed_count'] ?? 0) ?></span>
-                        <span class="summary-label">Completed</span>
-                    </div>
-                </div>
-
-                <div class="list-toolbar" style="display:block;">
-                    <form method="GET" class="search-wrap" style="margin-bottom: 1rem;">
-                        <span class="search-icon">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </span>
-
-                        <input type="text" name="search" class="search-input"
-                            placeholder="Search by event, user, org, type, venue..."
-                            value="<?= htmlspecialchars($search) ?>">
-
-                        <select name="status" class="search-input" style="max-width: 220px;">
-                            <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>All Statuses</option>
-                            <option value="Draft" <?= $status_filter === 'Draft' ? 'selected' : '' ?>>Draft</option>
-                            <option value="Pending Review" <?= $status_filter === 'Pending Review' ? 'selected' : '' ?>>
-                                Pending Review</option>
-                            <option value="Needs Revision" <?= $status_filter === 'Needs Revision' ? 'selected' : '' ?>>
-                                Needs Revision</option>
-                            <option value="Approved" <?= $status_filter === 'Approved' ? 'selected' : '' ?>>Approved
-                            </option>
-                            <option value="Completed" <?= $status_filter === 'Completed' ? 'selected' : '' ?>>Completed
-                            </option>
-                        </select>
-
-                        <select name="org" class="search-input" style="max-width: 220px;">
-                            <option value="">All Organizations</option>
-                            <?php foreach ($orgOptions as $org): ?>
-                                <?php $org_value = $org['org_body'] ?? ''; ?>
-                                <option value="<?= htmlspecialchars($org_value) ?>" <?= $org_filter === $org_value ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($org_value) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-
-                        <button type="submit" class="btn-primary">Apply</button>
-
-                        <?php if ($status_filter !== 'all' || $org_filter !== '' || $search !== ''): ?>
-                            <a href="admin_events.php" class="btn-secondary">Reset</a>
+        <!-- Toolbar -->
+        <div class="events-toolbar">
+            <!-- Tabs -->
+            <div class="toolbar-top">
+                <?php
+                $tabs = [
+                    ['value' => 'all',            'label' => 'All',            'count' => $total_events,   'icon' => 'fa-solid fa-list'],
+                    ['value' => 'Pending Review', 'label' => 'Pending',        'count' => $pending_review, 'icon' => 'fa-solid fa-hourglass-half'],
+                    ['value' => 'Approved',       'label' => 'Approved',       'count' => $approved,       'icon' => 'fa-solid fa-circle-check'],
+                    ['value' => 'Completed',      'label' => 'Completed',      'count' => $completed,      'icon' => 'fa-solid fa-flag-checkered'],
+                    ['value' => 'Needs Revision', 'label' => 'Needs Revision', 'count' => $needs_revision, 'icon' => 'fa-solid fa-rotate-left'],
+                    ['value' => 'Draft',          'label' => 'Draft',          'count' => null,            'icon' => 'fa-regular fa-file'],
+                ];
+                foreach ($tabs as $tab):
+                    $active = $status_filter === $tab['value'] ? 'active' : '';
+                    $url = '?status=' . urlencode($tab['value'])
+                         . ($org_filter ? '&org=' . urlencode($org_filter) : '')
+                         . ($search ? '&search=' . urlencode($search) : '');
+                ?>
+                    <a href="<?= $url ?>" class="tab-btn <?= $active ?>">
+                        <i class="<?= $tab['icon'] ?>"></i>
+                        <?= $tab['label'] ?>
+                        <?php if ($tab['count'] !== null): ?>
+                            <span class="tab-count"><?= $tab['count'] ?></span>
                         <?php endif; ?>
-                    </form>
+                    </a>
+                <?php endforeach; ?>
+            </div>
 
-                    <div class="filter-tabs" id="filterTabs">
-                        <a class="filter-tab <?= $status_filter === 'all' ? 'active' : '' ?>"
-                            href="admin_events.php?status=all&org=<?= urlencode($org_filter) ?>&search=<?= urlencode($search) ?>">All</a>
-                        <a class="filter-tab <?= $status_filter === 'Pending Review' ? 'active' : '' ?>"
-                            href="admin_events.php?status=Pending+Review&org=<?= urlencode($org_filter) ?>&search=<?= urlencode($search) ?>">Pending
-                            Review</a>
-                        <a class="filter-tab <?= $status_filter === 'Needs Revision' ? 'active' : '' ?>"
-                            href="admin_events.php?status=Needs+Revision&org=<?= urlencode($org_filter) ?>&search=<?= urlencode($search) ?>">Needs
-                            Revision</a>
-                        <a class="filter-tab <?= $status_filter === 'Approved' ? 'active' : '' ?>"
-                            href="admin_events.php?status=Approved&org=<?= urlencode($org_filter) ?>&search=<?= urlencode($search) ?>">Approved</a>
-                        <a class="filter-tab <?= $status_filter === 'Completed' ? 'active' : '' ?>"
-                            href="admin_events.php?status=Completed&org=<?= urlencode($org_filter) ?>&search=<?= urlencode($search) ?>">Completed</a>
-                    </div>
+            <!-- Search + Filters -->
+            <div class="toolbar-search">
+                <div class="search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="searchInput" class="search-input"
+                           placeholder="Search events, organizations, users..."
+                           value="<?= htmlspecialchars($search) ?>">
                 </div>
+                <select id="orgSelect" class="filter-select">
+                    <option value="">All Organizations</option>
+                    <?php foreach ($orgOptions as $org):
+                        $val = $org['org_body'] ?? '';
+                    ?>
+                        <option value="<?= htmlspecialchars($val) ?>" <?= $org_filter === $val ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($val) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <button class="btn-filter" id="applyFilters">
+                    <i class="fa-solid fa-sliders"></i> Search
+                </button>
+                <?php if ($search || $org_filter): ?>
+                    <a href="?status=<?= urlencode($status_filter) ?>" class="btn-filter">
+                        <i class="fa-solid fa-xmark"></i> Clear
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
 
-                <div class="events-grid" id="eventsGrid">
+        <!-- Table -->
+        <div class="events-table-container">
+            <table class="events-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" class="row-check" id="checkAll"></th>
+                        <th>Event</th>
+                        <th>Organization</th>
+                        <th>Managed By</th>
+                        <th>Start Date</th>
+                        <th>Status</th>
+                        <th>Requirements</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
                     <?php if (!empty($events)): ?>
-                        <?php foreach ($events as $event): ?>
-                            <?php
-                            $docs_total = (int) ($event['docs_total'] ?? 0);
-                            $docs_uploaded = (int) ($event['docs_uploaded'] ?? 0);
-                            $pct = $docs_total > 0 ? round(($docs_uploaded / $docs_total) * 100) : 0;
+                        <?php
+                        $dot_colors = ['#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+                        $i = 0;
+                        foreach ($events as $event):
+                            $dot = $dot_colors[$i % count($dot_colors)]; $i++;
+                            $status = $event['event_status'];
+                            $badge_class = match($status) {
+                                'Pending Review' => 'badge-pending-review',
+                                'Needs Revision' => 'badge-needs-revision',
+                                'Approved'       => 'badge-approved',
+                                'Completed'      => 'badge-completed',
+                                default          => 'badge-draft',
+                            };
+                            $pending_r  = (int)($event['pending_requirements'] ?? 0);
+                            $approved_r = (int)($event['approved_requirements'] ?? 0);
+                            $total_r    = (int)($event['total_requirements'] ?? 0);
 
-                            $pct_color_ref = max(0, min(100, (int) $pct));
-                            $hue = ($pct_color_ref / 100) * 120;
-                            $progress_color = "hsl($hue, 70%, 45%)";
-
-                            $status_class = normalizeStatusClass($event['event_status'] ?? 'Pending Review');
-
-                            $org_clean = $event['organizing_body'] ?? '';
-                            $decoded_orgs = json_decode($org_clean, true);
-                            if (is_array($decoded_orgs)) {
-                                $org_clean = implode(', ', $decoded_orgs);
-                            } else {
-                                $org_clean = str_replace(['[', ']', '"', "'"], '', $org_clean);
-                                $org_clean = str_replace(',', ', ', $org_clean);
-                            }
-                            ?>
-
-                            <article class="event-card">
-                                <div class="event-card-top">
-                                    <span class="event-type-tag">
-                                        <?= htmlspecialchars($event['activity_type'] ?? 'N/A') ?>
-                                    </span>
-
-                                    <span class="event-status status-<?= htmlspecialchars($status_class) ?>">
-                                        <span class="status-dot"></span>
-                                        <span class="status-text">
-                                            <?= htmlspecialchars($event['event_status']) ?>
-                                        </span>
-                                    </span>
+                            if ($total_r == 0)                        { $rc = 'req-neutral';   $ri = 'fa-solid fa-minus';               $rt = 'No requirements'; }
+                            elseif ($status === 'Completed')          { $rc = 'req-completed'; $ri = 'fa-solid fa-folder-open';         $rt = 'Completed'; }
+                            elseif ($approved_r === $total_r)         { $rc = 'req-approved';  $ri = 'fa-solid fa-circle-check';        $rt = '✓ All Approved'; }
+                            elseif ($pending_r > 0)                   { $rc = 'req-pending';   $ri = 'fa-solid fa-clock';               $rt = "$pending_r Pending"; }
+                            elseif ($status === 'Needs Revision')     { $rc = 'req-rejected';  $ri = 'fa-solid fa-triangle-exclamation'; $rt = 'Needs Revision'; }
+                            else                                       { $rc = 'req-neutral';   $ri = 'fa-solid fa-file-lines';          $rt = "$approved_r/$total_r Approved"; }
+                        ?>
+                        <tr>
+                            <td><input type="checkbox" class="row-check row-checkbox"></td>
+                            <td>
+                                <div class="event-name-cell">
+                                    <span class="event-color-dot" style="background:<?= $dot ?>"></span>
+                                    <span class="event-name-text"><?= htmlspecialchars($event['event_name']) ?></span>
                                 </div>
-
-                                <div class="event-card-body">
-                                    <h3 class="event-title">
-                                        <?= htmlspecialchars($event['event_name']) ?>
-                                    </h3>
-
-                                    <div class="event-meta">
-                                        <div class="meta-row">
-                                            <span class="meta-icon">
-                                                <i class="fa-solid fa-user"></i>
-                                            </span>
-                                            <span><?= htmlspecialchars($event['user_name'] ?? 'Unknown User') ?></span>
-                                        </div>
-
-                                        <div class="meta-row">
-                                            <span class="meta-icon">
-                                                <i class="fa-solid fa-building-columns"></i>
-                                            </span>
-                                            <span><?= htmlspecialchars($event['org_body'] ?? 'No organization') ?></span>
-                                        </div>
-
-                                        <div class="meta-row">
-                                            <span class="meta-icon">
-                                                <i class="fa-solid fa-location-dot"></i>
-                                            </span>
-                                            <span><?= htmlspecialchars($event['venue_platform'] ?? 'No venue set') ?></span>
-                                        </div>
-
-                                        <div class="meta-row">
-                                            <span class="meta-icon">
-                                                <i class="fa-solid fa-calendar"></i>
-                                            </span>
-                                            <span>
-                                                <?php if (!empty($event['start_datetime'])): ?>
-                                                    <?= date('M j, Y', strtotime($event['start_datetime'])) ?>
-                                                <?php else: ?>
-                                                    No schedule set
-                                                <?php endif; ?>
-                                            </span>
-                                        </div>
-
-                                        <div class="meta-row">
-                                            <span class="meta-icon">
-                                                <i class="fa-solid fa-layer-group"></i>
-                                            </span>
-                                            <span><?= htmlspecialchars($event['background'] ?? 'N/A') ?></span>
-                                        </div>
-                                    </div>
-
-                                    <div class="doc-progress">
-                                        <div class="doc-progress-label">
-                                            <span>Documents</span>
-                                            <span><?= $docs_uploaded ?>/<?= $docs_total ?> uploaded</span>
-                                        </div>
-
-                                        <div class="progress-bar">
-                                            <div class="progress-fill"
-                                                style="width: <?= $pct ?>%; --progress-color: <?= $progress_color ?>">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <?php if (!empty($event['admin_remarks']) && $event['event_status'] === 'Needs Revision'): ?>
-                                        <div class="doc-remarks-box" style="margin-top: 1rem;">
-                                            <strong>Latest Remarks</strong>
-                                            <p><?= nl2br(htmlspecialchars($event['admin_remarks'])) ?></p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <footer class="event-card-footer">
-                                    <span class="event-created">
-                                        Submitted <?= date('M j, Y', strtotime($event['created_at'])) ?>
+                            </td>
+                            <td>
+                                <span class="org-badge">
+                                    <i class="fa-solid fa-building-columns"></i>
+                                    <?= htmlspecialchars($event['org_body']) ?>
+                                </span>
+                            </td>
+                            <td><?= htmlspecialchars($event['user_name']) ?></td>
+                            <td>
+                                <?php if (!empty($event['start_datetime'])): ?>
+                                    <span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);">
+                                        <i class="fa-regular fa-calendar"></i>
+                                        <?= date('M j, Y', strtotime($event['start_datetime'])) ?>
                                     </span>
-
-                                    <div class="card-actions">
-                                        <a href="admin_manage_event.php?id=<?= (int) $event['event_id'] ?>"
-                                            class="btn-primary btn-view">
-                                            Manage Event
-                                        </a>
-                                    </div>
-                                </footer>
-                            </article>
+                                <?php else: ?>
+                                    <span style="color:#ccc;">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><span class="status-badge <?= $badge_class ?>"><?= htmlspecialchars($status) ?></span></td>
+                            <td>
+                                <span class="req-badge <?= $rc ?>">
+                                    <i class="<?= $ri ?>"></i> <?= $rt ?>
+                                </span>
+                            </td>
+                            <td>
+                                <a href="admin_manage_event.php?id=<?= $event['event_id'] ?>" class="btn-view">
+                                    <i class="fa-solid fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <div class="empty-state" style="grid-column: 1 / -1;">
-                            <div class="empty-icon">
-                                <i class="fa-solid fa-file-circle-xmark"></i>
-                            </div>
-                            <h3>No events found</h3>
-                            <p>Try adjusting your search or filters.</p>
-                        </div>
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <i class="fa-regular fa-calendar-xmark"></i>
+                                    <p>No events found<?= $search ? ' for "' . htmlspecialchars($search) . '"' : '' ?>.</p>
+                                </div>
+                            </td>
+                        </tr>
                     <?php endif; ?>
-                </div>
-            </section>
+                </tbody>
+            </table>
+        </div>
 
-            <?php include 'assets/includes/footer.php' ?>
-        </main>
-    </div>
+        <!-- Pagination -->
+        <?php if ($total_pages > 1): ?>
+        <div class="pagination-wrap">
+            <div class="pagination-info">
+                Showing <strong><?= $offset + 1 ?></strong> to <strong><?= min($offset + $per_page, $total_rows) ?></strong> of <strong><?= $total_rows ?></strong> events
+            </div>
+            <div class="pagination">
+                <a href="?page=1&status=<?= urlencode($status_filter) ?>&org=<?= urlencode($org_filter) ?>&search=<?= urlencode($search) ?>"
+                   class="page-btn <?= $page <= 1 ? 'disabled' : '' ?>"><i class="fa-solid fa-angles-left"></i></a>
+                <a href="?page=<?= $page-1 ?>&status=<?= urlencode($status_filter) ?>&org=<?= urlencode($org_filter) ?>&search=<?= urlencode($search) ?>"
+                   class="page-btn <?= $page <= 1 ? 'disabled' : '' ?>"><i class="fa-solid fa-chevron-left"></i></a>
+                <?php
+                $start_page = max(1, $page - 2);
+                $end_page   = min($total_pages, $page + 2);
+                for ($pg = $start_page; $pg <= $end_page; $pg++):
+                ?>
+                    <a href="?page=<?= $pg ?>&status=<?= urlencode($status_filter) ?>&org=<?= urlencode($org_filter) ?>&search=<?= urlencode($search) ?>"
+                       class="page-btn <?= $pg == $page ? 'active' : '' ?>"><?= $pg ?></a>
+                <?php endfor; ?>
+                <a href="?page=<?= $page+1 ?>&status=<?= urlencode($status_filter) ?>&org=<?= urlencode($org_filter) ?>&search=<?= urlencode($search) ?>"
+                   class="page-btn <?= $page >= $total_pages ? 'disabled' : '' ?>"><i class="fa-solid fa-chevron-right"></i></a>
+                <a href="?page=<?= $total_pages ?>&status=<?= urlencode($status_filter) ?>&org=<?= urlencode($org_filter) ?>&search=<?= urlencode($search) ?>"
+                   class="page-btn <?= $page >= $total_pages ? 'disabled' : '' ?>"><i class="fa-solid fa-angles-right"></i></a>
+            </div>
+        </div>
+        <?php endif; ?>
 
-    <script src="../app/script/layout.js?v=1"></script>
+        <?php include 'assets/includes/footer.php'; ?>
+    </main>
+</div>
+
+<script>
+    document.getElementById('applyFilters').addEventListener('click', function () {
+        const search = document.getElementById('searchInput').value;
+        const org    = document.getElementById('orgSelect').value;
+        window.location.href = `?status=<?= urlencode($status_filter) ?>&org=${encodeURIComponent(org)}&search=${encodeURIComponent(search)}`;
+    });
+
+    document.getElementById('searchInput').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') document.getElementById('applyFilters').click();
+    });
+
+    document.getElementById('checkAll').addEventListener('change', function () {
+        document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = this.checked);
+    });
+</script>
+<script src="../app/script/layout.js?v=1"></script>
 </body>
-
 </html>
