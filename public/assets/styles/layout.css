@@ -34,6 +34,8 @@
   --btn-font-size: 14px;
 
   --font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --bg-gradient: linear-gradient(90deg, #ecdfe3, #ece9e2, #ecdfe3);
 }
 
 /* Reset */
