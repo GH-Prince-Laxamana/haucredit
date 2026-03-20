@@ -281,6 +281,46 @@ try {
         $admin_user_id = (int) $existingAdminSelect['user_id'];
     }
 
+    /* ================= DEFAULT USER SEED ================= */
+    $existingUserSelect = fetchOne(
+        $conn,
+        "
+        SELECT user_id
+        FROM users
+        WHERE user_name = ?
+        LIMIT 1
+        ",
+        "s",
+        ['testuser']
+    );
+
+    if (!$existingUserSelect) {
+        $userPass = password_hash("123", PASSWORD_DEFAULT);
+
+        $stmt = execQuery(
+            $conn,
+            "
+            INSERT INTO users
+            (user_name, user_password, user_email, stud_num, org_body, role, profile_pic, user_reg_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+            ",
+            "sssssss",
+            [
+                'testuser',
+                $userPass,
+                'testuser@hau.edu.ph',
+                '123',
+                'SOC',
+                'user',
+                'default.jpg'
+            ]
+        );
+
+        $default_user_id = $stmt->insert_id;
+    } else {
+        $default_user_id = (int) $existingUserSelect['user_id'];
+    }
+
     /* ================= DEFAULT REQUIREMENT TEMPLATES ================= */
     $default_requirements = $requirement_list['default_requirements'];
     $default_requirements_descs = $requirement_list['default_requirements_descs'];
@@ -337,7 +377,7 @@ try {
         $activeTemplateCountRow = fetchOne($conn, $countActiveTemplatesSql);
         $docs_total = (int) ($activeTemplateCountRow['total'] ?? 0);
 
-        $user_id = $admin_user_id;
+        $user_id = $default_user_id;
         $event_name = "Sample Debug Event";
         $organizing_body = json_encode(["HAU OSA"]);
         $nature = "Test Nature";
