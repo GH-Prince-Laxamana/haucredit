@@ -2,6 +2,7 @@
 session_start();
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
+require_once "../app/query_builder_functions.php";
 send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
@@ -13,7 +14,13 @@ $user_id = (int) $_SESSION['user_id'];
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
 
-/* ================= ALL ACTIVE / UPCOMING EVENTS QUERY =================
+/* ================= HELPERS ================= */
+function normalizeStatusClass(string $status): string
+{
+    return strtolower(str_replace(' ', '-', $status));
+}
+
+/* ================= CURRENT EVENTS QUERY =================
    Uses:
    - events
    - event_dates
@@ -31,21 +38,25 @@ $fetchAllEventsSql = "
         ed.start_datetime,
         ed.end_datetime,
         el.venue_platform,
-        em.target_metric,
-        CASE
-            WHEN e.docs_total > 0 AND e.docs_uploaded < e.docs_total THEN 'pending'
-            WHEN ed.end_datetime IS NOT NULL AND ed.end_datetime >= NOW() THEN 'active'
-            ELSE 'completed'
-        END AS event_phase
+        em.target_metric
     FROM events e
     LEFT JOIN event_dates ed ON e.event_id = ed.event_id
     LEFT JOIN event_location el ON e.event_id = el.event_id
     LEFT JOIN event_metrics em ON e.event_id = em.event_id
     WHERE e.user_id = ?
       AND e.archived_at IS NULL
+      AND e.event_status IN ('Pending Review', 'Needs Revision', 'Approved')
     ORDER BY
+        CASE e.event_status
+            WHEN 'Needs Revision' THEN 1
+            WHEN 'Pending Review' THEN 2
+            WHEN 'Approved' THEN 3
+            WHEN 'Completed' THEN 4
+            ELSE 5
+        END,
         CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
-        ed.start_datetime ASC
+        ed.start_datetime ASC,
+        e.created_at DESC
 ";
 
 $all_events = fetchAll(
@@ -61,25 +72,45 @@ $uploaded_docs_all = array_sum(array_map(fn($e) => (int) ($e['docs_uploaded'] ??
 $overall_progress = $total_docs_all > 0 ? round(($uploaded_docs_all / $total_docs_all) * 100) : 0;
 
 /* ================= EVENT DISPLAY ================= */
-$total_active_events = count($all_events);
-$show_view_all = $total_active_events > 3;
+$total_current_events = count($all_events);
+$show_view_all = $total_current_events > 3;
 $show_limit_events = array_slice($all_events, 0, 3);
 
-/* ================= EVENT PHASE COUNTS ================= */
-$active = 0;
-$pending = 0;
-$completed = 0;
+/* ================= EVENT STATUS COUNTS ================= */
+$draft_count = 0;
+$pending_review_count = 0;
+$needs_revision_count = 0;
+$approved_count = 0;
+$completed_count = 0;
 
-foreach ($all_events as $e) {
-    switch ($e['event_phase']) {
-        case 'active':
-            $active++;
+$allUserEventsForCounts = fetchAll(
+    $conn,
+    "
+    SELECT event_status
+    FROM events
+    WHERE user_id = ?
+      AND archived_at IS NULL
+    ",
+    "i",
+    [$user_id]
+);
+
+foreach ($allUserEventsForCounts as $e) {
+    switch ($e['event_status']) {
+        case 'Draft':
+            $draft_count++;
             break;
-        case 'pending':
-            $pending++;
+        case 'Pending Review':
+            $pending_review_count++;
             break;
-        case 'completed':
-            $completed++;
+        case 'Needs Revision':
+            $needs_revision_count++;
+            break;
+        case 'Approved':
+            $approved_count++;
+            break;
+        case 'Completed':
+            $completed_count++;
             break;
     }
 }
@@ -93,6 +124,7 @@ foreach ($all_events as $e) {
 $fetchDeadlinesSql = "
     SELECT
         e.event_id,
+        e.event_status,
         rt.req_name,
         rt.req_desc,
         e.event_name,
@@ -106,7 +138,8 @@ $fetchDeadlinesSql = "
         ON e.event_id = ed.event_id
     WHERE e.user_id = ?
       AND e.archived_at IS NULL
-      AND er.submission_status = 'pending'
+      AND e.event_status IN ('Pending Review', 'Needs Revision', 'Approved')
+      AND er.submission_status = 'Pending'
       AND er.deadline IS NOT NULL
       AND (
             ed.end_datetime IS NULL
@@ -141,7 +174,6 @@ $archivedRow = fetchOne(
 
 $archived_events = (int) ($archivedRow['total'] ?? 0);
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -180,8 +212,8 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                     <?php
                     $stats = [
                         [
-                            'count' => $total_active_events,
-                            'label' => 'Active Events',
+                            'count' => $total_current_events,
+                            'label' => 'Current Events',
                             'icon' => 'fa-regular fa-calendar-days',
                             'link' => 'my_events.php'
                         ],
@@ -220,7 +252,7 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
 
                 <section class="home-section">
                     <header class="home-section-header">
-                        <h2 class="home-section-title">Active Events</h2>
+                        <h2 class="home-section-title">Current Events</h2>
                         <?php if ($show_view_all): ?>
                             <a href="my_events.php" class="btn-secondary btn-smaller">View All</a>
                         <?php endif; ?>
@@ -233,6 +265,7 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                                 $uploaded_docs = (int) ($event['docs_uploaded'] ?? 0);
                                 $progress = $total_docs > 0 ? round(($uploaded_docs / $total_docs) * 100) : 0;
                                 $progress_color = $progress >= 75 ? '#2e7d32' : ($progress >= 40 ? '#f9a825' : '#d32f2f');
+                                $status_class = normalizeStatusClass($event['event_status'] ?? 'Pending Review');
                                 ?>
                                 <li>
                                     <a class="event-card-container" href="view_event.php?id=<?= (int) $event['event_id'] ?>">
@@ -263,15 +296,15 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                                                 </div>
                                             </div>
 
-                                            <span class="home-status-badge <?= htmlspecialchars($event['event_phase']) ?>">
-                                                <?= ucfirst($event['event_phase']) ?>
+                                            <span class="home-status-badge <?= htmlspecialchars($status_class) ?>">
+                                                <?= htmlspecialchars($event['event_status']) ?>
                                             </span>
                                         </article>
                                     </a>
                                 </li>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <li>No active events after <?= date("F j") ?>.</li>
+                            <li>No current events available.</li>
                         <?php endif; ?>
                     </ul>
                 </section>
@@ -300,7 +333,8 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                                                 <?php endif; ?>
                                             </div>
                                             <div class="req-sub">
-                                                From <?= htmlspecialchars($d['event_name'] ?? '') ?> •
+                                                From <?= htmlspecialchars($d['event_name'] ?? '') ?>
+                                                (<?= htmlspecialchars($d['event_status'] ?? '') ?>) •
                                                 <strong>
                                                     <time datetime="<?= htmlspecialchars($d['deadline']) ?>">
                                                         <?= date("F j, g:i A", strtotime($d['deadline'])) ?>

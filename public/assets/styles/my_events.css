@@ -12,7 +12,7 @@
 /* ── Summary Strip ── */
 .summary-strip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 }
 
@@ -211,31 +211,50 @@
   flex-shrink: 0;
 }
 
-.event-status.status-active {
-  background: rgba(16, 117, 185, 0.1);
-  color: var(--blue);
+.event-status.status-draft {
+  background: rgba(89, 88, 86, 0.1);
+  color: gray;
 }
 
-.event-status.status-active .status-dot {
-  background: var(--blue);
+.event-status.status-draft .status-dot {
+  background: gray;
 }
 
-.event-status.status-pending {
+
+.event-status.status-pending-review {
   background: rgba(245, 158, 11, 0.1);
   color: var(--orange);
 }
 
-.event-status.status-pending .status-dot {
+.event-status.status-pending-review .status-dot {
   background: var(--orange);
 }
 
-.event-status.status-completed {
+.event-status.status-needs-revision {
+  background: rgba(245, 11, 11, 0.1);
+  color: var(--red);
+}
+
+.event-status.status-needs-revision .status-dot {
+  background: var(--red);
+}
+
+.event-status.status-approved {
   background: rgba(19, 182, 57, 0.143);
   color: var(--green);
 }
 
-.event-status.status-completed .status-dot {
+.event-status.status-approved .status-dot {
   background: var(--green);
+}
+
+.event-status.status-completed {
+  background: rgba(16, 117, 185, 0.1); 
+  color: var(--blue);
+}
+
+.event-status.status-completed .status-dot {
+  background: var(--blue);
 }
 
 /* Card Body */

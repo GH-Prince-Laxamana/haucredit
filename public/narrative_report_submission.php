@@ -1,9 +1,6 @@
 <?php
 session_start();
 require_once "../app/database.php";
-require_once "../app/security_headers.php";
-require_once "../app/query_builder_functions.php";
-send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
@@ -21,18 +18,19 @@ if ($event_id <= 0) {
 function formatSubmissionStatus(string $status): string
 {
     return match ($status) {
-        'uploaded' => 'Submitted',
-        'pending' => 'Pending',
-        default => ucwords(str_replace('_', ' ', $status))
+        'Uploaded' => 'Submitted',
+        'Pending' => 'Pending',
+        default => $status
     };
 }
 
 function formatReviewStatus(string $status): string
 {
     return match ($status) {
-        'not_reviewed' => 'Not Reviewed',
-        'needs_revision' => 'Needs Revision',
-        default => ucwords(str_replace('_', ' ', $status))
+        'Not Reviewed' => 'Not Reviewed',
+        'Needs Revision' => 'Needs Revision',
+        'Approved' => 'Approved',
+        default => $status
     };
 }
 
@@ -46,12 +44,56 @@ function formatDateTimeValue(?string $value): string
     return $ts ? date('F j, Y g:i A', $ts) : 'N/A';
 }
 
+function getNarrativeBanner(string $event_status, ?string $admin_remarks = null): array
+{
+    $class = strtolower(str_replace(' ', '-', $event_status));
+    $title = 'Narrative Report Status';
+    $message = '';
+
+    switch ($event_status) {
+        case 'Approved':
+            $message = "This event is approved. You may now submit the Narrative Report and post-event details.";
+            break;
+
+        case 'Needs Revision':
+            $message = "This Narrative Report or related event submission needs revision. Please review the remarks and update your submission.";
+            break;
+
+        case 'Completed':
+            $message = "This event is already completed. Narrative Report editing is no longer available.";
+            break;
+
+        case 'Pending Review':
+            $message = "This event is still in the pre-event review stage. Narrative Report submission is not yet available.";
+            break;
+
+        case 'Draft':
+            $message = "This event is still in draft status. Narrative Report submission is not yet available.";
+            break;
+
+        default:
+            $message = "Narrative Report status is currently unavailable.";
+            break;
+    }
+
+    if (!empty($admin_remarks)) {
+        $message .= "<br><strong>Admin remarks:</strong> " . htmlspecialchars($admin_remarks);
+    }
+
+    return [
+        'title' => $title,
+        'message' => $message,
+        'class' => $class
+    ];
+}
+
 /* ================= FETCH NARRATIVE REPORT REQUIREMENT ================= */
 $sql = "
     SELECT
         e.event_id,
         e.event_name,
         e.event_status,
+        e.admin_remarks,
         e.archived_at,
 
         er.event_req_id,
@@ -59,6 +101,7 @@ $sql = "
         er.review_status,
         er.deadline,
         er.reviewed_at,
+        er.reviewer_id,
         er.remarks,
 
         em.target_metric,
@@ -93,13 +136,25 @@ if (!$row) {
 
 $event_req_id = (int) $row["event_req_id"];
 $event_name = $row["event_name"] ?? "";
+$event_status = $row["event_status"] ?? "";
 $narrative = $row["narrative"] ?? "";
 $video_documentation_link = $row["video_documentation_link"] ?? "";
 $target_metric = $row["target_metric"] ?? "";
 $actual_metric = $row["actual_metric"] ?? "";
+$is_archived = !empty($row['archived_at']);
+
+/* ================= ENFORCE EDIT RULES ================= */
+$allowed_narrative_statuses = ['Approved', 'Needs Revision'];
+$can_edit_narrative = !$is_archived && in_array($event_status, $allowed_narrative_statuses, true);
+
+$status_banner = getNarrativeBanner($event_status, $row['admin_remarks'] ?? null);
 
 /* ================= HANDLE SUBMISSION ================= */
 if (isset($_POST["save_narrative_report"])) {
+    if (!$can_edit_narrative) {
+        popup_error("Narrative Report submission is not allowed while the event status is: " . $event_status);
+    }
+
     $narrative = trim($_POST["narrative"] ?? "");
     $video_documentation_link = trim($_POST["video_documentation_link"] ?? "");
     $actual_metric = trim($_POST["actual_metric"] ?? "");
@@ -140,62 +195,94 @@ if (isset($_POST["save_narrative_report"])) {
             [$event_req_id, $narrative, $video_documentation_link]
         );
 
-        $checkMetricSql = "
+        $metricExists = fetchOne(
+            $conn,
+            "
             SELECT event_id
             FROM event_metrics
             WHERE event_id = ?
             LIMIT 1
-        ";
-        $metricExists = fetchOne($conn, $checkMetricSql, "i", [$event_id]);
+            ",
+            "i",
+            [$event_id]
+        );
 
         if ($metricExists) {
-            $updateMetricSql = "
+            execQuery(
+                $conn,
+                "
                 UPDATE event_metrics
                 SET actual_metric = ?
                 WHERE event_id = ?
-            ";
-            execQuery($conn, $updateMetricSql, "si", [$actual_metric !== '' ? $actual_metric : null, $event_id]);
+                ",
+                "si",
+                [$actual_metric !== '' ? $actual_metric : null, $event_id]
+            );
         } else {
-            $insertMetricSql = "
+            execQuery(
+                $conn,
+                "
                 INSERT INTO event_metrics (event_id, target_metric, actual_metric)
                 VALUES (?, ?, ?)
-            ";
-            execQuery($conn, $insertMetricSql, "iss", [$event_id, $target_metric, $actual_metric !== '' ? $actual_metric : null]);
+                ",
+                "iss",
+                [$event_id, $target_metric, $actual_metric !== '' ? $actual_metric : null]
+            );
         }
 
-        $updateRequirementSql = "
+        /* Reset requirement review cycle */
+        execQuery(
+            $conn,
+            "
             UPDATE event_requirements
             SET
-                submission_status = 'uploaded',
+                submission_status = 'Uploaded',
+                review_status = 'Not Reviewed',
+                reviewed_at = NULL,
+                reviewer_id = NULL,
+                remarks = NULL,
                 updated_at = CURRENT_TIMESTAMP
             WHERE event_req_id = ?
-        ";
+            ",
+            "i",
+            [$event_req_id]
+        );
 
-        execQuery($conn, $updateRequirementSql, "i", [$event_req_id]);
-
-        $countUploadedSql = "
+        $uploadedRes = fetchOne(
+            $conn,
+            "
             SELECT COUNT(*) AS uploaded_total
             FROM event_requirements
             WHERE event_id = ?
-              AND submission_status = 'uploaded'
-        ";
-        $uploadedRes = fetchOne($conn, $countUploadedSql, "i", [$event_id]);
+              AND submission_status = 'Uploaded'
+            ",
+            "i",
+            [$event_id]
+        );
         $docs_uploaded = (int) ($uploadedRes["uploaded_total"] ?? 0);
 
-        $countTotalSql = "
+        $totalRes = fetchOne(
+            $conn,
+            "
             SELECT COUNT(*) AS total_docs
             FROM event_requirements
             WHERE event_id = ?
-        ";
-        $totalRes = fetchOne($conn, $countTotalSql, "i", [$event_id]);
+            ",
+            "i",
+            [$event_id]
+        );
         $docs_total = (int) ($totalRes["total_docs"] ?? 0);
 
-        $updateEventCountsSql = "
+        execQuery(
+            $conn,
+            "
             UPDATE events
             SET docs_uploaded = ?, docs_total = ?, updated_at = CURRENT_TIMESTAMP
             WHERE event_id = ?
-        ";
-        execQuery($conn, $updateEventCountsSql, "iii", [$docs_uploaded, $docs_total, $event_id]);
+            ",
+            "iii",
+            [$docs_uploaded, $docs_total, $event_id]
+        );
 
         $conn->commit();
 
@@ -207,7 +294,6 @@ if (isset($_POST["save_narrative_report"])) {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -242,45 +328,48 @@ if (isset($_POST["save_narrative_report"])) {
                     <a href="view_event.php?id=<?= (int) $event_id ?>" class="btn-secondary">Back</a>
                 </div>
 
-                <div class="status-banner">
+                <div class="status-banner status-<?= htmlspecialchars($status_banner['class']) ?>"
+                    style="flex-direction: column;">
                     <div class="status-content">
-                        <h3>Status Overview</h3>
+                        <h3><?= htmlspecialchars($status_banner['title']) ?></h3>
+                        <p><?= $status_banner['message'] ?></p>
                     </div>
-                    <div class="card-body">
-                        <div class="detail-grid">
-                            <div class="detail-item">
-                                <label>Submission Status</label>
-                                <p><?= htmlspecialchars(formatSubmissionStatus($row['submission_status'] ?? 'pending')) ?>
-                                </p>
-                            </div>
-                            <div class="detail-item">
-                                <label>Review Status</label>
-                                <p><?= htmlspecialchars(formatReviewStatus($row['review_status'] ?? 'not_reviewed')) ?>
-                                </p>
-                            </div>
-                            <div class="detail-item">
-                                <label>Deadline</label>
-                                <p><?= formatDateTimeValue($row['deadline'] ?? null) ?></p>
-                            </div>
-                            <div class="detail-item">
-                                <label>Submitted At</label>
-                                <p><?= formatDateTimeValue($row['submitted_at'] ?? null) ?></p>
-                            </div>
-                            <div class="detail-item">
-                                <label>Target Metric</label>
-                                <p><?= !empty($target_metric) ? htmlspecialchars($target_metric) : 'N/A' ?></p>
-                            </div>
-                            <div class="detail-item">
-                                <label>Actual Metric</label>
-                                <p><?= !empty($actual_metric) ? htmlspecialchars($actual_metric) : 'N/A' ?></p>
-                            </div>
-                            <?php if (!empty($row['remarks'])): ?>
-                                <div class="detail-item full-width">
-                                    <label>Admin Remarks</label>
-                                    <p><?= nl2br(htmlspecialchars($row['remarks'])) ?></p>
-                                </div>
-                            <?php endif; ?>
+                </div>
+
+                <div class="card-body">
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Submission Status</label>
+                            <p><?= htmlspecialchars(formatSubmissionStatus($row['submission_status'] ?? 'Pending')) ?>
+                            </p>
                         </div>
+                        <div class="detail-item">
+                            <label>Review Status</label>
+                            <p><?= htmlspecialchars(formatReviewStatus($row['review_status'] ?? 'Not Reviewed')) ?></p>
+                        </div>
+                        <div class="detail-item">
+                            <label>Deadline</label>
+                            <p><?= formatDateTimeValue($row['deadline'] ?? null) ?></p>
+                        </div>
+                        <div class="detail-item">
+                            <label>Submitted At</label>
+                            <p><?= formatDateTimeValue($row['submitted_at'] ?? null) ?></p>
+                        </div>
+                        <div class="detail-item">
+                            <label>Target Metric</label>
+                            <p><?= !empty($target_metric) ? htmlspecialchars($target_metric) : 'N/A' ?></p>
+                        </div>
+                        <div class="detail-item">
+                            <label>Actual Metric</label>
+                            <p><?= !empty($actual_metric) ? htmlspecialchars($actual_metric) : 'N/A' ?></p>
+                        </div>
+
+                        <?php if (!empty($row['remarks'])): ?>
+                            <div class="detail-item full-width">
+                                <label>Admin Remarks</label>
+                                <p><?= nl2br(htmlspecialchars($row['remarks'])) ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -303,8 +392,8 @@ if (isset($_POST["save_narrative_report"])) {
                                     Summarize what happened during the event, including key activities, outcomes, and
                                     highlights.
                                 </small>
-                                <textarea name="narrative" id="narrative"
-                                    rows="12"><?= htmlspecialchars($narrative) ?></textarea>
+                                <textarea name="narrative" id="narrative" rows="12" <?= $can_edit_narrative ? '' : 'readonly' ?>>
+                                <?= htmlspecialchars($narrative) ?> </textarea>
                             </div>
 
                             <div class="field long-field">
@@ -315,7 +404,7 @@ if (isset($_POST["save_narrative_report"])) {
                                 </small>
                                 <input type="text" name="actual_metric" id="actual_metric"
                                     value="<?= htmlspecialchars($actual_metric) ?>"
-                                    placeholder="82% Satisfaction Rating">
+                                    placeholder="82% Satisfaction Rating" <?= $can_edit_narrative ? '' : 'readonly' ?>>
                             </div>
 
                             <div class="field long-field">
@@ -325,17 +414,20 @@ if (isset($_POST["save_narrative_report"])) {
                                     Paste a valid link to Google Drive, YouTube, Facebook, or another approved source.
                                 </small>
                                 <input type="url" name="video_documentation_link" id="video_documentation_link"
-                                    value="<?= htmlspecialchars($video_documentation_link) ?>"
-                                    placeholder="https://...">
+                                    value="<?= htmlspecialchars($video_documentation_link) ?>" placeholder="https://..."
+                                    <?= $can_edit_narrative ? '' : 'readonly' ?>>
                             </div>
                         </div>
                     </div>
 
                     <div class="step-actions">
                         <a href="view_event.php?id=<?= (int) $event_id ?>" class="btn-secondary">Cancel</a>
-                        <button type="submit" name="save_narrative_report" class="btn-primary">
-                            Save Narrative Report
-                        </button>
+
+                        <?php if ($can_edit_narrative): ?>
+                            <button type="submit" name="save_narrative_report" class="btn-primary">
+                                Save Narrative Report
+                            </button>
+                        <?php endif; ?>
                     </div>
                 </form>
 

@@ -10,14 +10,7 @@ if (!isset($_SESSION["user_id"])) {
 $user_id = (int) $_SESSION["user_id"];
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
-/* ================= EVENTS QUERY =================
-   Uses:
-   - events
-   - event_type
-   - event_dates
-   - event_location
-   - docs_total / docs_uploaded from events
-*/
+/* ================= EVENTS QUERY ================= */
 $fetchUserEventsSql = "
     SELECT
         e.event_id,
@@ -34,13 +27,7 @@ $fetchUserEventsSql = "
         ed.start_datetime,
         ed.end_datetime,
 
-        el.venue_platform,
-
-        CASE
-            WHEN e.docs_total > 0 AND e.docs_uploaded < e.docs_total THEN 'pending'
-            WHEN ed.end_datetime IS NOT NULL AND ed.end_datetime >= NOW() THEN 'active'
-            ELSE 'completed'
-        END AS event_phase
+        el.venue_platform
 
     FROM events e
     LEFT JOIN event_type et
@@ -51,12 +38,14 @@ $fetchUserEventsSql = "
         ON e.event_id = el.event_id
     WHERE e.user_id = ?
       AND e.archived_at IS NULL
-
     ORDER BY
-        CASE
-            WHEN e.docs_total > 0 AND e.docs_uploaded < e.docs_total THEN 1
-            WHEN ed.end_datetime IS NOT NULL AND ed.end_datetime >= NOW() THEN 2
-            ELSE 3
+        CASE e.event_status
+            WHEN 'Draft' THEN 1
+            WHEN 'Needs Revision' THEN 2
+            WHEN 'Pending Review' THEN 3
+            WHEN 'Approved' THEN 4
+            WHEN 'Completed' THEN 5
+            ELSE 6
         END,
         CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
         ed.start_datetime DESC,
@@ -72,25 +61,43 @@ $events = fetchAll(
 
 /* ================= SUMMARY COUNTS ================= */
 $total_events = count($events);
-$active = 0;
-$pending = 0;
-$completed = 0;
+$draft_count = 0;
+$pending_review_count = 0;
+$needs_revision_count = 0;
+$approved_count = 0;
+$completed_count = 0;
 
 foreach ($events as $e) {
-    switch ($e['event_phase']) {
-        case 'active':
-            $active++;
+    switch ($e['event_status']) {
+        case 'Draft':
+            $draft_count++;
             break;
-        case 'pending':
-            $pending++;
+        case 'Pending Review':
+            $pending_review_count++;
             break;
-        case 'completed':
-            $completed++;
+        case 'Needs Revision':
+            $needs_revision_count++;
+            break;
+        case 'Approved':
+            $approved_count++;
+            break;
+        case 'Completed':
+            $completed_count++;
             break;
     }
 }
-?>
 
+/* ================= HELPERS ================= */
+function normalizeEventStatusClass(string $status): string
+{
+    return strtolower(str_replace(' ', '-', $status));
+}
+
+function canEditEvent(string $status): bool
+{
+    return in_array($status, ['Draft', 'Pending Review', 'Needs Revision'], true);
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -132,17 +139,27 @@ foreach ($events as $e) {
                     </div>
 
                     <div class="summary-card">
-                        <span class="summary-num"><?= $active ?></span>
-                        <span class="summary-label">Active</span>
+                        <span class="summary-num"><?= $draft_count ?></span>
+                        <span class="summary-label">Drafts</span>
                     </div>
 
                     <div class="summary-card">
-                        <span class="summary-num"><?= $pending ?></span>
+                        <span class="summary-num"><?= $pending_review_count ?></span>
                         <span class="summary-label">Pending Review</span>
                     </div>
 
                     <div class="summary-card">
-                        <span class="summary-num"><?= $completed ?></span>
+                        <span class="summary-num"><?= $needs_revision_count ?></span>
+                        <span class="summary-label">Needs Revision</span>
+                    </div>
+
+                    <div class="summary-card">
+                        <span class="summary-num"><?= $approved_count ?></span>
+                        <span class="summary-label">Approved</span>
+                    </div>
+
+                    <div class="summary-card">
+                        <span class="summary-num"><?= $completed_count ?></span>
                         <span class="summary-label">Completed</span>
                     </div>
                 </div>
@@ -159,9 +176,11 @@ foreach ($events as $e) {
 
                     <div class="filter-tabs" id="filterTabs">
                         <button class="filter-tab active" onclick="setFilter(this,'all')">All Events</button>
-                        <button class="filter-tab" onclick="setFilter(this,'active')">Active</button>
-                        <button class="filter-tab" onclick="setFilter(this,'pending')">Pending</button>
-                        <button class="filter-tab" onclick="setFilter(this,'completed')">Completed</button>
+                        <button class="filter-tab" onclick="setFilter(this,'Draft')">Drafts</button>
+                        <button class="filter-tab" onclick="setFilter(this,'Pending Review')">Pending Review</button>
+                        <button class="filter-tab" onclick="setFilter(this,'Needs Revision')">Needs Revision</button>
+                        <button class="filter-tab" onclick="setFilter(this,'Approved')">Approved</button>
+                        <button class="filter-tab" onclick="setFilter(this,'Completed')">Completed</button>
                     </div>
                 </div>
 
@@ -174,6 +193,7 @@ foreach ($events as $e) {
 
                         $org_clean = $event['organizing_body'] ?? '';
                         $decoded_orgs = json_decode($org_clean, true);
+
                         if (is_array($decoded_orgs)) {
                             $org_clean = implode(', ', $decoded_orgs);
                         } else {
@@ -187,6 +207,7 @@ foreach ($events as $e) {
                             ($event['nature'] ?? '') . ' ' .
                             $org_clean . ' ' .
                             ($event['venue_platform'] ?? '') . ' ' .
+                            ($event['event_status'] ?? '') . ' ' .
                             (!empty($event['start_datetime']) ? date('M j Y', strtotime($event['start_datetime'])) : '') . ' ' .
                             (!empty($event['end_datetime']) ? date('M j Y', strtotime($event['end_datetime'])) : '')
                         );
@@ -194,9 +215,12 @@ foreach ($events as $e) {
                         $pct_color_ref = max(0, min(100, (int) $pct));
                         $hue = ($pct_color_ref / 100) * 120;
                         $progress_color = "hsl($hue, 70%, 45%)";
+
+                        $status_class = normalizeEventStatusClass($event['event_status'] ?? 'Draft');
+                        $can_edit = canEditEvent($event['event_status'] ?? 'Draft');
                         ?>
 
-                        <article class="event-card" data-status="<?= htmlspecialchars($event['event_phase']) ?>"
+                        <article class="event-card" data-status="<?= htmlspecialchars($event['event_status']) ?>"
                             data-search="<?= htmlspecialchars($search_blob) ?>">
 
                             <div class="event-card-top">
@@ -204,10 +228,10 @@ foreach ($events as $e) {
                                     <?= htmlspecialchars($event['activity_type'] ?? 'N/A') ?>
                                 </span>
 
-                                <span class="event-status status-<?= htmlspecialchars($event['event_phase']) ?>">
+                                <span class="event-status status-<?= htmlspecialchars($status_class) ?>">
                                     <span class="status-dot"></span>
                                     <span class="status-text">
-                                        <?= ucfirst($event['event_phase']) ?>
+                                        <?= htmlspecialchars($event['event_status']) ?>
                                     </span>
                                 </span>
                             </div>
@@ -271,10 +295,13 @@ foreach ($events as $e) {
                                 </span>
 
                                 <div class="card-actions">
-                                    <a href="create_event.php?id=<?= (int) $event['event_id'] ?>"
-                                        class="btn-secondary btn-edit">
-                                        Edit
-                                    </a>
+                                    <?php if ($can_edit): ?>
+                                        <a href="create_event.php?id=<?= (int) $event['event_id'] ?>"
+                                            class="btn-secondary btn-edit">
+                                            Edit
+                                        </a>
+                                    <?php endif; ?>
+
                                     <a href="view_event.php?id=<?= (int) $event['event_id'] ?>"
                                         class="btn-primary btn-view">
                                         View

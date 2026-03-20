@@ -63,7 +63,7 @@ try {
             nature VARCHAR(255) NOT NULL,
             event_name VARCHAR(255) NOT NULL,
 
-            event_status ENUM('Draft','Pending Review','Approved','Rejected','Completed') NOT NULL DEFAULT 'Draft',
+            event_status ENUM('Draft','Pending Review','Needs Revision','Approved','Completed') NOT NULL DEFAULT 'Draft',
             admin_remarks TEXT NULL,
 
             docs_total INT NOT NULL DEFAULT 0,
@@ -168,8 +168,8 @@ try {
             event_id INT NOT NULL,
             req_template_id INT NOT NULL,
 
-            submission_status ENUM('pending','uploaded') NOT NULL DEFAULT 'pending',
-            review_status ENUM('not_reviewed','approved','rejected','needs_revision') NOT NULL DEFAULT 'not_reviewed',
+            submission_status ENUM('Pending','Uploaded') NOT NULL DEFAULT 'Pending',
+            review_status ENUM('Not Reviewed','Approved','Needs Revision') NOT NULL DEFAULT 'Not Reviewed',
 
             deadline DATETIME NULL,
             reviewed_at DATETIME NULL,
@@ -483,7 +483,7 @@ try {
         $insertEventRequirementSql = "
     INSERT INTO event_requirements (
         event_id, req_template_id, submission_status, review_status, deadline
-    ) VALUES (?, ?, 'pending', 'not_reviewed', ?)
+    ) VALUES (?, ?, 'Pending', 'Not Reviewed', ?)
     ON DUPLICATE KEY UPDATE
         deadline = VALUES(deadline),
         updated_at = CURRENT_TIMESTAMP
