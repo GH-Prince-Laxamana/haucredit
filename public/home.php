@@ -258,8 +258,8 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                         <?php endif; ?>
                     </header>
 
-                    <ul class="events-table">
-                        <?php if (!empty($show_limit_events)): ?>
+                    <?php if ($show_limit_events): ?>
+                        <ul class="events-table">
                             <?php foreach ($show_limit_events as $event):
                                 $total_docs = (int) ($event['docs_total'] ?? 0);
                                 $uploaded_docs = (int) ($event['docs_uploaded'] ?? 0);
@@ -303,10 +303,20 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                                     </a>
                                 </li>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <li>No current events available.</li>
-                        <?php endif; ?>
-                    </ul>
+                        </ul>
+                    <?php else: ?>
+                        <!-- ===== EMPTY STATE FOR ACTIVE EVENTS ===== -->
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <i class="fa-solid fa-file-circle-xmark"></i>
+                            </div>
+                            <h3>No events found</h3>
+                            <p>Try adjusting your search or filter, or create a new event.</p>
+                            <a href="create_event.php" class="btn-primary">
+                                Create Event
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </section>
 
                 <section class="home-section">
@@ -317,8 +327,8 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                         <?php endif; ?>
                     </header>
 
-                    <ul>
-                        <?php if (!empty($show_limit_deadlines)): ?>
+                    <?php if ($show_limit_deadlines): ?>
+                        <ul>
                             <?php foreach ($show_limit_deadlines as $d): ?>
                                 <li>
                                     <a class="req-card" href="view_event.php?id=<?= (int) $d['event_id'] ?>">
@@ -346,10 +356,17 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                                     </a>
                                 </li>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <li>No upcoming deadlines.</li>
-                        <?php endif; ?>
-                    </ul>
+                        </ul>
+                    <?php else: ?>
+                        <!-- ===== EMPTY STATE FOR DEADLINES ===== -->
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <i class="fa-regular fa-calendar-check"></i>
+                            </div>
+                            <h3>No upcoming deadlines</h3>
+                            <p>You're all caught up! No pending requirements at the moment.</p>
+                        </div>
+                    <?php endif; ?>
                 </section>
             </section>
 
