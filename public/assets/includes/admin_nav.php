@@ -10,6 +10,7 @@ if ($user_id) {
         SELECT profile_pic
         FROM users
         WHERE user_id = ?
+        LIMIT 1
     ";
 
     $user_profile = fetchOne(
@@ -21,6 +22,17 @@ if ($user_id) {
 
     $profile_pic = $user_profile['profile_pic'] ?? "default.jpg";
 }
+
+/* ================= ACTIVE NAV HELPERS ================= */
+$dashboard_pages = ['admin_dashboard.php'];
+$event_pages = ['admin_events.php', 'admin_manage_event.php', 'admin_review_narrative.php'];
+$user_pages = ['admin_users.php'];
+$config_pages = ['admin_configurations.php'];
+
+function isActiveNav(string $current_page, array $pages): string
+{
+    return in_array($current_page, $pages, true) ? 'active' : '';
+}
 ?>
 
 <head>
@@ -28,54 +40,47 @@ if ($user_id) {
 </head>
 
 <aside class="sidebar">
-    <img class="avatar" src="assets/profiles/<?= $profile_pic ?>" alt="<?= $username ?>">
+    <img class="avatar" src="assets/profiles/<?= htmlspecialchars($profile_pic) ?>" alt="<?= $username ?>">
 
     <div class="brand">
         <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
 
         <div class="brand-text">
             <div class="brand-name">HAUCREDIT</div>
-            <div class="brand-subtitle">Compliance Tracker</div>
+            <div class="brand-subtitle">Admin Panel</div>
         </div>
     </div>
 
     <nav class="nav">
-
         <!-- Dashboard -->
-        <a class="nav-item <?= ($current_page == 'admin_dashboard.php') ? 'active' : '' ?>" href="admin_dashboard.php">
-            <span><i class="fa-regular fa-house"></i> Admin Dashboard</span>
+        <a class="nav-item <?= isActiveNav($current_page, $dashboard_pages) ?>" href="admin_dashboard.php">
+            <span><i class="fa-solid fa-chart-line"></i> Dashboard</span>
         </a>
 
-        <a class="nav-item <?= ($current_page == 'admin_events.php') ? 'active' : '' ?>" href="admin_events.php">
-            <span><i class="fa-regular fa-house"></i> Admin Events</span>
+        <!-- Event Management -->
+        <a class="nav-item <?= isActiveNav($current_page, $event_pages) ?>" href="admin_events.php">
+            <span><i class="fa-solid fa-calendar-check"></i> Event Management</span>
+        </a>
+
+        <!-- Users -->
+        <a class="nav-item <?= isActiveNav($current_page, $user_pages) ?>" href="admin_users.php">
+            <span><i class="fa-solid fa-users"></i> Users</span>
+        </a>
+
+        <!-- Configurations -->
+        <a class="nav-item <?= isActiveNav($current_page, $config_pages) ?>" href="admin_configurations.php">
+            <span><i class="fa-solid fa-sliders"></i> Configurations</span>
         </a>
 
         <!-- Account -->
         <div class="account">
-
-            <?php
-            if ($current_page === 'about.php' && $username === "") {
-                echo '<button class="account-btn" type="button">
-                            <span style="text-align: center; margin: auto;"> Please Sign In to Continue </span>
-                        </button>';
-            } else {
-                echo '<a class="account-btn" href="profile.php">
-                            <span>My Account</span>
-                        </a>';
-            }
-            ?>
+            <a class="account-btn" href="profile.php">
+                <span><i class="fa-regular fa-user"></i> My Account</span>
+            </a>
 
             <form action="logout.php" method="POST">
-                <?php
-                if ($current_page === 'about.php' && $username === "") {
-                    echo '<button type="submit" class="logout-link">Sign In</button>';
-                } else {
-                    echo '<button type="submit" class="logout-link">Logout</button>';
-                }
-                ?>
+                <button type="submit" class="logout-link">Logout</button>
             </form>
-
         </div>
-
     </nav>
 </aside>

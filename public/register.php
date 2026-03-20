@@ -1,9 +1,7 @@
 <?php
 session_start();
 require_once "../app/database.php";
-
-// ===== SECURITY HEADERS =====
-require_once("../app/security_headers.php");
+require_once "../app/security_headers.php";
 send_security_headers();
 
 // ===== SELF-REFERENCING URL =====
@@ -14,6 +12,22 @@ if (isset($_SESSION["user_id"])) {
     header("Location: home.php");
     exit();
 }
+
+// ===== LOAD ORGANIZATION OPTIONS FROM DB =====
+$orgRows = fetchAll(
+    $conn,
+    "
+    SELECT org_name
+    FROM config_org_options
+    WHERE is_active = 1
+    ORDER BY sort_order ASC, org_name ASC
+    "
+);
+
+$org_options = array_map(
+    fn($row) => $row['org_name'],
+    $orgRows
+);
 
 // ===== VARIABLE INITIALIZATION =====
 $error = "";
@@ -30,7 +44,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $confirm = trim($_POST["confirm_password"] ?? "");
 
     // ===== VALIDATION: REQUIRED FIELDS =====
-    if ($username === "" || $email === "" || $stud_num === "" || $org_body === "" || $password === "" || $confirm === "") {
+    if (
+        $username === "" ||
+        $email === "" ||
+        $stud_num === "" ||
+        $org_body === "" ||
+        $password === "" ||
+        $confirm === ""
+    ) {
         $error = "Please fill in all fields.";
 
         // ===== VALIDATION: EMAIL FORMAT =====
@@ -45,6 +66,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (strlen($stud_num) < 8) {
         $error = "Invalid student number.";
 
+        // ===== VALIDATION: USERNAME LENGTH =====
+    } elseif (strlen($username) < 4) {
+        $error = "Username must be at least 4 characters.";
+
+        // ===== VALIDATION: ORGANIZING BODY MUST EXIST IN CONFIG =====
+    } elseif (!in_array($org_body, $org_options, true)) {
+        $error = "Please select a valid organizing body.";
+
         // ===== VALIDATION: PASSWORD MATCH =====
     } elseif ($password !== $confirm) {
         $error = "Passwords do not match.";
@@ -56,7 +85,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         !preg_match('/[a-z]/', $password) ||
         !preg_match('/[0-9]/', $password)
     ) {
-        $error = "Password must be at least 8 characters including a mix of uppercase (A-Z), lowercase (a-z), and numeric (0-9) characters";
+        $error = "Password must be at least 8 characters including a mix of uppercase (A-Z), lowercase (a-z), and numeric (0-9) characters.";
 
     } else {
         // ===== PASSWORD HASHING =====
@@ -64,8 +93,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         // ===== DATABASE INSERTION =====
         $insertUserSql = "
-            INSERT INTO users 
-                (user_name, user_password, user_email, stud_num, org_body, user_reg_date) 
+            INSERT INTO users
+                (user_name, user_password, user_email, stud_num, org_body, user_reg_date)
             VALUES (?, ?, ?, ?, ?, NOW())
         ";
 
@@ -100,8 +129,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 
 <body>
-    <!-- ===== NAVIGATION BAR ===== -->
-    <!-- Top navigation bar with branding and links -->
     <div class="navbar">
         <div class="navbar-brand">
             <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
@@ -115,11 +142,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
     </div>
 
-    <!-- ===== AUTHENTICATION CONTAINER ===== -->
-    <!-- Main container for the registration page layout -->
     <div class="auth-container">
-        <!-- ===== LEFT PANEL ===== -->
-        <!-- Branding and feature highlights -->
         <div class="auth-left-panel">
             <div class="brand-title">
                 <h1 class="brand-name">HAU<span class="brand-accent">CREDIT</span></h1>
@@ -133,15 +156,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </ul>
         </div>
 
-        <!-- ===== RIGHT PANEL ===== -->
-        <!-- Registration form and messages -->
         <div class="auth-right-panel">
             <div class="auth-card">
                 <h2>Register Account</h2>
                 <div class="subtitle">For recognized student organizations only.</div>
 
-                <!-- ===== REGISTRATION FORM ===== -->
-                <!-- Form for user registration with validation -->
                 <form action="<?= $self ?>" method="post">
                     <div class="form-group">
                         <label for="username">Username</label>
@@ -187,20 +206,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <button type="submit">Create Account</button>
                 </form>
 
-                <!-- ===== ERROR MESSAGE ===== -->
-                <!-- Display error message if registration fails -->
                 <?php if ($error !== ""): ?>
                     <div class="notice error"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
 
-                <!-- ===== SUCCESS MESSAGE ===== -->
-                <!-- Display success message if registration succeeds -->
                 <?php if ($success !== ""): ?>
                     <div class="notice success"><?= htmlspecialchars($success) ?></div>
                 <?php endif; ?>
 
-                <!-- ===== LOGIN LINK ===== -->
-                <!-- Link to login page for existing users -->
                 <div class="link">
                     Already a Member? <a href="index.php">Log In</a>
                 </div>
@@ -208,8 +221,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
     </div>
 
-    <!-- ===== FOOTER ===== -->
-    <!-- Include the site footer -->
     <?php include 'assets/includes/footer.php' ?>
 </body>
 

@@ -16,6 +16,22 @@ $error = $_SESSION["error"] ?? "";
 
 unset($_SESSION["success"], $_SESSION["error"]);
 
+// ===== LOAD ORGANIZATION OPTIONS FROM DB =====
+$orgRows = fetchAll(
+    $conn,
+    "
+    SELECT org_name
+    FROM config_org_options
+    WHERE is_active = 1
+    ORDER BY sort_order ASC, org_name ASC
+    "
+);
+
+$org_options = array_map(
+    fn($row) => $row['org_name'],
+    $orgRows
+);
+
 // ===== GET USER DATA =====
 $fetchUserProfileSql = "
     SELECT user_name, stud_num, user_email, org_body, profile_pic, user_password
@@ -30,6 +46,12 @@ $user = fetchOne(
     [$user_id]
 );
 
+if (!$user) {
+    $_SESSION["error"] = "User profile not found.";
+    header("Location: index.php");
+    exit();
+}
+
 // ===== PROFILE IMAGE UPLOAD =====
 if (isset($_POST["upload_photo"])) {
     if (isset($_FILES["profile_pic"]) && $_FILES["profile_pic"]["error"] === 0) {
@@ -37,7 +59,7 @@ if (isset($_POST["upload_photo"])) {
         $ext = strtolower(pathinfo($_FILES["profile_pic"]["name"], PATHINFO_EXTENSION));
 
         if (!in_array($ext, $allowed, true)) {
-            $_SESSION["error"] = "Only .JPG, .PNG, .WEBP allowed.";
+            $_SESSION["error"] = "Only .JPG, .JPEG, .PNG, and .WEBP files are allowed.";
             header("Location: profile.php");
             exit();
         }
@@ -49,10 +71,22 @@ if (isset($_POST["upload_photo"])) {
             exit();
         }
 
-        $newName = "user_" . $user_id . "_" . time() . "." . $ext;
-        $target = "assets/profiles/" . $newName;
+        $uploadDir = __DIR__ . "/assets/profiles/";
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
 
-        if (move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $target)) {
+        $newName = "user_" . $user_id . "_" . time() . "." . $ext;
+        $targetPath = $uploadDir . $newName;
+
+        if (move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $targetPath)) {
+            if (!empty($user['profile_pic']) && $user['profile_pic'] !== 'default.jpg') {
+                $oldPicPath = $uploadDir . $user['profile_pic'];
+                if (is_file($oldPicPath)) {
+                    @unlink($oldPicPath);
+                }
+            }
+
             $updateProfilePictureSql = "
                 UPDATE users
                 SET profile_pic = ?
@@ -69,16 +103,24 @@ if (isset($_POST["upload_photo"])) {
             $_SESSION["success"] = "Profile picture updated.";
             header("Location: profile.php");
             exit();
+        } else {
+            $_SESSION["error"] = "Failed to upload profile picture.";
+            header("Location: profile.php");
+            exit();
         }
+    } else {
+        $_SESSION["error"] = "Please select an image to upload.";
+        header("Location: profile.php");
+        exit();
     }
 }
 
 // ===== REMOVE PROFILE PHOTO =====
 if (isset($_POST['remove_photo'])) {
     if (!empty($user['profile_pic']) && $user['profile_pic'] !== 'default.jpg') {
-        $oldPic = "assets/profiles/" . $user['profile_pic'];
-        if (file_exists($oldPic)) {
-            unlink($oldPic);
+        $oldPic = __DIR__ . "/assets/profiles/" . $user['profile_pic'];
+        if (is_file($oldPic)) {
+            @unlink($oldPic);
         }
 
         $resetProfilePictureSql = "
@@ -137,6 +179,12 @@ if (isset($_POST["update_profile"])) {
         exit();
     }
 
+    if (!in_array($org, $org_options, true)) {
+        $_SESSION["error"] = "Please select a valid organizing body.";
+        header("Location: profile.php");
+        exit();
+    }
+
     // ===== VALIDATION: UNIQUE CONSTRAINTS =====
     $checkUniqueProfileFieldsSql = "
         SELECT user_name, user_email, stud_num
@@ -154,11 +202,11 @@ if (isset($_POST["update_profile"])) {
     );
 
     if ($row) {
-        if ($row["user_name"] === $username) {
+        if (($row["user_name"] ?? '') === $username) {
             $_SESSION["error"] = "Username already exists.";
-        } elseif ($row["user_email"] === $email) {
+        } elseif (($row["user_email"] ?? '') === $email) {
             $_SESSION["error"] = "Email already exists.";
-        } elseif ($row["stud_num"] === $studnum) {
+        } elseif (($row["stud_num"] ?? '') === $studnum) {
             $_SESSION["error"] = "Student number already exists.";
         }
 
@@ -179,6 +227,9 @@ if (isset($_POST["update_profile"])) {
         "ssssi",
         [$username, $studnum, $email, $org, $user_id]
     );
+
+    $_SESSION["username"] = $username;
+    $_SESSION["org_body"] = $org;
 
     $_SESSION["success"] = "Profile updated successfully.";
     header("Location: profile.php");
@@ -248,14 +299,12 @@ if (isset($_POST["change_password"])) {
 </head>
 
 <body>
-    <!-- ===== SIDEBAR OVERLAY ===== -->
     <div class="sidebar-overlay"></div>
 
     <div class="app">
         <?php include 'assets/includes/general_nav.php' ?>
 
         <main class="main">
-            <!-- ===== PAGE HEADER ===== -->
             <header class="topbar">
                 <div class="title-wrap">
                     <h1>Profile Settings</h1>
@@ -264,25 +313,21 @@ if (isset($_POST["change_password"])) {
             </header>
 
             <section class="content profile-page">
-                <!-- ===== PROFILE CARD ===== -->
                 <aside class="profile-card">
                     <div class="profile-avatar-wrap">
                         <img class="profile-avatar"
                             src="assets/profiles/<?php echo htmlspecialchars($user['profile_pic'] ?? 'default.jpg'); ?>"
                             alt="Profile Picture">
 
-                        <!-- Edit Photo Button -->
                         <button class="pencil-btn" type="button" id="editPhotoBtn">
                             <img class="pencil-icon" src="assets/images/pencil.png" alt="Pencil">
                         </button>
 
-                        <!-- Hidden Upload Form -->
                         <form method="post" enctype="multipart/form-data" id="photoForm">
                             <input type="file" name="profile_pic" id="photoInput" accept="image/*" hidden>
                             <button type="submit" name="upload_photo" hidden id="photoSubmit"></button>
                         </form>
 
-                        <!-- Photo Menu Options -->
                         <div class="photo-menu" id="photoMenu" style="display:none;">
                             <button class="btn-secondary btn-smaller" type="button" id="uploadChoice">Upload
                                 Photo</button>
@@ -305,7 +350,6 @@ if (isset($_POST["change_password"])) {
                     </div>
                 </aside>
 
-                <!-- ===== IMAGE CROP MODAL ===== -->
                 <div id="cropModal" class="crop-modal">
                     <div class="crop-container">
                         <div class="crop-header">
@@ -324,9 +368,7 @@ if (isset($_POST["change_password"])) {
                     </div>
                 </div>
 
-                <!-- ===== PROFILE PANEL ===== -->
                 <section class="profile-panel">
-                    <!-- ===== FLASH MESSAGES ===== -->
                     <?php if ($success): ?>
                         <div class="alert success"><?php echo $success ?></div>
                     <?php endif; ?>
@@ -335,13 +377,11 @@ if (isset($_POST["change_password"])) {
                         <div class="alert error"><?php echo $error ?></div>
                     <?php endif; ?>
 
-                    <!-- ===== TABS ===== -->
                     <div class="tabs">
                         <button class="tab active" id="editBtn">Edit Profile</button>
                         <button class="tab" id="passBtn">Change Password</button>
                     </div>
 
-                    <!-- ===== EDIT PROFILE TAB ===== -->
                     <div id="editTab" class="tab-content active">
                         <form class="profile-form" method="post">
                             <div class="grid-2">
@@ -384,7 +424,6 @@ if (isset($_POST["change_password"])) {
                         </form>
                     </div>
 
-                    <!-- ===== CHANGE PASSWORD TAB ===== -->
                     <div id="passTab" class="tab-content">
                         <form class="pw-form" method="post">
                             <div class="pw-field">

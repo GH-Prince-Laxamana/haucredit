@@ -264,7 +264,7 @@ $review_deadlines = fetchAll($conn, $fetchReviewDeadlinesSql);
                                 $status_class = normalizeStatusClass($event['event_status'] ?? 'Pending Review');
                                 ?>
                                 <li>
-                                    <a class="event-card-container" href="manage_event.php?id=<?= (int) $event['event_id'] ?>">
+                                    <a class="event-card-container" href="admin_manage_event.php?id=<?= (int) $event['event_id'] ?>">
                                         <article class="event-card">
                                             <div class="event-main">
                                                 <div class="event-info">
@@ -313,7 +313,7 @@ $review_deadlines = fetchAll($conn, $fetchReviewDeadlinesSql);
                             <?php foreach ($attention_events as $event): ?>
                                 <?php $status_class = normalizeStatusClass($event['event_status'] ?? 'Pending Review'); ?>
                                 <li>
-                                    <a class="event-card-container" href="manage_event.php?id=<?= (int) $event['event_id'] ?>">
+                                    <a class="event-card-container" href="admin_manage_event.php?id=<?= (int) $event['event_id'] ?>">
                                         <article class="event-card">
                                             <div class="event-main">
                                                 <div class="event-info">
@@ -389,7 +389,7 @@ $review_deadlines = fetchAll($conn, $fetchReviewDeadlinesSql);
                             <?php foreach ($review_deadlines as $item): ?>
                                 <?php $status_class = normalizeStatusClass($item['event_status'] ?? 'Pending Review'); ?>
                                 <li>
-                                    <a class="req-card" href="manage_event.php?id=<?= (int) $item['event_id'] ?>">
+                                    <a class="req-card" href="admin_manage_event.php?id=<?= (int) $item['event_id'] ?>">
                                         <div class="req-item">
                                             <div class="req-title"><?= htmlspecialchars($item['event_name']) ?></div>
                                             <div class="req-sub">

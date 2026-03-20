@@ -55,11 +55,51 @@ try {
             INDEX idx_password_resets_expires (expires_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
+        /* ================= CONFIG: ORGANIZATIONS ================= */
+        "CREATE TABLE IF NOT EXISTS config_org_options (
+            org_option_id INT AUTO_INCREMENT PRIMARY KEY,
+            org_name VARCHAR(255) NOT NULL UNIQUE,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            sort_order INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        /* ================= CONFIG: BACKGROUNDS ================= */
+        "CREATE TABLE IF NOT EXISTS config_background_options (
+            background_id INT AUTO_INCREMENT PRIMARY KEY,
+            background_name VARCHAR(100) NOT NULL UNIQUE,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            sort_order INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        /* ================= CONFIG: ACTIVITY TYPES ================= */
+        "CREATE TABLE IF NOT EXISTS config_activity_types (
+            activity_type_id INT AUTO_INCREMENT PRIMARY KEY,
+            activity_type_name VARCHAR(255) NOT NULL UNIQUE,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            sort_order INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        /* ================= CONFIG: SERIES OPTIONS ================= */
+        "CREATE TABLE IF NOT EXISTS config_series_options (
+            series_option_id INT AUTO_INCREMENT PRIMARY KEY,
+            series_name VARCHAR(255) NOT NULL UNIQUE,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            sort_order INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
         /* ================= EVENTS CORE ================= */
         "CREATE TABLE IF NOT EXISTS events (
             event_id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
-            organizing_body TEXT NOT NULL,
+            organizing_body JSON NOT NULL,
             nature VARCHAR(255) NOT NULL,
             event_name VARCHAR(255) NOT NULL,
 
@@ -84,12 +124,19 @@ try {
         "CREATE TABLE IF NOT EXISTS event_type (
             event_type_id INT AUTO_INCREMENT PRIMARY KEY,
             event_id INT NOT NULL,
-            background VARCHAR(100) NOT NULL,
-            activity_type VARCHAR(150) NOT NULL,
-            series VARCHAR(100) NULL,
+            background_id INT NOT NULL,
+            activity_type_id INT NOT NULL,
+            series_option_id INT NULL,
 
             FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
-            UNIQUE KEY uniq_event_type (event_id)
+            FOREIGN KEY (background_id) REFERENCES config_background_options(background_id) ON DELETE RESTRICT,
+            FOREIGN KEY (activity_type_id) REFERENCES config_activity_types(activity_type_id) ON DELETE RESTRICT,
+            FOREIGN KEY (series_option_id) REFERENCES config_series_options(series_option_id) ON DELETE SET NULL,
+
+            UNIQUE KEY uniq_event_type (event_id),
+            INDEX idx_event_type_background (background_id),
+            INDEX idx_event_type_activity (activity_type_id),
+            INDEX idx_event_type_series (series_option_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
         /* ================= EVENT DATES ================= */
@@ -140,14 +187,16 @@ try {
             UNIQUE KEY uniq_event_logistics (event_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
+        /* ================= EVENT METRICS ================= */
         "CREATE TABLE IF NOT EXISTS event_metrics (
             event_metrics_id INT AUTO_INCREMENT PRIMARY KEY,
             event_id INT NOT NULL,
             target_metric VARCHAR(255) NOT NULL,
             actual_metric VARCHAR(255) NULL,
+
             FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
             UNIQUE KEY uniq_event_metrics (event_id)
-        );",
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
         /* ================= MASTER REQUIREMENT LIST ================= */
         "CREATE TABLE IF NOT EXISTS requirement_templates (
@@ -160,6 +209,26 @@ try {
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+
+        /* ================= CONFIG: REQUIREMENTS MAP ================= */
+        "CREATE TABLE IF NOT EXISTS config_requirements_map (
+            config_map_id INT AUTO_INCREMENT PRIMARY KEY,
+            background_id INT NOT NULL,
+            activity_type_id INT NOT NULL,
+            req_template_id INT NOT NULL,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (background_id) REFERENCES config_background_options(background_id) ON DELETE CASCADE,
+            FOREIGN KEY (activity_type_id) REFERENCES config_activity_types(activity_type_id) ON DELETE CASCADE,
+            FOREIGN KEY (req_template_id) REFERENCES requirement_templates(req_template_id) ON DELETE CASCADE,
+
+            UNIQUE KEY uniq_config_map (background_id, activity_type_id, req_template_id),
+            INDEX idx_config_map_background (background_id),
+            INDEX idx_config_map_activity_type (activity_type_id),
+            INDEX idx_config_map_req_template (req_template_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
         /* ================= REQUIREMENTS ATTACHED TO EVENTS ================= */
@@ -208,19 +277,20 @@ try {
             INDEX idx_req_file_current (is_current)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
+        /* ================= NARRATIVE REPORT DETAILS ================= */
         "CREATE TABLE IF NOT EXISTS narrative_report_details (
-    narrative_report_id INT AUTO_INCREMENT PRIMARY KEY,
-    event_req_id INT NOT NULL UNIQUE,
+            narrative_report_id INT AUTO_INCREMENT PRIMARY KEY,
+            event_req_id INT NOT NULL UNIQUE,
 
-    narrative TEXT NULL,
-    video_documentation_link VARCHAR(500) NULL,
-    submitted_at DATETIME NULL,
+            narrative TEXT NULL,
+            video_documentation_link VARCHAR(500) NULL,
+            submitted_at DATETIME NULL,
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (event_req_id) REFERENCES event_requirements(event_req_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+            FOREIGN KEY (event_req_id) REFERENCES event_requirements(event_req_id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
 
         /* ================= CALENDAR ================= */
         "CREATE TABLE IF NOT EXISTS calendar_entries (
@@ -248,6 +318,9 @@ try {
     foreach ($tables as $table) {
         $conn->query($table);
     }
+
+    /* ================= DERIVE BACKGROUND OPTIONS FROM REQUIREMENTS MAP ================= */
+    $background_options = array_keys($requirements_map);
 
     /* ================= DEFAULT ADMIN ================= */
     $existingAdminSelect = fetchOne(
@@ -322,22 +395,22 @@ try {
     }
 
     /* ================= DEFAULT REQUIREMENT TEMPLATES ================= */
-    $default_requirements = $requirement_list['default_requirements'];
-    $default_requirements_descs = $requirement_list['default_requirements_descs'];
-    $requirements_templates = $requirement_list['requirements_templates'];
+    $default_requirements = $requirement_list['default_requirements'] ?? [];
+    $default_requirements_descs = $requirement_list['default_requirements_descs'] ?? [];
+    $requirements_templates = $requirement_list['requirements_templates'] ?? [];
 
     $templateUpsertSql = "
-            INSERT INTO requirement_templates (
-                req_name, req_desc, template_url, default_due_offset_days, default_due_basis, is_active
-            )
-            VALUES (?, ?, ?, ?, ?, 1)
-            ON DUPLICATE KEY UPDATE
-                req_desc = VALUES(req_desc),
-                template_url = VALUES(template_url),
-                default_due_offset_days = VALUES(default_due_offset_days),
-                default_due_basis = VALUES(default_due_basis),
-                is_active = VALUES(is_active)
-            ";
+        INSERT INTO requirement_templates (
+            req_name, req_desc, template_url, default_due_offset_days, default_due_basis, is_active
+        )
+        VALUES (?, ?, ?, ?, ?, 1)
+        ON DUPLICATE KEY UPDATE
+            req_desc = VALUES(req_desc),
+            template_url = VALUES(template_url),
+            default_due_offset_days = VALUES(default_due_offset_days),
+            default_due_basis = VALUES(default_due_basis),
+            is_active = VALUES(is_active)
+    ";
 
     foreach ($default_requirements as $req_name) {
         $req_desc = $default_requirements_descs[$req_name] ?? null;
@@ -357,38 +430,177 @@ try {
         );
     }
 
-    /* ================= SAMPLE SYSTEM EVENT ================= */
-    $checkSystemEventSql = "
-                            SELECT event_id
-                            FROM events
-                            WHERE is_system_event = 1
-                            LIMIT 1
-                            ";
+    /* ================= SEED CONFIG: ORGANIZATIONS ================= */
+    foreach ($org_options as $index => $org_name) {
+        execQuery(
+            $conn,
+            "
+            INSERT INTO config_org_options (org_name, is_active, sort_order)
+            VALUES (?, 1, ?)
+            ON DUPLICATE KEY UPDATE
+                sort_order = VALUES(sort_order),
+                is_active = 1,
+                updated_at = CURRENT_TIMESTAMP
+            ",
+            "si",
+            [$org_name, $index + 1]
+        );
+    }
 
-    $existingEvent = fetchOne($conn, $checkSystemEventSql);
+    /* ================= SEED CONFIG: BACKGROUNDS ================= */
+    foreach ($background_options as $index => $background_name) {
+        execQuery(
+            $conn,
+            "
+            INSERT INTO config_background_options (background_name, is_active, sort_order)
+            VALUES (?, 1, ?)
+            ON DUPLICATE KEY UPDATE
+                sort_order = VALUES(sort_order),
+                is_active = 1,
+                updated_at = CURRENT_TIMESTAMP
+            ",
+            "si",
+            [$background_name, $index + 1]
+        );
+    }
+
+    /* ================= SEED CONFIG: ACTIVITY TYPES ================= */
+    foreach ($activity_types as $index => $activity_type_name) {
+        execQuery(
+            $conn,
+            "
+            INSERT INTO config_activity_types (activity_type_name, is_active, sort_order)
+            VALUES (?, 1, ?)
+            ON DUPLICATE KEY UPDATE
+                sort_order = VALUES(sort_order),
+                is_active = 1,
+                updated_at = CURRENT_TIMESTAMP
+            ",
+            "si",
+            [$activity_type_name, $index + 1]
+        );
+    }
+
+    /* ================= SEED CONFIG: SERIES OPTIONS ================= */
+    foreach ($series_options as $index => $series_name) {
+        execQuery(
+            $conn,
+            "
+            INSERT INTO config_series_options (series_name, is_active, sort_order)
+            VALUES (?, 1, ?)
+            ON DUPLICATE KEY UPDATE
+                sort_order = VALUES(sort_order),
+                is_active = 1,
+                updated_at = CURRENT_TIMESTAMP
+            ",
+            "si",
+            [$series_name, $index + 1]
+        );
+    }
+
+    /* ================= SEED CONFIG: REQUIREMENTS MAP ================= */
+    foreach ($requirements_map as $background_name => $activityMap) {
+        $backgroundRow = fetchOne(
+            $conn,
+            "
+            SELECT background_id
+            FROM config_background_options
+            WHERE background_name = ?
+            LIMIT 1
+            ",
+            "s",
+            [$background_name]
+        );
+
+        if (!$backgroundRow) {
+            continue;
+        }
+
+        $background_id = (int) $backgroundRow['background_id'];
+
+        foreach ($activityMap as $activityTypeName => $reqNames) {
+            $activityTypeRow = fetchOne(
+                $conn,
+                "
+                SELECT activity_type_id
+                FROM config_activity_types
+                WHERE activity_type_name = ?
+                LIMIT 1
+                ",
+                "s",
+                [$activityTypeName]
+            );
+
+            if (!$activityTypeRow) {
+                continue;
+            }
+
+            $activity_type_id = (int) $activityTypeRow['activity_type_id'];
+
+            foreach ($reqNames as $reqName) {
+                $templateRow = fetchOne(
+                    $conn,
+                    "
+                    SELECT req_template_id
+                    FROM requirement_templates
+                    WHERE req_name = ?
+                    LIMIT 1
+                    ",
+                    "s",
+                    [$reqName]
+                );
+
+                if (!$templateRow) {
+                    continue;
+                }
+
+                $req_template_id = (int) $templateRow['req_template_id'];
+
+                execQuery(
+                    $conn,
+                    "
+                    INSERT INTO config_requirements_map (
+                        background_id,
+                        activity_type_id,
+                        req_template_id,
+                        is_active
+                    )
+                    VALUES (?, ?, ?, 1)
+                    ON DUPLICATE KEY UPDATE
+                        is_active = 1,
+                        updated_at = CURRENT_TIMESTAMP
+                    ",
+                    "iii",
+                    [$background_id, $activity_type_id, $req_template_id]
+                );
+            }
+        }
+    }
+
+    /* ================= SAMPLE SYSTEM EVENT ================= */
+    $existingEvent = fetchOne(
+        $conn,
+        "
+        SELECT event_id
+        FROM events
+        WHERE is_system_event = 1
+        LIMIT 1
+        "
+    );
 
     if (!$existingEvent) {
-        $countActiveTemplatesSql = "
-                                    SELECT COUNT(*) AS total
-                                    FROM requirement_templates
-                                    WHERE is_active = 1
-                                 ";
-
-        $activeTemplateCountRow = fetchOne($conn, $countActiveTemplatesSql);
-        $docs_total = (int) ($activeTemplateCountRow['total'] ?? 0);
-
         $user_id = $default_user_id;
         $event_name = "Sample Debug Event";
-        $organizing_body = json_encode(["HAU OSA"]);
+        $organizing_body = json_encode(["HAU OSA"], JSON_UNESCAPED_UNICODE);
         $nature = "Test Nature";
         $event_status = "Pending Review";
         $admin_remarks = null;
         $docs_uploaded = 0;
         $is_system_event = 1;
 
-        $background = "OSA-Initiated Activity";
-        $activity_type = "On-campus Activity";
-        $series = null;
+        $background_name = "OSA-Initiated Activity";
+        $activity_type_name = "On-campus Activity";
+        $series_name = null;
 
         $start_datetime = date('Y-m-d H:i:s', strtotime('+1 day 09:00'));
         $end_datetime = date('Y-m-d H:i:s', strtotime('+1 day 12:00'));
@@ -406,17 +618,83 @@ try {
 
         $target_metric = "75% Satisfaction Rating";
 
-        /* Insert into events core */
-        $insertEventSql = "
-                        INSERT INTO events (
-                            user_id, organizing_body, nature, event_name,
-                            event_status, admin_remarks, docs_total, docs_uploaded, is_system_event
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ";
+        $backgroundRow = fetchOne(
+            $conn,
+            "
+            SELECT background_id
+            FROM config_background_options
+            WHERE background_name = ? AND is_active = 1
+            LIMIT 1
+            ",
+            "s",
+            [$background_name]
+        );
 
+        $activityTypeRow = fetchOne(
+            $conn,
+            "
+            SELECT activity_type_id
+            FROM config_activity_types
+            WHERE activity_type_name = ? AND is_active = 1
+            LIMIT 1
+            ",
+            "s",
+            [$activity_type_name]
+        );
+
+        $series_option_id = null;
+        if ($series_name !== null && $series_name !== '') {
+            $seriesRow = fetchOne(
+                $conn,
+                "
+                SELECT series_option_id
+                FROM config_series_options
+                WHERE series_name = ? AND is_active = 1
+                LIMIT 1
+                ",
+                "s",
+                [$series_name]
+            );
+
+            if ($seriesRow) {
+                $series_option_id = (int) $seriesRow['series_option_id'];
+            }
+        }
+
+        if (!$backgroundRow || !$activityTypeRow) {
+            throw new Exception("Sample event config references could not be resolved.");
+        }
+
+        $background_id = (int) $backgroundRow['background_id'];
+        $activity_type_id = (int) $activityTypeRow['activity_type_id'];
+
+        $docsTotalRow = fetchOne(
+            $conn,
+            "
+            SELECT COUNT(*) AS total
+            FROM config_requirements_map crm
+            INNER JOIN requirement_templates rt
+                ON rt.req_template_id = crm.req_template_id
+            WHERE crm.background_id = ?
+              AND crm.activity_type_id = ?
+              AND crm.is_active = 1
+              AND rt.is_active = 1
+            ",
+            "ii",
+            [$background_id, $activity_type_id]
+        );
+
+        $docs_total = (int) ($docsTotalRow['total'] ?? 0);
+
+        /* Insert into events core */
         $insertEventStmt = execQuery(
             $conn,
-            $insertEventSql,
+            "
+            INSERT INTO events (
+                user_id, organizing_body, nature, event_name,
+                event_status, admin_remarks, docs_total, docs_uploaded, is_system_event
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ",
             "isssssiii",
             [
                 $user_id,
@@ -433,103 +711,104 @@ try {
         $event_id = $insertEventStmt->insert_id;
 
         /* Insert into event_type */
-        $insertEventTypeSql = "
-                            INSERT INTO event_type (event_id, background, activity_type, series)
-                            VALUES (?, ?, ?, ?)
-                            ";
-
         execQuery(
             $conn,
-            $insertEventTypeSql,
-            "isss",
-            [$event_id, $background, $activity_type, $series]
+            "
+            INSERT INTO event_type (event_id, background_id, activity_type_id, series_option_id)
+            VALUES (?, ?, ?, ?)
+            ",
+            "iiii",
+            [$event_id, $background_id, $activity_type_id, $series_option_id]
         );
 
         /* Insert into event_dates */
-        $insertEventDatesSql = "
-                            INSERT INTO event_dates (event_id, start_datetime, end_datetime)
-                            VALUES (?, ?, ?)
-                            ";
-
         execQuery(
             $conn,
-            $insertEventDatesSql,
+            "
+            INSERT INTO event_dates (event_id, start_datetime, end_datetime)
+            VALUES (?, ?, ?)
+            ",
             "iss",
             [$event_id, $start_datetime, $end_datetime]
         );
 
         /* Insert into event_participants */
-        $insertEventParticipantsSql = "
-                                    INSERT INTO event_participants (event_id, participants, participant_range, has_visitors)
-                                    VALUES (?, ?, ?, ?)
-                                    ";
-
         execQuery(
             $conn,
-            $insertEventParticipantsSql,
+            "
+            INSERT INTO event_participants (event_id, participants, participant_range, has_visitors)
+            VALUES (?, ?, ?, ?)
+            ",
             "isss",
             [$event_id, $participants, $participant_range, $has_visitors]
         );
 
         /* Insert into event_location */
-        $insertEventLocationSql = "
-                                INSERT INTO event_location (event_id, venue_platform, distance)
-                                VALUES (?, ?, ?)
-                                ";
-
         execQuery(
             $conn,
-            $insertEventLocationSql,
+            "
+            INSERT INTO event_location (event_id, venue_platform, distance)
+            VALUES (?, ?, ?)
+            ",
             "iss",
             [$event_id, $venue_platform, $distance]
         );
 
         /* Insert into event_logistics */
-        $insertEventLogisticsSql = "
-                                    INSERT INTO event_logistics (event_id, extraneous, collect_payments, overnight)
-                                    VALUES (?, ?, ?, ?)
-                                    ";
-
         execQuery(
             $conn,
-            $insertEventLogisticsSql,
+            "
+            INSERT INTO event_logistics (event_id, extraneous, collect_payments, overnight)
+            VALUES (?, ?, ?, ?)
+            ",
             "issi",
             [$event_id, $extraneous, $collect_payments, $overnight]
         );
 
-        /* Insert into event metric */
-        $insertEventMetricSql = "
-                                    INSERT INTO event_metrics (event_id, target_metric)
-                                    VALUES (?, ?)
-                                    ";
-
+        /* Insert into event_metrics */
         execQuery(
             $conn,
-            $insertEventMetricSql,
+            "
+            INSERT INTO event_metrics (event_id, target_metric)
+            VALUES (?, ?)
+            ",
             "is",
             [$event_id, $target_metric]
         );
 
-        $getTemplatesResult = fetchAll(
+        /* Assign only mapped requirements */
+        $mappedTemplates = fetchAll(
             $conn,
             "
-    SELECT req_template_id, req_name, default_due_offset_days, default_due_basis
-    FROM requirement_templates
-    WHERE is_active = 1
-    ORDER BY req_template_id ASC
-    "
+            SELECT
+                rt.req_template_id,
+                rt.req_name,
+                rt.default_due_offset_days,
+                rt.default_due_basis
+            FROM config_requirements_map crm
+            INNER JOIN requirement_templates rt
+                ON rt.req_template_id = crm.req_template_id
+            WHERE crm.background_id = ?
+              AND crm.activity_type_id = ?
+              AND crm.is_active = 1
+              AND rt.is_active = 1
+            ORDER BY rt.req_name ASC
+            ",
+            "ii",
+            [$background_id, $activity_type_id]
         );
 
         $insertEventRequirementSql = "
-    INSERT INTO event_requirements (
-        event_id, req_template_id, submission_status, review_status, deadline
-    ) VALUES (?, ?, 'Pending', 'Not Reviewed', ?)
-    ON DUPLICATE KEY UPDATE
-        deadline = VALUES(deadline),
-        updated_at = CURRENT_TIMESTAMP
-";
+            INSERT INTO event_requirements (
+                event_id, req_template_id, submission_status, review_status, deadline
+            )
+            VALUES (?, ?, 'Pending', 'Not Reviewed', ?)
+            ON DUPLICATE KEY UPDATE
+                deadline = VALUES(deadline),
+                updated_at = CURRENT_TIMESTAMP
+        ";
 
-        foreach ($getTemplatesResult as $tpl) {
+        foreach ($mappedTemplates as $tpl) {
             $tpl_id = (int) $tpl['req_template_id'];
             $req_name = $tpl['req_name'] ?? '';
             $offset_days = $tpl['default_due_offset_days'];
@@ -540,16 +819,16 @@ try {
             if ($offset_days !== null && $basis !== 'manual') {
                 $baseDate = null;
 
-                if (in_array($basis, ['before_start', 'after_start'], true) && $start_datetime !== '') {
+                if (in_array($basis, ['before_start', 'after_start'], true)) {
                     $baseDate = new DateTime($start_datetime);
-                } elseif (in_array($basis, ['before_end', 'after_end'], true) && $end_datetime !== '') {
+                } elseif (in_array($basis, ['before_end', 'after_end'], true)) {
                     $baseDate = new DateTime($end_datetime);
                 }
 
                 if ($baseDate) {
                     if ($basis === 'before_start' || $basis === 'before_end') {
                         $baseDate->modify("-{$offset_days} days");
-                    } elseif ($basis === 'after_start' || $basis === 'after_end') {
+                    } else {
                         $baseDate->modify("+{$offset_days} days");
                     }
 
@@ -568,11 +847,11 @@ try {
                 $eventReqRow = fetchOne(
                     $conn,
                     "
-            SELECT event_req_id
-            FROM event_requirements
-            WHERE event_id = ? AND req_template_id = ?
-            LIMIT 1
-            ",
+                    SELECT event_req_id
+                    FROM event_requirements
+                    WHERE event_id = ? AND req_template_id = ?
+                    LIMIT 1
+                    ",
                     "ii",
                     [$event_id, $tpl_id]
                 );
@@ -581,10 +860,10 @@ try {
                     execQuery(
                         $conn,
                         "
-                INSERT INTO narrative_report_details (event_req_id)
-                VALUES (?)
-                ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
-                ",
+                        INSERT INTO narrative_report_details (event_req_id)
+                        VALUES (?)
+                        ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
+                        ",
                         "i",
                         [(int) $eventReqRow['event_req_id']]
                     );
@@ -593,19 +872,15 @@ try {
         }
 
         /* Insert independent calendar entry linked to event */
-        $notes = "Default debug event";
-
-        $insertCalendarEntrySql = "
-                                INSERT INTO calendar_entries
-                                (user_id, event_id, title, start_datetime, end_datetime, notes)
-                                VALUES (?, ?, ?, ?, ?, ?)
-                                ";
-
         execQuery(
             $conn,
-            $insertCalendarEntrySql,
+            "
+            INSERT INTO calendar_entries
+            (user_id, event_id, title, start_datetime, end_datetime, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ",
             "iissss",
-            [$user_id, $event_id, $event_name, $start_datetime, $end_datetime, $notes]
+            [$user_id, $event_id, $event_name, $start_datetime, $end_datetime, "Default debug event"]
         );
     }
 

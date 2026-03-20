@@ -22,7 +22,8 @@ $fetchUserEventsSql = "
         e.docs_total,
         e.docs_uploaded,
 
-        et.activity_type,
+        et.activity_type_id,
+        cat.activity_type_name AS activity_type,
 
         ed.start_datetime,
         ed.end_datetime,
@@ -32,6 +33,8 @@ $fetchUserEventsSql = "
     FROM events e
     LEFT JOIN event_type et
         ON e.event_id = et.event_id
+    LEFT JOIN config_activity_types cat
+        ON et.activity_type_id = cat.activity_type_id
     LEFT JOIN event_dates ed
         ON e.event_id = ed.event_id
     LEFT JOIN event_location el

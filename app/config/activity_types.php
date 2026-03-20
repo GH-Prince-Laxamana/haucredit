@@ -1,4 +1,5 @@
-<?php
+<?php 
+// activity_types
 return [
     'On-campus Activity',
     'Virtual Activity',
