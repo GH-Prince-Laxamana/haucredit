@@ -664,6 +664,142 @@
   margin-top: 4px;
 }
 
+/* Document Checklist */
+.doc-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.doc-help {
+  font-size: var(--title-smaller-size);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+/* DOC ITEM BASE */
+.doc-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: white;
+  transition: all 0.25s ease;
+}
+
+.doc-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* STATUS BACKGROUNDS */
+.doc-item.status-uploaded {
+  background: white;
+  border-left: 4px solid var(--green);
+}
+
+.doc-item.status-pending {
+  background: white;
+  border-left: 4px solid rgba(245, 158, 11, 0.9);
+}
+
+/* Optional if you ever use "submitted" in class names */
+.doc-item.status-submitted {
+  background: white;
+  border-left: 4px solid var(--green);
+}
+
+.doc-checkbox {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--title-smaller-size);
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+}
+
+.doc-item.status-uploaded .doc-checkbox,
+.doc-item.status-submitted .doc-checkbox {
+  background: rgba(0, 128, 0, 0.625);
+  color: white;
+}
+
+.doc-item.status-pending .doc-checkbox {
+  background: rgba(245, 158, 11, 0.9);
+  color: white;
+}
+
+.doc-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-info h4 {
+  font-size: var(--title-smaller-size);
+  font-weight: 700;
+  color: var(--burgundy);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.doc-status {
+  font-size: var(--sub-title-size);
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.doc-item.status-uploaded .doc-status,
+.doc-item.status-submitted .doc-status {
+  color: var(--green);
+}
+
+.doc-item.status-pending .doc-status {
+  color: #d97706;
+}
+
+.doc-deadline,
+.doc-remarks {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 600;
+}
+
+.doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.metric-achieved {
+  color: var(--green) !important;
+  font-weight: 700;
+}
+
+.metric-not-achieved {
+  color: #dc2626 !important;
+  font-weight: 700;
+}
+
+.metric-neutral {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
 /* =========================
    RESPONSIVE - VIEW EVENT
    ========================= */

@@ -2,92 +2,102 @@
 session_start();
 require_once "../app/database.php";
 
-// ===== AUTHENTICATION CHECK =====
-// Ensure user is logged in before displaying events
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
 }
 
-// ===== USER DATA EXTRACTION =====
-// Retrieve and sanitize username from session
+$user_id = (int) $_SESSION["user_id"];
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
 /* ================= EVENTS QUERY ================= */
-// Fetch all active events for the current user with document progress and phase calculation
-// Phase logic: pending (incomplete docs), active (complete docs + future end), completed (past end)
-$stmt = $conn->prepare("
-    SELECT 
+$fetchUserEventsSql = "
+    SELECT
         e.event_id,
         e.event_name,
-        e.activity_type,
         e.nature,
         e.organizing_body,
-        e.venue_platform,
-        e.start_datetime,
-        e.end_datetime,
-        e.participants,
         e.event_status,
         e.created_at,
+        e.docs_total,
+        e.docs_uploaded,
 
-        COUNT(r.req_id) AS docs_total,
-        SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) AS docs_uploaded,
+        et.activity_type,
 
-        CASE
-            WHEN SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) < COUNT(r.req_id)
-                THEN 'pending'
-            WHEN e.end_datetime >= NOW()
-                THEN 'active'
-            ELSE 'completed'
-        END AS event_phase
+        ed.start_datetime,
+        ed.end_datetime,
+
+        el.venue_platform
 
     FROM events e
-    LEFT JOIN requirements r ON e.event_id = r.event_id
-    WHERE e.user_id = ? AND e.archived_at IS NULL
-    GROUP BY e.event_id
+    LEFT JOIN event_type et
+        ON e.event_id = et.event_id
+    LEFT JOIN event_dates ed
+        ON e.event_id = ed.event_id
+    LEFT JOIN event_location el
+        ON e.event_id = el.event_id
+    WHERE e.user_id = ?
+      AND e.archived_at IS NULL
+    ORDER BY
+        CASE e.event_status
+            WHEN 'Draft' THEN 1
+            WHEN 'Needs Revision' THEN 2
+            WHEN 'Pending Review' THEN 3
+            WHEN 'Approved' THEN 4
+            WHEN 'Completed' THEN 5
+            ELSE 6
+        END,
+        CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
+        ed.start_datetime DESC,
+        e.created_at DESC
+";
 
-    ORDER BY 
-    CASE
-        WHEN SUM(CASE WHEN r.doc_status = 'uploaded' THEN 1 ELSE 0 END) < COUNT(r.req_id)
-            THEN 1
-        WHEN e.end_datetime >= NOW()
-            THEN 2
-        ELSE 3
-    END,
-    e.start_datetime DESC
-");
-
-$stmt->bind_param("i", $_SESSION["user_id"]);
-$stmt->execute();
-$result = $stmt->get_result();
-
-// ===== STORE EVENTS IN ARRAY =====
-// Collect all event data into an array for processing
-$events = [];
-while ($row = $result->fetch_assoc()) {
-    $events[] = $row;
-}
+$events = fetchAll(
+    $conn,
+    $fetchUserEventsSql,
+    "i",
+    [$user_id]
+);
 
 /* ================= SUMMARY COUNTS ================= */
-// Calculate total events and count by phase for summary display
 $total_events = count($events);
-$active = $pending = $completed = 0;
+$draft_count = 0;
+$pending_review_count = 0;
+$needs_revision_count = 0;
+$approved_count = 0;
+$completed_count = 0;
 
 foreach ($events as $e) {
-    switch ($e['event_phase']) {
-        case 'active':
-            $active++;
+    switch ($e['event_status']) {
+        case 'Draft':
+            $draft_count++;
             break;
-        case 'pending':
-            $pending++;
+        case 'Pending Review':
+            $pending_review_count++;
             break;
-        case 'completed':
-            $completed++;
+        case 'Needs Revision':
+            $needs_revision_count++;
+            break;
+        case 'Approved':
+            $approved_count++;
+            break;
+        case 'Completed':
+            $completed_count++;
             break;
     }
 }
-?>
 
+/* ================= HELPERS ================= */
+function normalizeEventStatusClass(string $status): string
+{
+    return strtolower(str_replace(' ', '-', $status));
+}
+
+function canEditEvent(string $status): bool
+{
+    return in_array($status, ['Draft', 'Pending Review', 'Needs Revision'], true);
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -102,13 +112,11 @@ foreach ($events as $e) {
 
 <body>
     <div class="app">
-        <!-- Sidebar overlay for mobile navigation -->
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
         <?php include 'assets/includes/general_nav.php' ?>
 
         <main class="main">
-            <!-- ===== PAGE HEADER ===== -->
             <header class="topbar">
                 <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
 
@@ -119,13 +127,11 @@ foreach ($events as $e) {
 
                 <div class="action-btns">
                     <a href="archived_events.php" class="btn-secondary">Archived Events</a>
-                    <a href="create_event.php" class="btn-primary">Create Event</a>
+                    <a href="create_event.php" class="btn-primary"><i class="fa-solid fa-plus"></i> Create Event</a>
                 </div>
             </header>
 
             <section class="content my-events-page">
-                <!-- ===== SUMMARY CARDS ===== -->
-                <!-- Display overview statistics for events -->
                 <div class="summary-strip">
                     <div class="summary-card">
                         <span class="summary-num"><?= $total_events ?></span>
@@ -133,23 +139,31 @@ foreach ($events as $e) {
                     </div>
 
                     <div class="summary-card">
-                        <span class="summary-num"><?= $active ?></span>
-                        <span class="summary-label">Active</span>
+                        <span class="summary-num"><?= $draft_count ?></span>
+                        <span class="summary-label">Drafts</span>
                     </div>
 
                     <div class="summary-card">
-                        <span class="summary-num"><?= $pending ?></span>
+                        <span class="summary-num"><?= $pending_review_count ?></span>
                         <span class="summary-label">Pending Review</span>
                     </div>
 
                     <div class="summary-card">
-                        <span class="summary-num"><?= $completed ?></span>
+                        <span class="summary-num"><?= $needs_revision_count ?></span>
+                        <span class="summary-label">Needs Revision</span>
+                    </div>
+
+                    <div class="summary-card">
+                        <span class="summary-num"><?= $approved_count ?></span>
+                        <span class="summary-label">Approved</span>
+                    </div>
+
+                    <div class="summary-card">
+                        <span class="summary-num"><?= $completed_count ?></span>
                         <span class="summary-label">Completed</span>
                     </div>
                 </div>
 
-                <!-- ===== SEARCH AND FILTER CONTROLS ===== -->
-                <!-- Provide search and filter functionality for events -->
                 <div class="list-toolbar">
                     <div class="search-wrap">
                         <span class="search-icon">
@@ -162,67 +176,66 @@ foreach ($events as $e) {
 
                     <div class="filter-tabs" id="filterTabs">
                         <button class="filter-tab active" onclick="setFilter(this,'all')">All Events</button>
-                        <button class="filter-tab" onclick="setFilter(this,'active')">Active</button>
-                        <button class="filter-tab" onclick="setFilter(this,'pending')">Pending</button>
-                        <button class="filter-tab" onclick="setFilter(this,'completed')">Completed</button>
+                        <button class="filter-tab" onclick="setFilter(this,'Draft')">Drafts</button>
+                        <button class="filter-tab" onclick="setFilter(this,'Pending Review')">Pending Review</button>
+                        <button class="filter-tab" onclick="setFilter(this,'Needs Revision')">Needs Revision</button>
+                        <button class="filter-tab" onclick="setFilter(this,'Approved')">Approved</button>
+                        <button class="filter-tab" onclick="setFilter(this,'Completed')">Completed</button>
                     </div>
                 </div>
 
-                <!-- ===== EVENT CARDS GRID ===== -->
-                <!-- Display individual event cards with details and actions -->
                 <div class="events-grid" id="eventsGrid">
                     <?php foreach ($events as $event): ?>
                         <?php
-                        // Calculate document upload progress percentage
-                        $pct = $event['docs_total'] > 0
-                            ? round(($event['docs_uploaded'] / $event['docs_total']) * 100)
-                            : 0;
+                        $docs_total = (int) ($event['docs_total'] ?? 0);
+                        $docs_uploaded = (int) ($event['docs_uploaded'] ?? 0);
+                        $pct = $docs_total > 0 ? round(($docs_uploaded / $docs_total) * 100) : 0;
 
-                        // Create searchable text blob for filtering
+                        $org_clean = $event['organizing_body'] ?? '';
+                        $decoded_orgs = json_decode($org_clean, true);
+
+                        if (is_array($decoded_orgs)) {
+                            $org_clean = implode(', ', $decoded_orgs);
+                        } else {
+                            $org_clean = str_replace(['[', ']', '"', "'"], '', $org_clean);
+                            $org_clean = str_replace(',', ', ', $org_clean);
+                        }
+
                         $search_blob = strtolower(
-                            $event['event_name'] . ' ' .
-                            $event['activity_type'] . ' ' .
-                            $event['nature'] . ' ' .
-                            $event['organizing_body'] . ' ' .
-                            $event['venue_platform'] . ' ' .
-                            date('M j Y', strtotime($event['start_datetime'])) . ' ' .
-                            date('M j Y', strtotime($event['end_datetime']))
+                            ($event['event_name'] ?? '') . ' ' .
+                            ($event['activity_type'] ?? '') . ' ' .
+                            ($event['nature'] ?? '') . ' ' .
+                            $org_clean . ' ' .
+                            ($event['venue_platform'] ?? '') . ' ' .
+                            ($event['event_status'] ?? '') . ' ' .
+                            (!empty($event['start_datetime']) ? date('M j Y', strtotime($event['start_datetime'])) : '') . ' ' .
+                            (!empty($event['end_datetime']) ? date('M j Y', strtotime($event['end_datetime'])) : '')
                         );
 
-                        // Clean up organizing body display (remove JSON artifacts)
-                        $org_clean = str_replace(
-                            ['[', ']', '"', "'"],
-                            '',
-                            $event['organizing_body']
-                        );
-
-                        $org_clean = str_replace(',', ', ', $org_clean);
-
-                        $pct_color_ref = max(0, min(100, (int) $pct)); // clamp 0–100
-                    
-                        $hue = ($pct_color_ref / 100) * 120; // 0 = red, 120 = green
-                    
+                        $pct_color_ref = max(0, min(100, (int) $pct));
+                        $hue = ($pct_color_ref / 100) * 120;
                         $progress_color = "hsl($hue, 70%, 45%)";
+
+                        $status_class = normalizeEventStatusClass($event['event_status'] ?? 'Draft');
+                        $can_edit = canEditEvent($event['event_status'] ?? 'Draft');
                         ?>
 
-                        <article class="event-card" data-status="<?= $event['event_phase'] ?>"
+                        <article class="event-card" data-status="<?= htmlspecialchars($event['event_status']) ?>"
                             data-search="<?= htmlspecialchars($search_blob) ?>">
 
-                            <!-- Card Top Section -->
                             <div class="event-card-top">
                                 <span class="event-type-tag">
-                                    <?= htmlspecialchars($event['activity_type']) ?>
+                                    <?= htmlspecialchars($event['activity_type'] ?? 'N/A') ?>
                                 </span>
 
-                                <span class="event-status status-<?= $event['event_phase'] ?>">
+                                <span class="event-status status-<?= htmlspecialchars($status_class) ?>">
                                     <span class="status-dot"></span>
                                     <span class="status-text">
-                                        <?= ucfirst($event['event_phase']) ?>
+                                        <?= htmlspecialchars($event['event_status']) ?>
                                     </span>
                                 </span>
                             </div>
 
-                            <!-- Card Body Section -->
                             <div class="event-card-body">
                                 <h3 class="event-title">
                                     <?= htmlspecialchars($event['event_name']) ?>
@@ -240,7 +253,7 @@ foreach ($events as $e) {
                                         <span class="meta-icon">
                                             <i class="fa-solid fa-location-dot"></i>
                                         </span>
-                                        <span><?= htmlspecialchars($event['venue_platform']) ?></span>
+                                        <span><?= htmlspecialchars($event['venue_platform'] ?? 'No venue set') ?></span>
                                     </div>
 
                                     <div class="meta-row">
@@ -249,49 +262,56 @@ foreach ($events as $e) {
                                         </span>
 
                                         <span>
-                                            <?= date('M j, Y', strtotime($event['start_datetime'])) ?>
+                                            <?php if (!empty($event['start_datetime'])): ?>
+                                                <?= date('M j, Y', strtotime($event['start_datetime'])) ?>
+                                            <?php else: ?>
+                                                No schedule set
+                                            <?php endif; ?>
 
-                                            <?php if ($event['start_datetime'] !== $event['end_datetime']): ?>
+                                            <?php if (!empty($event['start_datetime']) && !empty($event['end_datetime']) && $event['start_datetime'] !== $event['end_datetime']): ?>
                                                 – <?= date('M j, Y', strtotime($event['end_datetime'])) ?>
                                             <?php endif; ?>
                                         </span>
                                     </div>
                                 </div>
 
-                                <!-- Documents Progress Section -->
                                 <div class="doc-progress">
                                     <div class="doc-progress-label">
                                         <span>Documents</span>
-                                        <span>
-                                            <?= $event['docs_uploaded'] ?>/<?= $event['docs_total'] ?> uploaded
-                                        </span>
+                                        <span><?= $docs_uploaded ?>/<?= $docs_total ?> uploaded</span>
                                     </div>
 
                                     <div class="progress-bar">
-                                        <div class="progress-fill" style="width: <?= $pct ?>%; --progress-color: <?= $progress_color ?>"></div>
+                                        <div class="progress-fill"
+                                            style="width: <?= $pct ?>%; --progress-color: <?= $progress_color ?>">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Card Footer Section -->
                             <footer class="event-card-footer">
                                 <span class="event-created">
                                     Created <?= date('M j, Y', strtotime($event['created_at'])) ?>
                                 </span>
 
                                 <div class="card-actions">
-                                    <a href="create_event.php?id=<?= $event['event_id'] ?>"
-                                        class="btn-secondary btn-edit">Edit</a>
-                                    <a href="view_event.php?id=<?= $event['event_id'] ?>"
-                                        class="btn-primary btn-view">View</a>
+                                    <?php if ($can_edit): ?>
+                                        <a href="create_event.php?id=<?= (int) $event['event_id'] ?>"
+                                            class="btn-secondary btn-edit">
+                                            Edit
+                                        </a>
+                                    <?php endif; ?>
+
+                                    <a href="view_event.php?id=<?= (int) $event['event_id'] ?>"
+                                        class="btn-primary btn-view">
+                                        View
+                                    </a>
                                 </div>
                             </footer>
                         </article>
                     <?php endforeach; ?>
                 </div>
 
-                <!-- ===== EMPTY STATE ===== -->
-                <!-- Display when no events match the current filters -->
                 <div class="empty-state" id="emptyState" <?= empty($events) ? '' : 'hidden' ?>>
                     <div class="empty-icon">
                         <i class="fa-solid fa-file-circle-xmark"></i>

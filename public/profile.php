@@ -3,52 +3,45 @@ session_start();
 require_once "../app/database.php";
 
 // ===== AUTHENTICATION CHECK =====
-// Ensure user is logged in before allowing profile access
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
 }
 
-$user_id = $_SESSION["user_id"];
+$user_id = (int) $_SESSION["user_id"];
 
 // ===== FLASH MESSAGES =====
-// Retrieve and clear any success or error messages from session
 $success = $_SESSION["success"] ?? "";
 $error = $_SESSION["error"] ?? "";
 
 unset($_SESSION["success"], $_SESSION["error"]);
 
 // ===== GET USER DATA =====
-// Fetch current user information from database
-$stmt = $conn->prepare("
+$fetchUserProfileSql = "
     SELECT user_name, stud_num, user_email, org_body, profile_pic, user_password
     FROM users
-    WHERE user_id=?
-");
+    WHERE user_id = ?
+";
 
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
+$user = fetchOne(
+    $conn,
+    $fetchUserProfileSql,
+    "i",
+    [$user_id]
+);
 
 // ===== PROFILE IMAGE UPLOAD =====
-// Handle profile picture upload via POST request
 if (isset($_POST["upload_photo"])) {
-
-    // Check if file was uploaded successfully
     if (isset($_FILES["profile_pic"]) && $_FILES["profile_pic"]["error"] === 0) {
-
-        // Define allowed file extensions
         $allowed = ["jpg", "jpeg", "png", "webp"];
         $ext = strtolower(pathinfo($_FILES["profile_pic"]["name"], PATHINFO_EXTENSION));
 
-        // Validate file extension
-        if (!in_array($ext, $allowed)) {
+        if (!in_array($ext, $allowed, true)) {
             $_SESSION["error"] = "Only .JPG, .PNG, .WEBP allowed.";
             header("Location: profile.php");
             exit();
         }
 
-        // Verify file is a valid image
         $check = getimagesize($_FILES["profile_pic"]["tmp_name"]);
         if ($check === false) {
             $_SESSION["error"] = "Invalid image file.";
@@ -56,21 +49,22 @@ if (isset($_POST["upload_photo"])) {
             exit();
         }
 
-        // Generate unique filename and move uploaded file
         $newName = "user_" . $user_id . "_" . time() . "." . $ext;
         $target = "assets/profiles/" . $newName;
 
         if (move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $target)) {
-
-            // Update database with new profile picture filename
-            $stmt = $conn->prepare("
+            $updateProfilePictureSql = "
                 UPDATE users
-                SET profile_pic=?
-                WHERE user_id=?
-            ");
+                SET profile_pic = ?
+                WHERE user_id = ?
+            ";
 
-            $stmt->bind_param("si", $newName, $user_id);
-            $stmt->execute();
+            execQuery(
+                $conn,
+                $updateProfilePictureSql,
+                "si",
+                [$newName, $user_id]
+            );
 
             $_SESSION["success"] = "Profile picture updated.";
             header("Location: profile.php");
@@ -80,18 +74,25 @@ if (isset($_POST["upload_photo"])) {
 }
 
 // ===== REMOVE PROFILE PHOTO =====
-// Handle profile photo removal via POST request
 if (isset($_POST['remove_photo'])) {
-    // Only remove if not the default image
     if (!empty($user['profile_pic']) && $user['profile_pic'] !== 'default.jpg') {
         $oldPic = "assets/profiles/" . $user['profile_pic'];
-        if (file_exists($oldPic))
+        if (file_exists($oldPic)) {
             unlink($oldPic);
+        }
 
-        // Reset profile picture to default in database
-        $stmt = $conn->prepare("UPDATE users SET profile_pic='default.jpg' WHERE user_id=?");
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
+        $resetProfilePictureSql = "
+            UPDATE users
+            SET profile_pic = 'default.jpg'
+            WHERE user_id = ?
+        ";
+
+        execQuery(
+            $conn,
+            $resetProfilePictureSql,
+            "i",
+            [$user_id]
+        );
     }
 
     $_SESSION['success'] = "Profile photo removed.";
@@ -100,44 +101,36 @@ if (isset($_POST['remove_photo'])) {
 }
 
 // ===== UPDATE PROFILE INFO =====
-// Handle profile information update via POST request
 if (isset($_POST["update_profile"])) {
-
-    // Extract and sanitize form inputs
     $username = trim($_POST["username"] ?? "");
     $studnum = trim($_POST["stud_num"] ?? "");
     $email = trim($_POST["email"] ?? "");
     $org = trim($_POST["org_body"] ?? "");
 
-    // ===== VALIDATION: REQUIRED FIELDS =====
     if ($username === "" || $studnum === "" || $email === "" || $org === "") {
         $_SESSION["error"] = "All fields are required.";
         header("Location: profile.php");
         exit();
     }
 
-    // ===== VALIDATION: EMAIL FORMAT =====
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $_SESSION["error"] = "Invalid email format.";
         header("Location: profile.php");
         exit();
     }
 
-    // ===== VALIDATION: HAU STUDENT EMAIL ONLY =====
     if (!preg_match('/@(student\.hau\.edu\.ph)$/i', $email)) {
         $_SESSION["error"] = "Email must be your HAU student email.";
         header("Location: profile.php");
         exit();
     }
 
-    // ===== VALIDATION: STUDENT NUMBER LENGTH =====
     if (strlen($studnum) < 8) {
         $_SESSION["error"] = "Invalid student number.";
         header("Location: profile.php");
         exit();
     }
 
-    // ===== VALIDATION: USERNAME LENGTH =====
     if (strlen($username) < 4) {
         $_SESSION["error"] = "Username must be at least 4 characters.";
         header("Location: profile.php");
@@ -145,21 +138,22 @@ if (isset($_POST["update_profile"])) {
     }
 
     // ===== VALIDATION: UNIQUE CONSTRAINTS =====
-    // Check for existing username, email, or student number
-    $stmt = $conn->prepare("
+    $checkUniqueProfileFieldsSql = "
         SELECT user_name, user_email, stud_num
         FROM users
-        WHERE (user_name=? OR user_email=? OR stud_num=?)
-        AND user_id != ?
+        WHERE (user_name = ? OR user_email = ? OR stud_num = ?)
+          AND user_id != ?
         LIMIT 1
-    ");
+    ";
 
-    $stmt->bind_param("sssi", $username, $email, $studnum, $user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $row = fetchOne(
+        $conn,
+        $checkUniqueProfileFieldsSql,
+        "sssi",
+        [$username, $email, $studnum, $user_id]
+    );
 
-    if ($row = $result->fetch_assoc()) {
-
+    if ($row) {
         if ($row["user_name"] === $username) {
             $_SESSION["error"] = "Username already exists.";
         } elseif ($row["user_email"] === $email) {
@@ -173,48 +167,42 @@ if (isset($_POST["update_profile"])) {
     }
 
     // ===== UPDATE PROFILE =====
-    $stmt = $conn->prepare("
+    $updateUserProfileSql = "
         UPDATE users
-        SET user_name=?, stud_num=?, user_email=?, org_body=?
-        WHERE user_id=?
-    ");
+        SET user_name = ?, stud_num = ?, user_email = ?, org_body = ?
+        WHERE user_id = ?
+    ";
 
-    $stmt->bind_param("ssssi", $username, $studnum, $email, $org, $user_id);
+    execQuery(
+        $conn,
+        $updateUserProfileSql,
+        "ssssi",
+        [$username, $studnum, $email, $org, $user_id]
+    );
 
-    if ($stmt->execute()) {
-        $_SESSION["success"] = "Profile updated successfully.";
-    } else {
-        $_SESSION["error"] = "Unable to update profile.";
-    }
-
+    $_SESSION["success"] = "Profile updated successfully.";
     header("Location: profile.php");
     exit();
 }
 
 // ===== PASSWORD CHANGE =====
-// Handle password change via POST request
 if (isset($_POST["change_password"])) {
-
-    // Extract form inputs
     $current = $_POST["current_password"] ?? "";
     $new = $_POST["new_password"] ?? "";
     $confirm = $_POST["confirm_password"] ?? "";
 
-    // ===== VALIDATION: CURRENT PASSWORD =====
     if (!password_verify($current, $user["user_password"])) {
         $_SESSION["error"] = "Current password incorrect.";
         header("Location: profile.php");
         exit();
     }
 
-    // ===== VALIDATION: PASSWORD MATCH =====
     if ($new !== $confirm) {
         $_SESSION["error"] = "Passwords do not match.";
         header("Location: profile.php");
         exit();
     }
 
-    // ===== VALIDATION: PASSWORD STRENGTH =====
     if (
         strlen($new) < 8 ||
         !preg_match('/[A-Z]/', $new) ||
@@ -226,17 +214,20 @@ if (isset($_POST["change_password"])) {
         exit();
     }
 
-    // ===== UPDATE PASSWORD =====
     $hash = password_hash($new, PASSWORD_DEFAULT);
 
-    $stmt = $conn->prepare("
+    $updateUserPasswordSql = "
         UPDATE users
-        SET user_password=?
-        WHERE user_id=?
-    ");
+        SET user_password = ?
+        WHERE user_id = ?
+    ";
 
-    $stmt->bind_param("si", $hash, $user_id);
-    $stmt->execute();
+    execQuery(
+        $conn,
+        $updateUserPasswordSql,
+        "si",
+        [$hash, $user_id]
+    );
 
     $_SESSION["success"] = "Password changed successfully.";
     header("Location: profile.php");
@@ -293,10 +284,12 @@ if (isset($_POST["change_password"])) {
 
                         <!-- Photo Menu Options -->
                         <div class="photo-menu" id="photoMenu" style="display:none;">
-                            <button class="btn-secondary btn-smaller" type="button" id="uploadChoice">Upload Photo</button>
+                            <button class="btn-secondary btn-smaller" type="button" id="uploadChoice">Upload
+                                Photo</button>
 
                             <?php if (!empty($user['profile_pic']) && $user['profile_pic'] !== 'default.jpg'): ?>
-                                <button class="btn-secondary btn-smaller" type="button" id="removeChoice">Remove Photo</button>
+                                <button class="btn-secondary btn-smaller" type="button" id="removeChoice">Remove
+                                    Photo</button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -377,88 +370,16 @@ if (isset($_POST["change_password"])) {
                                     value="<?php echo htmlspecialchars($user['org_body']); ?>"
                                     placeholder="Search or select organization" required>
                                 <datalist id="org_list">
-                                    <!-- HAU OFFICE -->
-                                    <option value="HAU OSA">
-
-                                    <!-- UNIVERSITY STUDENT GOVERNMENT -->
-                                    <option value="HAUSG USC">
-                                    <option value="HAUSG HC">
-                                    <option value="HAUSG SEN">
-                                    <option value="HAUSG COMELEC">
-                                    <option value="HAUSG CSO">
-                                    <option value="HAUSG CFA">
-
-                                    <!-- COLLEGE STUDENT COUNCILS -->
-                                    <option value="HAUSG CSC-CCJEF">
-                                    <option value="HAUSG CSC-SAS">
-                                    <option value="HAUSG CSC-SBA">
-                                    <option value="HAUSG CSC-SoC">
-                                    <option value="HAUSG CSC-SEd">
-                                    <option value="HAUSG CSC-SEA">
-                                    <option value="HAUSG CSC-SHTM">
-                                    <option value="HAUSG CSC-SNAMS">
-
-                                    <!-- STUDENT PUBLICATIONS -->
-                                    <option value="HPC Angge">
-                                    <option value="HPC HQ">
-                                    <option value="HPC NX">
-                                    <option value="HPC Enteng">
-                                    <option value="HPC AP">
-                                    <option value="HPC Reple">
-                                    <option value="HPC Soln">
-                                    <option value="HPC CC">
-                                    <option value="HPC LL">
-
-                                    <!-- UNI-WIDE ORGANIZATIONS -->
-                                    <option value="Uniwide DC">
-                                    <option value="Uniwide JJC">
-                                    <option value="Uniwide JO">
-                                    <option value="Uniwide GDGoC">
-                                    <option value="Uniwide ADS">
-                                    <option value="Uniwide RCY">
-                                    <option value="Uniwide RAC">
-                                    <option value="Uniwide APLMS">
-                                    <option value="Uniwide SVE">
-                                    <option value="Uniwide 21CC">
-                                    <option value="Uniwide HPC">
-
-                                    <!-- SCHOOL ORGANIZATIONS -->
-                                    <option value="CCJEF COPS">
-                                    <option value="CCJEF SAFE">
-                                    <option value="SAS PsychSoc">
-                                    <option value="SAS CL">
-                                    <option value="SBA Mansoc">
-                                    <option value="SoC MAFIA">
-                                    <option value="SoC LOOP">
-                                    <option value="SoC CG">
-                                    <option value="SoC CSIA">
-                                    <option value="SEd KAS">
-                                    <option value="SEd KLDS">
-                                    <option value="SEA SAEP">
-                                    <option value="SEA UAPSA">
-                                    <option value="SEA PSME">
-                                    <option value="SEA PIIE">
-                                    <option value="SEA IIEE">
-                                    <option value="SEA PICE">
-                                    <option value="SEA IECEP">
-                                    <option value="SEA ICpEP">
-                                    <option value="SHTM HMAP">
-                                    <option value="SHTM LTSP">
-                                    <option value="SNAMS ARTS">
-                                    <option value="SNAMS PHISMETS">
-                                    <option value="SNAMS SANS">
-
-                                    <!-- POLITICAL PARTIES -->
-                                    <option value="PP Lualu">
-                                    <option value="PP Sulung">
-                                    <option value="PP Sulagpo">
-                                    <option value="PP Tindig">
+                                    <?php foreach ($org_options as $org): ?>
+                                        <option value="<?= htmlspecialchars($org, ENT_QUOTES, 'UTF-8') ?>">
+                                        <?php endforeach; ?>
                                 </datalist>
                             </div>
 
                             <div class="pw-actions">
                                 <button class="btn-secondary btn-smaller ghost" type="reset">Discard Changes</button>
-                                <button class="btn-primary btn-smaller" type="submit" name="update_profile">Apply Changes</button>
+                                <button class="btn-primary btn-smaller" type="submit" name="update_profile">Apply
+                                    Changes</button>
                             </div>
                         </form>
                     </div>
@@ -498,7 +419,8 @@ if (isset($_POST["change_password"])) {
 
                             <div class="pw-actions">
                                 <button class="btn-secondary btn-smaller ghost" type="reset">Discard Changes</button>
-                                <button class="btn-primary btn-smaller primary" type="submit" name="change_password">Apply Changes</button>
+                                <button class="btn-primary btn-smaller primary" type="submit"
+                                    name="change_password">Apply Changes</button>
                             </div>
                         </form>
                     </div>

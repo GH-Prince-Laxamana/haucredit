@@ -2,158 +2,243 @@
 session_start();
 require_once "../app/database.php";
 
-// ===== TIMEZONE SETTING =====
-// Set the default timezone to Asia/Manila for accurate date/time handling
 date_default_timezone_set('Asia/Manila');
 
-// ===== AUTHENTICATION CHECK =====
-// Ensure user is logged in before allowing access to requirements page
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
     exit();
 }
 
-$user_id = $_SESSION["user_id"];
+$user_id = (int) $_SESSION["user_id"];
+$event_filter = isset($_GET['event_id']) && $_GET['event_id'] !== '' ? (int) $_GET['event_id'] : null;
 
-// ===== GET FILTER PARAMETER =====
-// Retrieve optional event filter from URL query string
-$event_filter = $_GET['event_id'] ?? null;
+/* ================= HELPERS ================= */
+function getRequirementDisplayDate(?string $deadline, ?string $event_start): ?string
+{
+    if (!empty($deadline)) {
+        return $deadline;
+    }
 
-// ===== LOAD REQUIREMENTS FROM DATABASE =====
-// Query to fetch requirements joined with events for the current user
-// Only include non-archived events
-$sql = "
-    SELECT r.req_id, r.req_name, r.req_desc, r.file_path, r.doc_status, r.created_at,
-           e.event_id, e.event_name, e.start_datetime
-    FROM requirements r
-    JOIN events e ON r.event_id = e.event_id
+    if (!empty($event_start)) {
+        return $event_start;
+    }
+
+    return null;
+}
+
+function formatSubmissionStatus(string $status): string
+{
+    return match ($status) {
+        'Uploaded' => 'Uploaded',
+        'Pending' => 'Pending',
+        default => $status
+    };
+}
+
+function getRequirementGroup(array $requirement, DateTime $todayStart, DateTime $tomorrowStart): string
+{
+    if (empty($requirement['deadline'])) {
+        return 'No Deadline';
+    }
+
+    $deadlineTs = strtotime($requirement['deadline']);
+    if ($deadlineTs === false) {
+        return 'No Deadline';
+    }
+
+    $todayStartTs = $todayStart->getTimestamp();
+    $tomorrowStartTs = $tomorrowStart->getTimestamp();
+
+    if ($deadlineTs < $todayStartTs) {
+        return 'Overdue';
+    }
+
+    if ($deadlineTs >= $todayStartTs && $deadlineTs < $tomorrowStartTs) {
+        return 'Today';
+    }
+
+    return 'Upcoming';
+}
+
+/* ================= LOAD REQUIREMENTS FROM DATABASE ================= */
+$fetchRequirementsSql = "
+    SELECT
+        er.event_req_id,
+        rt.req_name,
+        rt.req_desc,
+        rt.template_url,
+        er.submission_status,
+        er.review_status,
+        er.deadline,
+        er.created_at,
+        er.updated_at,
+
+        rf.file_path,
+        rf.original_file_name,
+        rf.file_type,
+        rf.uploaded_at,
+
+        e.event_id,
+        e.event_name,
+        e.event_status,
+        ed.start_datetime,
+        ed.end_datetime
+    FROM event_requirements er
+    INNER JOIN requirement_templates rt
+        ON er.req_template_id = rt.req_template_id
+    INNER JOIN events e
+        ON er.event_id = e.event_id
+    LEFT JOIN event_dates ed
+        ON e.event_id = ed.event_id
+    LEFT JOIN requirement_files rf
+        ON er.event_req_id = rf.event_req_id
+       AND rf.is_current = 1
     WHERE e.user_id = ?
-    AND e.archived_at IS NULL
+      AND e.archived_at IS NULL
+      AND e.event_status IN ('Pending Review', 'Needs Revision', 'Approved')
 ";
 
-// Add event filter condition if specified
+$requirementParams = [$user_id];
+$requirementTypes = "i";
+
 if ($event_filter) {
-    $sql .= " AND e.event_id = ?";
+    $fetchRequirementsSql .= " AND e.event_id = ?";
+    $requirementParams[] = $event_filter;
+    $requirementTypes .= "i";
 }
 
-// Order by event start time and requirement creation time
-$sql .= " ORDER BY e.start_datetime ASC, r.created_at ASC";
+$fetchRequirementsSql .= "
+    ORDER BY
+        CASE WHEN er.deadline IS NULL AND ed.start_datetime IS NULL THEN 1 ELSE 0 END,
+        COALESCE(er.deadline, ed.start_datetime) ASC,
+        er.created_at ASC
+";
 
-// Prepare and execute the query
-$stmt = $conn->prepare($sql);
+$requirementRows = fetchAll(
+    $conn,
+    $fetchRequirementsSql,
+    $requirementTypes,
+    $requirementParams
+);
 
-// Bind parameters based on whether filter is applied
-if ($event_filter) {
-    $stmt->bind_param("ii", $user_id, $event_filter);
-} else {
-    $stmt->bind_param("i", $user_id);
-}
-
-$stmt->execute();
-$result = $stmt->get_result();
-
-// Initialize requirements array
 $requirements = [];
 
-// ===== LOAD EVENTS FOR FILTER DROPDOWN =====
-// Fetch all non-archived events for the current user to populate filter options
+/* ================= LOAD EVENTS FOR FILTER DROPDOWN ================= */
+$fetchFilterEventsSql = "
+    SELECT
+        e.event_id,
+        e.event_name,
+        e.event_status,
+        ed.start_datetime
+    FROM events e
+    LEFT JOIN event_dates ed
+        ON e.event_id = ed.event_id
+    WHERE e.user_id = ?
+      AND e.archived_at IS NULL
+      AND e.event_status IN ('Pending Review', 'Needs Revision', 'Approved')
+    ORDER BY
+        CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
+        ed.start_datetime ASC,
+        e.created_at ASC
+";
+
+$eventRows = fetchAll(
+    $conn,
+    $fetchFilterEventsSql,
+    "i",
+    [$user_id]
+);
+
 $events_map = [];
-
-$ev_stmt = $conn->prepare("
-    SELECT event_id, event_name, start_datetime
-    FROM events
-    WHERE user_id = ?
-    AND archived_at IS NULL
-    ORDER BY start_datetime ASC
-");
-
-$ev_stmt->bind_param("i", $user_id);
-$ev_stmt->execute();
-$ev_res = $ev_stmt->get_result();
-
-// Build events map for filter dropdown
-while ($row = $ev_res->fetch_assoc()) {
+foreach ($eventRows as $row) {
     $events_map[$row['event_id']] = [
         'name' => $row['event_name'],
+        'status' => $row['event_status'],
         'start' => $row['start_datetime']
     ];
 }
 
-// Process requirements result into array
-while ($row = $result->fetch_assoc()) {
+foreach ($requirementRows as $row) {
     $requirements[] = [
-        'id' => $row['req_id'],
+        'id' => (int) $row['event_req_id'],
         'name' => $row['req_name'],
         'desc' => $row['req_desc'],
+        'template_url' => $row['template_url'],
         'file_path' => $row['file_path'],
-        'status' => $row['doc_status'],
+        'original_file_name' => $row['original_file_name'],
+        'file_type' => $row['file_type'],
+        'uploaded_at' => $row['uploaded_at'],
+        'status' => $row['submission_status'],
+        'review_status' => $row['review_status'],
+        'deadline' => $row['deadline'],
         'created_at' => $row['created_at'],
-        'event_id' => $row['event_id'],
+        'updated_at' => $row['updated_at'],
+        'event_id' => (int) $row['event_id'],
         'event_name' => $row['event_name'],
+        'event_status' => $row['event_status'],
         'event_start' => $row['start_datetime'],
+        'event_end' => $row['end_datetime'],
+        'display_datetime' => getRequirementDisplayDate($row['deadline'] ?? null, $row['start_datetime'] ?? null)
     ];
 }
 
-// ===== DATE GROUPING SETUP =====
-// Create DateTime objects for today, yesterday, and tomorrow for grouping
-$today = new DateTime('today');
-$yesterday = (clone $today)->modify('-1 day');
-$tomorrow = (clone $today)->modify('+1 day');
+/* ================= DATE GROUPING SETUP ================= */
+$todayStart = new DateTime('today');
+$tomorrowStart = (clone $todayStart)->modify('+1 day');
 
-// ===== FUNCTION TO FILTER REQUIREMENTS BY DATE =====
-// Helper function to get events and their requirements for a specific date
-function eventsForDate($requirements, $date)
-{
-    // Filter requirements by the specified date (YYYY-MM-DD format)
-    $filtered = array_filter($requirements, fn($r) => substr($r['event_start'], 0, 10) === $date);
+/* ================= GROUP REQUIREMENTS ================= */
+$grouped = [
+    'Overdue' => [],
+    'Today' => [],
+    'Upcoming' => [],
+    'No Deadline' => []
+];
 
-    $events = [];
+foreach ($requirements as $r) {
+    $groupName = getRequirementGroup($r, $todayStart, $tomorrowStart);
+    $eventId = $r['event_id'];
 
-    // Group requirements by event
-    foreach ($filtered as $r) {
-        $eventId = $r['event_id'];
-
-        if (!isset($events[$eventId])) {
-            $events[$eventId] = [
-                'event_name' => $r['event_name'],
-                'event_id' => $eventId,
-                'requirements' => []
-            ];
-        }
-
-        $events[$eventId]['requirements'][] = $r;
+    if (!isset($grouped[$groupName][$eventId])) {
+        $grouped[$groupName][$eventId] = [
+            'event_name' => $r['event_name'],
+            'event_id' => $eventId,
+            'event_status' => $r['event_status'],
+            'event_start' => $r['event_start'],
+            'requirements' => []
+        ];
     }
 
-    return $events;
+    $grouped[$groupName][$eventId]['requirements'][] = $r;
 }
 
-// ===== CREATE DATE GROUPS =====
-// Group requirements into Yesterday, Today, and Tomorrow categories
 $groups = [
     [
-        'title' => 'Yesterday',
-        'date' => $yesterday,
-        'items' => eventsForDate($requirements, $yesterday->format('Y-m-d'))
+        'title' => 'Overdue',
+        'subtitle' => 'Requirements with deadlines before today',
+        'items' => $grouped['Overdue']
     ],
     [
         'title' => 'Today',
-        'date' => $today,
-        'items' => eventsForDate($requirements, $today->format('Y-m-d'))
+        'subtitle' => 'Requirements due today',
+        'items' => $grouped['Today']
     ],
     [
-        'title' => 'Tomorrow',
-        'date' => $tomorrow,
-        'items' => eventsForDate($requirements, $tomorrow->format('Y-m-d'))
+        'title' => 'Upcoming',
+        'subtitle' => 'Requirements due after today',
+        'items' => $grouped['Upcoming']
+    ],
+    [
+        'title' => 'No Deadline',
+        'subtitle' => 'Requirements without a computed deadline',
+        'items' => $grouped['No Deadline']
     ]
 ];
 
-// ===== PROGRESS CALCULATION =====
-// Calculate completion progress based on uploaded requirements
+/* ================= PROGRESS CALCULATION ================= */
 $total = count($requirements);
-$uploaded = count(array_filter($requirements, fn($r) => $r['status'] === 'uploaded'));
+$uploaded = count(array_filter($requirements, fn($r) => ($r['status'] ?? '') === 'Uploaded'));
 $percent = $total ? round(($uploaded / $total) * 100) : 0;
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -167,20 +252,14 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
 </head>
 
 <body>
-    <!-- ===== APPLICATION CONTAINER ===== -->
-    <!-- Main app wrapper for layout structure -->
     <div class="app">
-        <!-- ===== GENERAL NAVIGATION ===== -->
-        <!-- Include the general navigation bar -->
         <?php include "assets/includes/general_nav.php"; ?>
 
         <main class="main">
-            <!-- ===== PAGE HEADER ===== -->
-            <!-- Top section with page title and description -->
             <header class="topbar">
                 <div class="title-wrap">
                     <h1>Requirements</h1>
-                    <p>Keep track your compliance progress.</p>
+                    <p>Keep track of your compliance progress.</p>
                 </div>
             </header>
 
@@ -209,32 +288,33 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                 </div>
             </div>
 
-            <!-- ===== EVENT FILTER ===== -->
-            <!-- Form for filtering requirements by specific event -->
             <div class="filter-bar" id="req-deadlines">
                 <form method="GET">
                     <label>Filter by Event:</label>
                     <select name="event_id" onchange="this.form.submit()">
-                        <option value="">-- All Events --</option>
+                        <option value="">-- All Active Compliance Events --</option>
                         <?php foreach ($events_map as $id => $ev): ?>
-                            <option value="<?= $id ?>" <?= ($event_filter == $id) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($ev['name']) ?> (<?= date('M j, Y', strtotime($ev['start'])) ?>)
+                            <option value="<?= (int) $id ?>" <?= ($event_filter == $id) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($ev['name']) ?> - <?= htmlspecialchars($ev['status']) ?>
+                                <?php if (!empty($ev['start'])): ?>
+                                    (<?= date('M j, Y', strtotime($ev['start'])) ?>)
+                                <?php else: ?>
+                                    (No schedule)
+                                <?php endif; ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </form>
             </div>
 
-            <!-- ===== REQUIREMENTS LIST ===== -->
-            <!-- Main content section with grouped requirements -->
             <section class="content req-page">
                 <?php foreach ($groups as $group): ?>
-                    <!-- ===== REQUIREMENT GROUP ===== -->
-                    <!-- Each group represents a date category (Yesterday, Today, Tomorrow) -->
                     <div class="req-group">
                         <div class="req-head">
-                            <h2><?= $group['title'] ?></h2>
-                            <p><?= $group['date']->format('F j, Y') ?></p>
+                            <div>
+                                <h2><?= htmlspecialchars($group['title']) ?></h2>
+                                <p><?= htmlspecialchars($group['subtitle']) ?></p>
+                            </div>
                         </div>
 
                     <?php if (empty($group['items'])): ?>
@@ -263,41 +343,36 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                     </div>
                 <?php endif; ?>
 
-                        <!-- ===== EVENT BLOCKS ===== -->
-                        <!-- Loop through events within this date group -->
-                        <?php foreach ($group['items'] as $event):
-                            // Sort requirements within event: uploaded first, then by deadline
+                        <?php foreach ($group['items'] as $event): ?>
+                            <?php
                             usort($event['requirements'], function ($a, $b) {
-                                $a_uploaded = ($a['status'] === 'uploaded');
-                                $b_uploaded = ($b['status'] === 'uploaded');
+                                $a_uploaded = (($a['status'] ?? '') === 'Uploaded');
+                                $b_uploaded = (($b['status'] ?? '') === 'Uploaded');
 
-                                // Prioritize uploaded requirements
                                 if ($a_uploaded !== $b_uploaded) {
                                     return $a_uploaded <=> $b_uploaded;
                                 }
 
-                                // Then sort by deadline (event start if no specific deadline)
-                                $a_deadline = strtotime($a['deadline'] ?? $a['event_start']);
-                                $b_deadline = strtotime($b['deadline'] ?? $b['event_start']);
+                                $a_deadline = strtotime($a['display_datetime'] ?? '9999-12-31 23:59:59');
+                                $b_deadline = strtotime($b['display_datetime'] ?? '9999-12-31 23:59:59');
 
                                 return $a_deadline <=> $b_deadline;
                             });
-                        ?>
+                            ?>
+
                             <div class="event-block">
-                                <!-- ===== INDIVIDUAL REQUIREMENTS ===== -->
-                                <!-- Loop through requirements for this event -->
-                                <?php foreach ($event['requirements'] as $req):
-                                    $status = ($req['status'] === 'uploaded') ? 'Uploaded' : 'Pending';
-                                    $deadline = strtotime($req['deadline'] ?? $req['event_start']);
-                                ?>
-                                    <!-- ===== REQUIREMENT CARD ===== -->
-                                    <!-- Clickable card linking to event view page -->
-                                    <a class="req-card" href="view_event.php?id=<?= $event['event_id'] ?>">
+                                <?php foreach ($event['requirements'] as $req): ?>
+                                    <?php
+                                    $status = formatSubmissionStatus($req['status'] ?? 'Pending');
+                                    $deadline_source = $req['display_datetime'];
+                                    $deadline_ts = $deadline_source ? strtotime($deadline_source) : null;
+                                    ?>
+
+                                    <a class="req-card" href="view_event.php?id=<?= (int) $event['event_id'] ?>">
                                         <div class="req-item">
                                             <div class="req-title">
                                                 <?= htmlspecialchars($req['name']) ?>
 
-                                                <!-- Tooltip for requirement description if available -->
                                                 <?php if (!empty($req['desc'])): ?>
                                                     <span class="tooltip-icon">
                                                         <i class="fa-regular fa-circle-question"></i>
@@ -308,20 +383,50 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                                                 <?php endif; ?>
                                             </div>
 
-                                            <!-- Sub-information showing event name and deadline time -->
                                             <div class="req-sub">
-                                                From <?= htmlspecialchars($event['event_name']) ?>:
-                                                <strong>
-                                                    <time datetime="<?= htmlspecialchars($req['deadline'] ?? $req['event_start']) ?>">
-                                                        <?= date("g:i A", $deadline) ?>
-                                                    </time>
-                                                </strong>
+                                                From <?= htmlspecialchars($event['event_name']) ?>
+                                                (<?= htmlspecialchars($event['event_status']) ?>)
                                             </div>
+
+                                            <div class="req-sub">
+                                                <?php if (!empty($req['deadline']) && $deadline_ts): ?>
+                                                    Deadline:
+                                                    <strong>
+                                                        <time datetime="<?= htmlspecialchars($req['deadline']) ?>">
+                                                            <?= date("M j, Y g:i A", $deadline_ts) ?>
+                                                        </time>
+                                                    </strong>
+                                                <?php elseif ($deadline_ts): ?>
+                                                    Event Date:
+                                                    <strong>
+                                                        <time datetime="<?= htmlspecialchars($deadline_source) ?>">
+                                                            <?= date("M j, Y g:i A", $deadline_ts) ?>
+                                                        </time>
+                                                    </strong>
+                                                <?php else: ?>
+                                                    <strong>No schedule</strong>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <?php if (!empty($req['template_url']) || !empty($req['file_path'])): ?>
+                                                <div class="req-sub">
+                                                    <?php if (!empty($req['template_url'])): ?>
+                                                        <span>Template available</span>
+                                                    <?php endif; ?>
+
+                                                    <?php if (!empty($req['template_url']) && !empty($req['file_path'])): ?>
+                                                        <span> • </span>
+                                                    <?php endif; ?>
+
+                                                    <?php if (!empty($req['file_path'])): ?>
+                                                        <span>File uploaded</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
                                         </div>
 
-                                        <!-- Status indicator -->
                                         <span class="status <?= strtolower($status) ?>">
-                                            <?= $status ?>
+                                            <?= htmlspecialchars($status) ?>
                                         </span>
                                     </a>
                                 <?php endforeach; ?>
@@ -333,9 +438,7 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
         </main>
     </div>
 
-    <!-- ===== JAVASCRIPT ===== -->
-    <!-- Include requirements-specific JavaScript -->
-    <script src="assets/js/requirements.js"></script>
+    <script src="../app/script/requirements.js"></script>
 </body>
 
 </html>

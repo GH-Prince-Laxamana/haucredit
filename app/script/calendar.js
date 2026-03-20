@@ -1,263 +1,165 @@
 (function () {
-  // ===== UTILITY FUNCTIONS =====
-  // Define shorthand functions for DOM selection to reduce code verbosity
-  const $ = (s, r = document) => r.querySelector(s);
-  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) =>
+    Array.from(root.querySelectorAll(selector));
 
-  // ===== DATE HELPER FUNCTIONS =====
-  // Convert date string to timestamp for comparison operations
-  const toTs = (d) => new Date(d + "T00:00:00").getTime();
+  const toTs = (dateStr) => new Date(dateStr + "T00:00:00").getTime();
 
-  // Add days to a date string and return formatted date
-  const addDays = (d, n) => {
-    const dt = new Date(d + "T00:00:00");
-    dt.setDate(dt.getDate() + n);
+  const addDays = (dateStr, daysToAdd) => {
+    const dt = new Date(dateStr + "T00:00:00");
+    dt.setDate(dt.getDate() + daysToAdd);
     const y = dt.getFullYear();
     const m = String(dt.getMonth() + 1).padStart(2, "0");
-    const day = String(dt.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+    const d = String(dt.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   };
 
-  // Split ISO datetime string into date and time parts
   const isoToParts = (iso) => {
     if (!iso || !iso.includes("T")) return { d: "", t: "" };
     const [d, t] = iso.split("T");
-    return { d: d || "", t: t || "" };
+    return { d: d || "", t: "" + (t || "").slice(0, 5) };
   };
 
-  // Extract date part from ISO datetime string
   const dateOnlyFromISO = (iso) => (iso ? iso.split("T")[0] : "");
-
-  // Extract time part from ISO datetime string
   const timeOnlyFromISO = (iso) =>
-    iso && iso.includes("T") ? iso.split("T")[1] : "";
+    iso && iso.includes("T") ? iso.split("T")[1].slice(0, 5) : "";
 
-  // ===== BUILD EDIT BUTTON WITH FA ICON =====
-  // Create edit button element with Font Awesome icon for consistency with calendar.php
-  const buildPillElement = () => {
-    const editBtn = document.createElement("button");
-    editBtn.type = "button";
-    editBtn.className = "pill-btn edit";
-    editBtn.title = "Edit";
-
-    // Create Font Awesome icon element instead of using text content
-    const icon = document.createElement("i");
-    icon.className = "fa-solid fa-pen";
-    editBtn.appendChild(icon);
-
-    return editBtn;
-  };
-
-  // ===== BUILD DELETE FORM WITH FA ICON =====
-  // Create delete form element with Font Awesome icon for consistency with calendar.php
-  const buildDeleteForm = (entryId, csrfToken) => {
-    const delForm = document.createElement("form");
-    delForm.className = "pill-del";
-    delForm.method = "post";
-
-    // Create hidden input for CSRF token to prevent cross-site request forgery
-    const csrf = document.createElement("input");
-    csrf.type = "hidden";
-    csrf.name = "csrf_token";
-    csrf.value = csrfToken;
-
-    // Create hidden input for action type
-    const act = document.createElement("input");
-    act.type = "hidden";
-    act.name = "action";
-    act.value = "delete_entry";
-
-    // Create hidden input for entry ID
-    const idInp = document.createElement("input");
-    idInp.type = "hidden";
-    idInp.name = "entry_id";
-    idInp.value = entryId;
-
-    // Create hidden input to indicate AJAX request
-    const ajax = document.createElement("input");
-    ajax.type = "hidden";
-    ajax.name = "ajax";
-    ajax.value = "1";
-
-    // Create delete button with Font Awesome icon
-    const delBtn = document.createElement("button");
-    delBtn.type = "submit";
-    delBtn.className = "pill-btn del";
-    delBtn.title = "Delete";
-
-    // Create Font Awesome icon element instead of using text content
-    const icon = document.createElement("i");
-    icon.className = "fa-solid fa-trash-can";
-    delBtn.appendChild(icon);
-
-    // Append all elements to the form
-    delForm.append(csrf, act, idInp, ajax, delBtn);
-    return delForm;
-  };
-
-  // ===== DOM CONTENT LOADED EVENT =====
-  // Execute code after DOM is fully loaded to ensure all elements are available
   document.addEventListener("DOMContentLoaded", () => {
-    // ===== DOM ELEMENT SELECTIONS =====
-    // Select modal and related elements for calendar entry management
     const modal = $("#calModal");
     const openBtn = $("#openAdd");
     const closeBackdrop = $("#closeAdd");
-    const closeBtn = $("#closeAddBtn");
     const cancelBtn = $("#cancelAdd");
 
-    // Select form elements for calendar entry input
     const modalTitle = $("#modalTitle");
     const form = $(".cal-form");
     const formAction = $("#formAction");
     const entryId = $("#entryId");
 
-    // Select input fields for calendar entry details
-    const title = $("#title");
-    const startDate = $("#start_date");
-    const startTime = $("#start_time");
-    const endDate = $("#end_date");
-    const endTime = $("#end_time");
-    const notes = $("#notes");
+    const titleInput = $("#title");
+    const startDateInput = $("#start_date");
+    const startTimeInput = $("#start_time");
+    const endDateInput = $("#end_date");
+    const endTimeInput = $("#end_time");
+    const notesInput = $("#notes");
 
-    // Get month boundaries from data attributes for rendering constraints
-    const monthStart = document.body.dataset.monthStart;
-    const monthEnd = document.body.dataset.monthEnd;
-
-    // ===== TRACKER ELEMENTS =====
-    // Select elements for displaying calendar statistics (if present)
-    const tEntries = $("#tEntries");
-    const tDays = $("#tDays");
-    const tUpcoming = $("#tUpcoming");
-
-    // ===== VIEW ELEMENTS =====
-    // Select elements for different calendar view modes
     const tabs = $$(".cal-tab[data-view]");
     const viewMonth = $("#viewMonth");
     const viewWeek = $("#viewWeek");
     const viewDay = $("#viewDay");
-
-    // Select elements for week and day view rendering
     const weekHead = $("#weekHead");
     const weekGrid = $("#weekGrid");
     const dayHead = $("#dayHead");
     const dayList = $("#dayList");
 
-    // Early return if required elements are missing to prevent errors
-    if (!modal || !openBtn || !form) return;
+    if (!modal || !form || !openBtn) return;
 
-    // ===== STATE VARIABLES =====
-    // Track current view mode and selected day for calendar navigation
     let currentView = "month";
     let selectedDay = (() => {
       const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const dd = String(now.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`;
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
     })();
 
-    // ===== MODAL MANAGEMENT FUNCTIONS =====
-    // Function to open the modal with proper accessibility attributes
-    const open = () => {
+    function openModal() {
       modal.classList.add("show");
       modal.setAttribute("aria-hidden", "false");
       document.body.classList.add("no-scroll");
-      setTimeout(() => title && title.focus(), 0);
-    };
+      setTimeout(() => titleInput?.focus(), 0);
+    }
 
-    // Function to close the modal and restore page state
-    const close = () => {
+    function closeModal() {
       modal.classList.remove("show");
       modal.setAttribute("aria-hidden", "true");
       document.body.classList.remove("no-scroll");
-    };
+    }
 
-    // Function to reset modal to add mode for new entries
-    const resetToAddMode = () => {
+    function resetToAddMode() {
       modalTitle.textContent = "Add Calendar Entry";
       formAction.value = "add_entry";
       entryId.value = "";
-      title.value = "";
-      startTime.value = "08:00";
-      endDate.value = "";
-      endTime.value = "";
-      notes.value = "";
-    };
+      titleInput.value = "";
+      startDateInput.value = "";
+      startTimeInput.value = "08:00";
+      endDateInput.value = "";
+      endTimeInput.value = "";
+      notesInput.value = "";
+    }
 
-    // Function to set date range in form inputs
-    const setDateRange = (a, b) => {
-      startDate.value = a || "";
-      endDate.value = b || a || "";
-    };
+    function loadEditDataFromPill(pill) {
+      modalTitle.textContent = "Edit Calendar Entry";
+      formAction.value = "edit_entry";
+      entryId.value = pill.dataset.entryId || "";
+      titleInput.value = pill.dataset.title || "";
+      notesInput.value = pill.dataset.notes || "";
 
-    // ===== EVENT LISTENERS FOR MODAL =====
-    // Handle opening modal for adding new entries
-    openBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      resetToAddMode();
-      setDateRange(selectedDay, selectedDay);
-      open();
-    });
+      const startParts = isoToParts(pill.dataset.start || "");
+      startDateInput.value = startParts.d || "";
+      startTimeInput.value = startParts.t || "08:00";
 
-    // Handle closing modal via backdrop, close button, or cancel button
-    [closeBackdrop, closeBtn, cancelBtn].forEach((btn) => {
-      if (btn) btn.addEventListener("click", close);
-    });
+      if (pill.dataset.end) {
+        const endParts = isoToParts(pill.dataset.end);
+        endDateInput.value = endParts.d || "";
+        endTimeInput.value = endParts.t || "";
+      } else {
+        endDateInput.value = "";
+        endTimeInput.value = "";
+      }
+    }
 
-    // Handle closing modal with Escape key for accessibility
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && modal.classList.contains("show")) close();
-    });
+    function setDateRange(startDate, endDate) {
+      startDateInput.value = startDate || "";
+      endDateInput.value = endDate || startDate || "";
+    }
 
-    // ===== UTILITY FUNCTIONS =====
-    // Collect calendar entries from DOM elements for rendering
     function collectEntriesFromDOM() {
       const map = new Map();
-      $$(".pill[data-entry-id]").forEach((p) => {
-        const id = p.dataset.entryId;
-        if (map.has(id)) return;
+
+      $$(".pill[data-entry-id]").forEach((pill) => {
+        const id = pill.dataset.entryId;
+        if (!id || map.has(id)) return;
+
         map.set(id, {
           id,
-          title: p.dataset.title || "",
-          start: p.dataset.start || "",
-          end: p.dataset.end || "",
-          notes: p.dataset.notes || "",
+          title: pill.dataset.title || "",
+          start: pill.dataset.start || "",
+          end: pill.dataset.end || "",
+          notes: pill.dataset.notes || "",
+          eventId: pill.dataset.eventId || "",
+          eventName: pill.dataset.eventName || "",
         });
       });
+
       return Array.from(map.values());
     }
 
-    // Check if an entry overlaps with a specific day
     function overlapsDay(entry, dayStr) {
-      const s = dateOnlyFromISO(entry.start);
-      const e = entry.end ? dateOnlyFromISO(entry.end) : s;
-      return toTs(dayStr) >= toTs(s) && toTs(dayStr) <= toTs(e);
+      const startDate = dateOnlyFromISO(entry.start);
+      const endDate = entry.end ? dateOnlyFromISO(entry.end) : startDate;
+      return toTs(dayStr) >= toTs(startDate) && toTs(dayStr) <= toTs(endDate);
     }
 
-    // Calculate start of week for a given day
     function startOfWeek(dayStr) {
       const d = new Date(dayStr + "T00:00:00");
-      const dow = d.getDay();
-      d.setDate(d.getDate() - dow);
+      const dayOfWeek = d.getDay();
+      d.setDate(d.getDate() - dayOfWeek);
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${dd}`;
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
     }
 
-    // ===== VIEW SWITCHING =====
-    // Set active tab based on current view
     function setActiveTab(view) {
-      tabs.forEach((t) =>
-        t.classList.toggle("active", t.dataset.view === view),
-      );
+      tabs.forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.view === view);
+      });
     }
 
-    // Switch to specified view and render accordingly
     function showView(view) {
       currentView = view;
       setActiveTab(view);
+
       if (viewMonth) viewMonth.hidden = view !== "month";
       if (viewWeek) viewWeek.hidden = view !== "week";
       if (viewDay) viewDay.hidden = view !== "day";
@@ -266,82 +168,110 @@
       if (view === "day") renderDay(selectedDay);
     }
 
-    // Attach event listeners to view tabs
-    tabs.forEach((btn) => {
-      btn.addEventListener("click", () => showView(btn.dataset.view));
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => showView(tab.dataset.view));
     });
 
-    // ===== MONTH VIEW INTERACTIONS =====
-    // State for drag selection in month view
-    const dragState = { dragging: false, start: "", end: "" };
+    openBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      resetToAddMode();
+      setDateRange(selectedDay, selectedDay);
+      openModal();
+    });
 
-    // Clear highlighted range in calendar cells
-    const clearRange = () =>
-      $$(".cal-cell.range").forEach((c) => c.classList.remove("range"));
+    [closeBackdrop, cancelBtn].forEach((btn) => {
+      if (btn) btn.addEventListener("click", closeModal);
+    });
 
-    // Highlight range of dates in calendar grid
-    const highlightRange = (a, b) => {
-      clearRange();
-      if (!a || !b) return;
-      const from = Math.min(toTs(a), toTs(b));
-      const to = Math.max(toTs(a), toTs(b));
-      $$(".cal-cell[data-date]").forEach((cell) => {
-        const d = cell.dataset.date;
-        const t = toTs(d);
-        if (t >= from && t <= to) cell.classList.add("range");
-      });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.classList.contains("show")) {
+        closeModal();
+      }
+    });
+
+    const dragState = {
+      dragging: false,
+      start: "",
+      end: "",
     };
 
-    // Handle cell click to open modal for adding entry
-    const handleCellClick = (cell) => {
+    function clearRange() {
+      $$(".cal-cell.range").forEach((cell) => cell.classList.remove("range"));
+    }
+
+    function highlightRange(a, b) {
+      clearRange();
+      if (!a || !b) return;
+
+      const from = Math.min(toTs(a), toTs(b));
+      const to = Math.max(toTs(a), toTs(b));
+
+      $$(".cal-cell[data-date]").forEach((cell) => {
+        const cellDate = cell.dataset.date;
+        const ts = toTs(cellDate);
+        if (ts >= from && ts <= to) {
+          cell.classList.add("range");
+        }
+      });
+    }
+
+    function handleCellClick(cell, e) {
       if (
-        event.target.closest(".pill") ||
-        event.target.closest("form") ||
-        event.target.closest("button")
-      )
+        e.target.closest(".pill") ||
+        e.target.closest("form") ||
+        e.target.closest("button") ||
+        e.target.closest("a")
+      ) {
         return;
+      }
+
       selectedDay = cell.dataset.date;
       resetToAddMode();
       setDateRange(selectedDay, selectedDay);
-      open();
-    };
+      openModal();
+    }
 
-    // Attach click listeners to calendar cells
     $$(".cal-cell[data-date]").forEach((cell) => {
-      cell.addEventListener("click", () => handleCellClick(cell));
+      cell.addEventListener("click", (e) => handleCellClick(cell, e));
     });
 
-    // Handle drag selection for date range in month view
-    const grid = $(".cal-grid");
-    if (grid) {
-      grid.addEventListener("pointerdown", (e) => {
+    const monthGrid = $(".cal-grid");
+    if (monthGrid) {
+      monthGrid.addEventListener("pointerdown", (e) => {
         const cell = e.target.closest(".cal-cell[data-date]");
         if (!cell) return;
+
         if (
           e.target.closest(".pill") ||
           e.target.closest("form") ||
-          e.target.closest("button")
-        )
+          e.target.closest("button") ||
+          e.target.closest("a")
+        ) {
           return;
+        }
+
         dragState.dragging = true;
         dragState.start = cell.dataset.date;
-        dragState.end = dragState.start;
+        dragState.end = cell.dataset.date;
         highlightRange(dragState.start, dragState.end);
       });
 
-      grid.addEventListener("pointermove", (e) => {
+      monthGrid.addEventListener("pointermove", (e) => {
         if (!dragState.dragging) return;
+
         const cell = e.target.closest(".cal-cell[data-date]");
         if (!cell) return;
-        const d = cell.dataset.date;
-        if (d && d !== dragState.end) {
-          dragState.end = d;
+
+        const date = cell.dataset.date;
+        if (date && date !== dragState.end) {
+          dragState.end = date;
           highlightRange(dragState.start, dragState.end);
         }
       });
 
       window.addEventListener("pointerup", () => {
         if (!dragState.dragging) return;
+
         dragState.dragging = false;
 
         const a = dragState.start;
@@ -354,171 +284,123 @@
         selectedDay = from;
         resetToAddMode();
         setDateRange(from, to);
-        open();
+        openModal();
 
-        setTimeout(clearRange, 250);
+        setTimeout(clearRange, 200);
       });
     }
 
-    // ===== TRACKER UPDATE =====
-    // Update statistics display elements
-    function updateTracker(stats) {
-      if (!stats) return;
-      if (tEntries) tEntries.textContent = stats.entries;
-      if (tDays) tDays.textContent = stats.entry_days;
-      if (tUpcoming) tUpcoming.textContent = stats.upcoming;
+    function bindEditablePills(root = document) {
+      $$(".pill[data-entry-id]", root).forEach((pill) => {
+        const isLinkedEvent =
+          !!pill.dataset.eventId && pill.dataset.eventId !== "0";
+        if (isLinkedEvent) return;
+
+        if (!pill.dataset.clickbound) {
+          pill.dataset.clickbound = "1";
+          pill.addEventListener("click", (e) => {
+            if (
+              e.target.closest(".pill-actions") ||
+              e.target.closest("button") ||
+              e.target.closest("form") ||
+              e.target.closest("a")
+            ) {
+              return;
+            }
+
+            loadEditDataFromPill(pill);
+            openModal();
+          });
+        }
+
+        const editBtn = $(".pill-btn.edit", pill);
+        if (editBtn && !editBtn.dataset.bound) {
+          editBtn.dataset.bound = "1";
+          editBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            loadEditDataFromPill(pill);
+            openModal();
+          });
+        }
+      });
     }
 
-    // ===== DOM REMOVAL =====
-    // Remove entry elements from all views
-    function removeEntryEverywhere(id) {
-      $$('.pill[data-entry-id="' + id + '"]').forEach((p) => p.remove());
-    }
+    function createWeekDayEntryElement(entry) {
+      const isLinkedEvent = !!entry.eventId && entry.eventId !== "0";
 
-    // ===== BUILD PILL ELEMENT =====
-    // Create visual pill element for calendar entries
-    function buildPill(e) {
       const pill = document.createElement("div");
-      pill.className = "pill";
-      pill.dataset.entryId = e.id;
-      pill.dataset.title = e.title;
-      pill.dataset.start = e.start;
-      pill.dataset.end = e.end || "";
-      pill.dataset.notes = e.notes || "";
+      pill.className = "pill" + (isLinkedEvent ? " pill-event" : "");
+      pill.dataset.entryId = entry.id;
+      pill.dataset.title = entry.title;
+      pill.dataset.start = entry.start;
+      pill.dataset.end = entry.end || "";
+      pill.dataset.notes = entry.notes || "";
+      pill.dataset.eventId = entry.eventId || "";
+      pill.dataset.eventName = entry.eventName || "";
 
-      // Create title element
-      const t = document.createElement("div");
-      t.className = "pill-title";
-      t.textContent = e.title;
+      const title = document.createElement("div");
+      title.className = "pill-title";
+      title.textContent = entry.title;
+      pill.appendChild(title);
 
-      // Create time display if available
-      const st = timeOnlyFromISO(e.start);
-      const et = e.end ? timeOnlyFromISO(e.end) : "";
-      const timeText = st ? (et ? `${st}–${et}` : st) : "";
+      const startTime = timeOnlyFromISO(entry.start);
+      const endTime = entry.end ? timeOnlyFromISO(entry.end) : "";
+      const timeText = startTime
+        ? endTime
+          ? `${startTime}–${endTime}`
+          : startTime
+        : "";
 
-      pill.appendChild(t);
       if (timeText) {
-        const ti = document.createElement("div");
-        ti.className = "pill-time";
-        ti.textContent = timeText;
-        pill.appendChild(ti);
+        const time = document.createElement("div");
+        time.className = "pill-time";
+        time.textContent = timeText;
+        pill.appendChild(time);
       }
 
-      // Create actions container with edit and delete buttons
       const actions = document.createElement("div");
       actions.className = "pill-actions";
-      
-      const csrfToken = $('input[name="csrf_token"]')?.value || "";
-      actions.append(buildPillElement(), buildDeleteForm(e.id, csrfToken));
-      pill.appendChild(actions);
 
+      if (isLinkedEvent) {
+        const link = document.createElement("a");
+        link.href = `view_event.php?id=${entry.eventId}`;
+        link.className = "pill-btn edit";
+        link.title = "View Event";
+        link.innerHTML =
+          '<i class="fa-solid fa-arrow-up-right-from-square"></i>';
+        actions.appendChild(link);
+      } else {
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "pill-btn edit";
+        editBtn.title = "Edit";
+        editBtn.innerHTML = '<i class="fa-solid fa-pen"></i>';
+        actions.appendChild(editBtn);
+
+        const deleteForm = document.createElement("form");
+        deleteForm.method = "post";
+        deleteForm.className = "pill-del";
+        deleteForm.onsubmit = () => confirm("Delete this entry?");
+
+        const csrf =
+          document.querySelector('input[name="csrf_token"]')?.value || "";
+
+        deleteForm.innerHTML = `
+          <input type="hidden" name="csrf_token" value="${csrf}">
+          <input type="hidden" name="action" value="delete_entry">
+          <input type="hidden" name="entry_id" value="${entry.id}">
+          <button type="submit" class="pill-btn del" title="Delete">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        `;
+        actions.appendChild(deleteForm);
+      }
+
+      pill.appendChild(actions);
       return pill;
     }
 
-    // ===== BIND EVENT HANDLERS =====
-    // Bind event handlers to pill elements for editing and deleting
-    function bindAll() {
-      const bindEditHandler = (pill) => {
-        // Function to load pill data into modal for editing
-        const loadPillData = () => {
-          modalTitle.textContent = "Edit Calendar Entry";
-          formAction.value = "edit_entry";
-          entryId.value = pill.dataset.entryId || "";
-          title.value = pill.dataset.title || "";
-          notes.value = pill.dataset.notes || "";
-
-          const sp = isoToParts(pill.dataset.start || "");
-          startDate.value = sp.d || "";
-          startTime.value = sp.t || "08:00";
-
-          if (pill.dataset.end) {
-            const ep = isoToParts(pill.dataset.end);
-            endDate.value = ep.d || "";
-            endTime.value = ep.t || "";
-          } else {
-            endDate.value = "";
-            endTime.value = "";
-          }
-        };
-
-        // Handle pill click to open edit modal
-        const handlePillClick = (e) => {
-          if (
-            e.target.closest(".pill-actions") ||
-            e.target.closest("button") ||
-            e.target.closest("form")
-          )
-            return;
-          loadPillData();
-          open();
-        };
-
-        // Handle edit button click
-        const handleEditClick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          loadPillData();
-          open();
-        };
-
-        // Bind click event to pill if not already bound
-        if (!pill.dataset.clickbound) {
-          pill.dataset.clickbound = "1";
-          pill.addEventListener("click", handlePillClick);
-        }
-
-        // Bind click event to edit button if not already bound
-        const editBtn = pill.querySelector(".pill-btn.edit");
-        if (editBtn && !editBtn.dataset.bound) {
-          editBtn.dataset.bound = "1";
-          editBtn.addEventListener("click", handleEditClick);
-        }
-      };
-
-      // Bind edit handlers to all pills
-      $$(".pill").forEach(bindEditHandler);
-
-      // ===== DELETE HANDLER =====
-      // Bind submit handlers to delete forms
-      $$(".pill-del").forEach((f) => {
-        if (f.dataset.bound) return;
-        f.dataset.bound = "1";
-
-        f.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const id = $('input[name="entry_id"]', f)?.value;
-          if (!id) return;
-
-          if (!confirm("Delete this entry?")) return;
-
-          const fd = new FormData(f);
-          fd.set("ajax", "1");
-
-          const res = await fetch(window.location.href, {
-            method: "POST",
-            body: fd,
-            headers: { "X-Requested-With": "XMLHttpRequest" },
-          });
-
-          const data = await res.json();
-          if (!res.ok || !data.success) {
-            alert(data.error || "Delete failed");
-            return;
-          }
-
-          removeEntryEverywhere(id);
-
-          // Re-render active view after deletion
-          if (currentView === "week") renderWeek(selectedDay);
-          if (currentView === "day") renderDay(selectedDay);
-
-          updateTracker(data.stats);
-        });
-      });
-    }
-
-    // ===== RENDER WEEK VIEW =====
-    // Render week view with entries for each day
     function renderWeek(anchorDay) {
       if (!weekHead || !weekGrid) return;
 
@@ -532,42 +414,42 @@
       for (let i = 0; i < 7; i++) {
         const d = addDays(start, i);
         const dt = new Date(d + "T00:00:00");
-        const label = `${weekdayNames[i]} • ${dt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+        const label = `${weekdayNames[i]} • ${dt.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        })}`;
 
-        // Create header for the day
-        const h = document.createElement("div");
-        h.className = "wh";
-        h.textContent = label;
-        weekHead.appendChild(h);
+        const head = document.createElement("div");
+        head.className = "wh";
+        head.textContent = label;
+        weekHead.appendChild(head);
 
-        // Create column for the day
         const col = document.createElement("div");
         col.className = "week-col";
         col.dataset.date = d;
 
-        // Add date display
         const top = document.createElement("div");
         top.className = "wk-date";
         top.textContent = d;
         col.appendChild(top);
 
-        // Add entries for this day
         entries
-          .filter((e) => overlapsDay(e, d))
+          .filter((entry) => overlapsDay(entry, d))
           .sort((a, b) => (a.start || "").localeCompare(b.start || ""))
-          .forEach((e) => {
-            const pill = buildPill(e);
-            col.appendChild(pill);
+          .forEach((entry) => {
+            col.appendChild(createWeekDayEntryElement(entry));
           });
 
-        // Handle column click to switch to day view
-        col.addEventListener("click", (ev) => {
+        col.addEventListener("click", (e) => {
           if (
-            ev.target.closest(".pill") ||
-            ev.target.closest("form") ||
-            ev.target.closest("button")
-          )
+            e.target.closest(".pill") ||
+            e.target.closest("form") ||
+            e.target.closest("button") ||
+            e.target.closest("a")
+          ) {
             return;
+          }
+
           selectedDay = d;
           showView("day");
         });
@@ -575,11 +457,9 @@
         weekGrid.appendChild(col);
       }
 
-      bindAll();
+      bindEditablePills(weekGrid);
     }
 
-    // ===== RENDER DAY VIEW =====
-    // Render day view with detailed entries for selected day
     function renderDay(dayStr) {
       if (!dayHead || !dayList) return;
 
@@ -588,7 +468,7 @@
       dayList.innerHTML = "";
 
       const entries = collectEntriesFromDOM()
-        .filter((e) => overlapsDay(e, dayStr))
+        .filter((entry) => overlapsDay(entry, dayStr))
         .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
 
       if (entries.length === 0) {
@@ -600,141 +480,53 @@
         return;
       }
 
-      entries.forEach((e) => {
+      entries.forEach((entry) => {
         const row = document.createElement("div");
         row.className = "day-item";
 
         const left = document.createElement("div");
         left.className = "di-left";
 
-        // Title and notes
-        const tt = document.createElement("div");
-        tt.className = "di-title";
-        tt.textContent = e.title;
+        const title = document.createElement("div");
+        title.className = "di-title";
+        title.textContent = entry.title;
 
-        const nn = document.createElement("div");
-        nn.className = "di-notes";
-        nn.textContent = e.notes || "";
+        const notes = document.createElement("div");
+        notes.className = "di-notes";
+        notes.textContent = entry.notes || "";
 
-        left.append(tt, nn);
+        left.append(title, notes);
 
-        // Time display
         const right = document.createElement("div");
         right.className = "di-time";
-        const st = timeOnlyFromISO(e.start);
-        const et = e.end ? timeOnlyFromISO(e.end) : "";
-        right.textContent = st ? (et ? `${st}–${et}` : st) : "";
 
-        // Actions
-        const pill = buildPill(e);
-        pill.style.marginTop = "0";
-        pill.style.width = "fit-content";
+        const startTime = timeOnlyFromISO(entry.start);
+        const endTime = entry.end ? timeOnlyFromISO(entry.end) : "";
+        right.textContent = startTime
+          ? endTime
+            ? `${startTime}–${endTime}`
+            : startTime
+          : "";
 
         const actionsWrap = document.createElement("div");
         actionsWrap.style.display = "flex";
         actionsWrap.style.gap = "10px";
         actionsWrap.style.alignItems = "center";
-        actionsWrap.appendChild(pill.querySelector(".pill-actions"));
+
+        const pill = createWeekDayEntryElement(entry);
+        const actions = $(".pill-actions", pill);
+        if (actions) {
+          actionsWrap.appendChild(actions);
+        }
 
         row.append(left, right, actionsWrap);
         dayList.appendChild(row);
       });
 
-      bindAll();
+      bindEditablePills(dayList);
     }
 
-    // Initial binding of event handlers
-    bindAll();
-
-    // ===== AJAX FORM SUBMISSION =====
-    // Handle form submission for adding/editing entries
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const fd = new FormData(form);
-      fd.set("ajax", "1");
-
-      const res = await fetch(form.getAttribute("action"), {
-        method: "POST",
-        body: fd,
-        headers: { "X-Requested-With": "XMLHttpRequest" },
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        alert(data.error || "Save failed");
-        return;
-      }
-
-      // Remove old entry if editing
-      if (data.mode === "edit")
-        removeEntryEverywhere(String(data.entry.entry_id));
-
-      // Render new entry across relevant days in month view
-      const entry = data.entry;
-      const startD = entry.start_date;
-      const endD = entry.end_date;
-
-      let cur = startD;
-      while (toTs(cur) <= toTs(endD)) {
-        // Only render if within current month
-        if (toTs(cur) >= toTs(monthStart) && toTs(cur) <= toTs(monthEnd)) {
-          const cell = $('.cal-cell[data-date="' + cur + '"]');
-          if (cell) {
-            const spanClass = (() => {
-              if (startD === endD) return "";
-              if (cur === startD) return " span-start";
-              if (cur === endD) return " span-end";
-              return " span-mid";
-            })();
-
-            const pill = document.createElement("div");
-            pill.className = "pill" + spanClass;
-            pill.dataset.entryId = entry.entry_id;
-            pill.dataset.title = entry.title;
-            pill.dataset.start = entry.start_iso;
-            pill.dataset.end = entry.end_iso || "";
-            pill.dataset.notes = entry.notes || "";
-
-            const t = document.createElement("div");
-            t.className = "pill-title";
-            t.textContent = entry.title;
-            pill.appendChild(t);
-
-            // Show time only on start day
-            if (cur === startD && entry.time_label) {
-              const ti = document.createElement("div");
-              ti.className = "pill-time";
-              ti.textContent = entry.time_label;
-              pill.appendChild(ti);
-            }
-
-            // Add actions
-            const actions = document.createElement("div");
-            actions.className = "pill-actions";
-            const csrfToken = $('input[name="csrf_token"]')?.value || "";
-            actions.append(buildPillElement(), buildDeleteForm(entry.entry_id, csrfToken));
-            pill.appendChild(actions);
-
-            cell.appendChild(pill);
-          }
-        }
-        cur = addDays(cur, 1);
-      }
-
-      // Bind handlers to new elements
-      bindAll();
-
-      // Re-render week/day views if active
-      if (currentView === "week") renderWeek(selectedDay);
-      if (currentView === "day") renderDay(selectedDay);
-
-      updateTracker(data.stats);
-      close();
-      form.reset();
-    });
-
-    // Set default view to month
+    bindEditablePills(document);
     showView("month");
   });
 })();

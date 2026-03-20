@@ -3,56 +3,45 @@ session_start();
 require_once "../app/database.php";
 
 // ===== SECURITY HEADERS =====
-// Include security headers to protect against common web vulnerabilities
 require_once "../app/security_headers.php";
 send_security_headers();
 
 // ===== SELF-REFERENCING URL =====
-// Generate a safe, self-referencing URL for the form action to prevent XSS
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 
 // ===== VARIABLE INITIALIZATION =====
-// Initialize error and success message variables
 $error = "";
 $success = "";
 
 // ===== GET PARAMETERS =====
-// Retrieve and sanitize token and email from URL query parameters
 $token = trim($_GET["token"] ?? "");
 $email = trim($_GET["email"] ?? "");
 
 // ===== VALIDATE GET PARAMETERS =====
-// Check if required parameters are present
 if ($token === "" || $email === "") {
     $error = "Invalid reset link.";
 }
 
 // ===== POST REQUEST HANDLING =====
-// Process form submission for password reset
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // Extract and sanitize form input values
     $token = trim($_POST["token"] ?? "");
     $email = trim($_POST["email"] ?? "");
     $new = trim($_POST["new_password"] ?? "");
     $confirm = trim($_POST["confirm_password"] ?? "");
 
     // ===== VALIDATION: REQUIRED PARAMETERS =====
-    // Ensure token and email are provided
     if ($token === "" || $email === "") {
         $error = "Invalid reset link.";
 
-    // ===== VALIDATION: REQUIRED FIELDS =====
-    // Check if password fields are filled
+        // ===== VALIDATION: REQUIRED FIELDS =====
     } elseif ($new === "" || $confirm === "") {
         $error = "Please fill in all fields.";
 
-    // ===== VALIDATION: PASSWORD MATCH =====
-    // Ensure new password and confirmation match
+        // ===== VALIDATION: PASSWORD MATCH =====
     } elseif ($new !== $confirm) {
         $error = "Passwords do not match.";
 
-    // ===== VALIDATION: PASSWORD STRENGTH =====
-    // Enforce password complexity requirements
+        // ===== VALIDATION: PASSWORD STRENGTH =====
     } elseif (
         strlen($new) < 8 ||
         !preg_match('/[A-Z]/', $new) ||
@@ -63,13 +52,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } else {
         // ===== VERIFY USER EXISTS =====
-        // Check if user with provided email exists
-        $u = mysqli_prepare($conn, "SELECT user_id FROM users WHERE user_email = ? LIMIT 1");
-        mysqli_stmt_bind_param($u, "s", $email);
-        mysqli_stmt_execute($u);
-        $ures = mysqli_stmt_get_result($u);
-        $user = mysqli_fetch_assoc($ures);
-        mysqli_stmt_close($u);
+        $fetchUserByEmailSql = "
+            SELECT user_id
+            FROM users
+            WHERE user_email = ?
+            LIMIT 1
+        ";
+
+        $user = fetchOne(
+            $conn,
+            $fetchUserByEmailSql,
+            "s",
+            [$email]
+        );
 
         if (!$user) {
             $error = "Invalid reset link.";
@@ -77,19 +72,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $user_id = (int) $user["user_id"];
 
             // ===== VERIFY RESET TOKEN =====
-            // Fetch the most recent reset token for the user
-            $r = mysqli_prepare(
+            $fetchLatestResetTokenSql = "
+                SELECT token_hash, expires_at
+                FROM password_resets
+                WHERE user_id = ?
+                ORDER BY id DESC
+                LIMIT 1
+            ";
+
+            $reset = fetchOne(
                 $conn,
-                "SELECT token_hash, expires_at FROM password_resets
-                 WHERE user_id = ?
-                 ORDER BY id DESC
-                 LIMIT 1"
+                $fetchLatestResetTokenSql,
+                "i",
+                [$user_id]
             );
-            mysqli_stmt_bind_param($r, "i", $user_id);
-            mysqli_stmt_execute($r);
-            $rres = mysqli_stmt_get_result($r);
-            $reset = mysqli_fetch_assoc($rres);
-            mysqli_stmt_close($r);
 
             if (!$reset) {
                 $error = "Reset request not found or already used.";
@@ -99,22 +95,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $error = "Invalid reset link.";
             } else {
                 // ===== UPDATE PASSWORD =====
-                // Hash the new password and update user record
                 $hash = password_hash($new, PASSWORD_DEFAULT);
 
-                $upd = mysqli_prepare($conn, "UPDATE users SET user_password = ? WHERE user_id = ?");
-                mysqli_stmt_bind_param($upd, "si", $hash, $user_id);
-                mysqli_stmt_execute($upd);
-                mysqli_stmt_close($upd);
+                $updateUserPasswordSql = "
+                    UPDATE users
+                    SET user_password = ?
+                    WHERE user_id = ?
+                ";
+
+                execQuery(
+                    $conn,
+                    $updateUserPasswordSql,
+                    "si",
+                    [$hash, $user_id]
+                );
 
                 // ===== CLEANUP RESET TOKENS =====
-                // Delete all reset tokens for the user after successful reset
-                $del = mysqli_prepare($conn, "DELETE FROM password_resets WHERE user_id = ?");
-                mysqli_stmt_bind_param($del, "i", $user_id);
-                mysqli_stmt_execute($del);
-                mysqli_stmt_close($del);
+                $deleteResetTokensSql = "
+                    DELETE FROM password_resets
+                    WHERE user_id = ?
+                ";
 
-                // Clear error and set success message
+                execQuery(
+                    $conn,
+                    $deleteResetTokensSql,
+                    "i",
+                    [$user_id]
+                );
+
                 $error = "";
                 $success = "Password updated! You can now log in.";
             }
@@ -183,21 +191,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <!-- ===== ERROR MESSAGE ===== -->
                 <!-- Display error message if reset fails -->
                 <?php if ($error !== ""): ?>
-                    <div class="notice error"><?= htmlspecialchars($error) ?></div>
-                    <div class="link">Back to <a href="index.php">Log In</a></div>
+                        <div class="notice error"><?= htmlspecialchars($error) ?></div>
+                        <div class="link">Back to <a href="index.php">Log In</a></div>
                 <?php endif; ?>
 
                 <!-- ===== SUCCESS MESSAGE ===== -->
                 <!-- Display success message if reset succeeds -->
                 <?php if ($success !== ""): ?>
-                    <div class="notice success"><?= htmlspecialchars($success) ?></div>
-                    <div class="link">Go to <a href="index.php">Log In</a></div>
+                        <div class="notice success"><?= htmlspecialchars($success) ?></div>
+                        <div class="link">Go to <a href="index.php">Log In</a></div>
                 <?php endif; ?>
 
                 <!-- ===== DEFAULT LINK ===== -->
                 <!-- Default link to login page when no messages are shown -->
                 <?php if ($error === "" && $success === ""): ?>
-                    <div class="link">Back to <a href="index.php">Log In</a></div>
+                        <div class="link">Back to <a href="index.php">Log In</a></div>
                 <?php endif; ?>
             </div>
         </div>

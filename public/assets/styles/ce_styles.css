@@ -164,6 +164,11 @@ legend {
   padding: 0 0 5px;
 }
 
+.hint-important {
+  color: red;
+  font-weight: bold;
+}
+
 .multi-select {
   position: relative;
   border-radius: 6px;

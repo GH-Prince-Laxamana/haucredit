@@ -181,19 +181,24 @@
   font-weight: 600;
 }
 
-.home-status-badge.active {
-  background: rgba(5, 150, 105, 0.1);
-  color: var(--blue);
-}
-
-.home-status-badge.pending {
+.home-status-badge.pending-review {
   background: rgba(217, 119, 6, 0.1);
   color: var(--orange);
 }
 
-.home-status-badge.completed {
-  background: rgba(59, 130, 246, 0.1);
+.home-status-badge.needs-revision {
+  background: rgba(245, 11, 11, 0.1);
+  color: var(--red);
+}
+
+.home-status-badge.approved {
+  background: rgba(19, 182, 57, 0.143);
   color: var(--green);
+}
+
+.home-status-badge.completed {
+  background: rgba(16, 117, 185, 0.1);
+  color: var(--blue);
 }
 
 .home-deadline-item {
