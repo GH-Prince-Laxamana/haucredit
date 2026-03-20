@@ -64,6 +64,7 @@ body {
   display: flex;
   position: relative;
 }
+
 /* Sidebar */
 .sidebar {
   width: 300px;
@@ -72,7 +73,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 24px 20px;
-  position: relative;
+  position: sticky;
   z-index: 999;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
   border-right: 1px solid rgba(194, 161, 77, 0.2);
@@ -188,7 +189,8 @@ body {
 
 /* Account Section */
 .account {
-  margin-top: auto;
+  /* margin-top: auto; */
+  margin-top: 50px;
   padding-top: 24px;
   border-top: 1px solid rgba(194, 161, 77, 0.2);
   display: flex;

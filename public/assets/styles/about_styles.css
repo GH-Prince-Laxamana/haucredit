@@ -215,12 +215,6 @@
     text-align: center;
 }
 
-.feature-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 35px -12px rgba(75, 0, 20, 0.2);
-    border-color: rgba(194, 161, 77, 0.4);
-}
-
 .feature-icon {
     width: 70px;
     height: 70px;
