@@ -15,10 +15,20 @@ $current_admin_id = (int) $_SESSION["user_id"];
 $search = trim($_GET['search'] ?? '');
 $org_filter = trim($_GET['org'] ?? '');
 
+$success = $_SESSION["success"] ?? "";
+$error = $_SESSION["error"] ?? "";
+unset($_SESSION["success"], $_SESSION["error"]);
+
+/* ================= CSRF ================= */
+if (empty($_SESSION["csrf_token"])) {
+    $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
+}
+$csrf_token = $_SESSION["csrf_token"];
+
 /* ================= HELPERS ================= */
 function normalizeRoleClass(string $role): string
 {
-    return strtolower(str_replace(' ', '-', $role));
+    return strtolower(str_replace(' ', '-', trim($role)));
 }
 
 /* ================= SUMMARY COUNTS ================= */
@@ -32,13 +42,12 @@ $summarySql = "
 
 $summary = fetchOne($conn, $summarySql, "", []);
 
-/* ================= ORG OPTIONS ================= */
+/* ================= ORG OPTIONS FROM CONFIG ================= */
 $orgOptionsSql = "
-    SELECT DISTINCT org_body
-    FROM users
-    WHERE org_body IS NOT NULL
-      AND org_body != ''
-    ORDER BY org_body ASC
+    SELECT org_name
+    FROM config_org_options
+    WHERE is_active = 1
+    ORDER BY sort_order ASC, org_name ASC
 ";
 
 $orgOptions = fetchAll($conn, $orgOptionsSql, "", []);
@@ -157,6 +166,14 @@ foreach ($users as $user) {
             </header>
 
             <section class="content my-events-page">
+                <?php if ($success !== ""): ?>
+                    <div class="notice success" style="margin-bottom: 1rem;"><?= htmlspecialchars($success) ?></div>
+                <?php endif; ?>
+
+                <?php if ($error !== ""): ?>
+                    <div class="notice error" style="margin-bottom: 1rem;"><?= htmlspecialchars($error) ?></div>
+                <?php endif; ?>
+
                 <div class="summary-strip">
                     <div class="summary-card">
                         <span class="summary-num"><?= $total_users ?></span>
@@ -179,6 +196,63 @@ foreach ($users as $user) {
                     </div>
                 </div>
 
+                <section class="detail-card" style="margin-bottom: 1.25rem;">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-user-plus"></i> Add User</h2>
+                    </div>
+
+                    <div class="card-body">
+                        <form method="POST" action="admin_update_user.php" class="search-wrap" id="addUserForm"
+                            style="display:grid; gap:.75rem;" novalidate>
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                            <input type="hidden" name="action" value="add_user">
+
+                            <input type="text" id="user_name" name="user_name" class="search-input"
+                                placeholder="Username" minlength="4" maxlength="50" pattern="[A-Za-z0-9._-]{4,50}"
+                                title="Username must be 4-50 characters and may contain letters, numbers, dot, underscore, and hyphen only."
+                                required>
+
+                            <input type="email" id="user_email" name="user_email" class="search-input"
+                                placeholder="name@student.hau.edu.ph"
+                                pattern="^[A-Za-z0-9._%+-]+@student\.hau\.edu\.ph$"
+                                title="Email must be a valid HAU student email." required>
+
+                            <input type="text" id="stud_num" name="stud_num" class="search-input" placeholder="20XXXXXX"
+                                inputmode="numeric" minlength="8" maxlength="20" pattern="[0-9]{8,20}"
+                                title="Student number must contain 8 to 20 digits only." required>
+
+                            <select name="org_body" id="org_body" class="search-input" required>
+                                <option value="">Select organization</option>
+                                <?php foreach ($orgOptions as $org): ?>
+                                    <option value="<?= htmlspecialchars($org['org_name']) ?>">
+                                        <?= htmlspecialchars($org['org_name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+
+                            <select name="role" id="role" class="search-input" required>
+                                <option value="user">Standard User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+
+                            <input type="password" id="user_password" name="user_password" class="search-input"
+                                placeholder="Temporary password" minlength="8" maxlength="255"
+                                pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}"
+                                title="Password must be at least 8 characters and include uppercase, lowercase, and number."
+                                required>
+
+                            <input type="password" id="confirm_password" name="confirm_password" class="search-input"
+                                placeholder="Confirm password" minlength="8" maxlength="255" required>
+
+                            <div id="addUserFormError" class="notice error" style="display:none; margin:0;"></div>
+
+                            <div class="card-actions" style="justify-content:flex-end;">
+                                <button type="submit" class="btn-primary">Create User</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
                 <div class="list-toolbar" style="display:block;">
                     <form method="GET" class="search-wrap" style="margin-bottom: 1rem;">
                         <span class="search-icon">
@@ -192,7 +266,7 @@ foreach ($users as $user) {
                         <select name="org" class="search-input" style="max-width: 240px;">
                             <option value="">All Organizations</option>
                             <?php foreach ($orgOptions as $org): ?>
-                                <?php $org_value = $org['org_body'] ?? ''; ?>
+                                <?php $org_value = $org['org_name'] ?? ''; ?>
                                 <option value="<?= htmlspecialchars($org_value) ?>" <?= $org_filter === $org_value ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($org_value) ?>
                                 </option>
@@ -308,6 +382,7 @@ foreach ($users as $user) {
 
                                         <?php if (!$is_self && ($user['role'] ?? '') === 'user'): ?>
                                             <form method="POST" action="admin_update_user.php">
+                                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                                 <input type="hidden" name="user_id" value="<?= (int) $user['user_id'] ?>">
                                                 <input type="hidden" name="action" value="make_admin">
                                                 <button type="submit" class="btn-primary btn-view">Promote to Admin</button>
@@ -317,6 +392,7 @@ foreach ($users as $user) {
                                         <?php if (!$is_self && ($user['role'] ?? '') === 'admin'): ?>
                                             <form method="POST" action="admin_update_user.php"
                                                 data-confirm="Set this admin back to standard user?">
+                                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                                 <input type="hidden" name="user_id" value="<?= (int) $user['user_id'] ?>">
                                                 <input type="hidden" name="action" value="make_user">
                                                 <button type="submit" class="btn-secondary btn-edit">Set as User</button>
@@ -326,6 +402,7 @@ foreach ($users as $user) {
                                         <?php if (!$is_self): ?>
                                             <form method="POST" action="admin_update_user.php"
                                                 data-confirm="Delete this user? This will also delete all their related records.">
+                                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                                 <input type="hidden" name="user_id" value="<?= (int) $user['user_id'] ?>">
                                                 <input type="hidden" name="action" value="delete_user">
                                                 <button type="submit" class="btn-primary btn-danger">Delete</button>

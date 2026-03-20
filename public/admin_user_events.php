@@ -91,8 +91,10 @@ $fetchEventsSql = "
         e.created_at,
         e.updated_at,
 
-        et.activity_type,
-        et.background,
+        et.activity_type_id,
+        et.background_id,
+        cat.activity_type_name AS activity_type,
+        cbo.background_name AS background,
 
         ed.start_datetime,
         ed.end_datetime,
@@ -101,6 +103,10 @@ $fetchEventsSql = "
     FROM events e
     LEFT JOIN event_type et
         ON e.event_id = et.event_id
+    LEFT JOIN config_activity_types cat
+        ON et.activity_type_id = cat.activity_type_id
+    LEFT JOIN config_background_options cbo
+        ON et.background_id = cbo.background_id
     LEFT JOIN event_dates ed
         ON e.event_id = ed.event_id
     LEFT JOIN event_location el
@@ -124,8 +130,8 @@ if ($search !== '') {
         AND (
             e.event_name LIKE ?
             OR e.nature LIKE ?
-            OR et.activity_type LIKE ?
-            OR et.background LIKE ?
+            OR cat.activity_type_name LIKE ?
+            OR cbo.background_name LIKE ?
             OR el.venue_platform LIKE ?
         )
     ";
@@ -175,7 +181,8 @@ $events = fetchAll($conn, $fetchEventsSql, $types, $params);
 
                 <div class="title-wrap">
                     <h1>User Events</h1>
-                    <p><?= htmlspecialchars($user['user_name']) ?> • <?= htmlspecialchars($user['org_body'] ?? 'No organization') ?></p>
+                    <p><?= htmlspecialchars($user['user_name']) ?> •
+                        <?= htmlspecialchars($user['org_body'] ?? 'No organization') ?></p>
                 </div>
 
                 <div class="action-btns">
@@ -187,11 +194,9 @@ $events = fetchAll($conn, $fetchEventsSql, $types, $params);
                 <section class="detail-card" style="margin-bottom: 1.25rem;">
                     <div class="card-body">
                         <div style="display:flex; gap:1rem; align-items:center;">
-                            <img
-                                src="assets/profiles/<?= htmlspecialchars(!empty($user['profile_pic']) ? $user['profile_pic'] : 'default.jpg') ?>"
+                            <img src="assets/profiles/<?= htmlspecialchars(!empty($user['profile_pic']) ? $user['profile_pic'] : 'default.jpg') ?>"
                                 alt="<?= htmlspecialchars($user['user_name']) ?>"
-                                style="width:72px; height:72px; border-radius:50%; object-fit:cover;"
-                            >
+                                style="width:72px; height:72px; border-radius:50%; object-fit:cover;">
 
                             <div>
                                 <h2 style="margin:0 0 .35rem 0;"><?= htmlspecialchars($user['user_name']) ?></h2>
@@ -258,21 +263,20 @@ $events = fetchAll($conn, $fetchEventsSql, $types, $params);
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </span>
 
-                        <input
-                            type="text"
-                            name="search"
-                            class="search-input"
-                            placeholder="Search this user's events..."
-                            value="<?= htmlspecialchars($search) ?>"
-                        >
+                        <input type="text" name="search" class="search-input" placeholder="Search this user's events..."
+                            value="<?= htmlspecialchars($search) ?>">
 
                         <select name="status" class="search-input" style="max-width: 220px;">
                             <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>All Statuses</option>
                             <option value="Draft" <?= $status_filter === 'Draft' ? 'selected' : '' ?>>Draft</option>
-                            <option value="Pending Review" <?= $status_filter === 'Pending Review' ? 'selected' : '' ?>>Pending Review</option>
-                            <option value="Needs Revision" <?= $status_filter === 'Needs Revision' ? 'selected' : '' ?>>Needs Revision</option>
-                            <option value="Approved" <?= $status_filter === 'Approved' ? 'selected' : '' ?>>Approved</option>
-                            <option value="Completed" <?= $status_filter === 'Completed' ? 'selected' : '' ?>>Completed</option>
+                            <option value="Pending Review" <?= $status_filter === 'Pending Review' ? 'selected' : '' ?>>
+                                Pending Review</option>
+                            <option value="Needs Revision" <?= $status_filter === 'Needs Revision' ? 'selected' : '' ?>>
+                                Needs Revision</option>
+                            <option value="Approved" <?= $status_filter === 'Approved' ? 'selected' : '' ?>>Approved
+                            </option>
+                            <option value="Completed" <?= $status_filter === 'Completed' ? 'selected' : '' ?>>Completed
+                            </option>
                         </select>
 
                         <button type="submit" class="btn-primary">Apply</button>
@@ -381,7 +385,8 @@ $events = fetchAll($conn, $fetchEventsSql, $types, $params);
                                     </span>
 
                                     <div class="card-actions">
-                                        <a href="admin_manage_event.php?id=<?= (int) $event['event_id'] ?>" class="btn-primary btn-view">
+                                        <a href="admin_manage_event.php?id=<?= (int) $event['event_id'] ?>"
+                                            class="btn-primary btn-view">
                                             Manage Event
                                         </a>
                                     </div>

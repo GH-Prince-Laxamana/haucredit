@@ -378,7 +378,7 @@ $review_deadlines = fetchAll($conn, $fetchReviewDeadlinesSql);
                     </ul>
                 </section>
 
-                <section class="home-section">
+                <!-- <section class="home-section">
                     <header class="home-section-header">
                         <h2 class="home-section-title">Upcoming Review Deadlines</h2>
                         <a href="admin_events.php?sort=start" class="btn-secondary btn-smaller">View All</a>
@@ -412,7 +412,7 @@ $review_deadlines = fetchAll($conn, $fetchReviewDeadlinesSql);
                             <li>No upcoming review deadlines.</li>
                         <?php endif; ?>
                     </ul>
-                </section>
+                </section> -->
 
             </section>
 

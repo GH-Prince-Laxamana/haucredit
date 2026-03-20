@@ -177,7 +177,7 @@ $can_review = !in_array(($row['event_status'] ?? ''), ['Draft', 'Completed'], tr
                 </div>
 
                 <div class="action-btns">
-                    <a href="manage_event.php?id=<?= (int) $event_id ?>" class="btn-secondary">Back to Event</a>
+                    <a href="admin_manage_event.php?id=<?= (int) $event_id ?>" class="btn-secondary">Back to Event</a>
                 </div>
             </header>
 
