@@ -126,7 +126,7 @@
 
 
 .req-card:hover {
-  background: var(--offwhite);
+  background: var(--bg-gradient);
   cursor: pointer;
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(75, 0, 20, 0.08);
