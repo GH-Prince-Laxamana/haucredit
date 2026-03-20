@@ -4,8 +4,6 @@ require_once "../app/database.php";
 require_once "../app/security_headers.php";
 send_security_headers();
 
-
-
 if (!isset($_SESSION["user_id"])) {
   header("Location: index.php");
   exit();
@@ -31,91 +29,99 @@ $ce_fields = [
   'has_visitors'
 ];
 
-$event_id = isset($_GET['id']) ? (int) $_GET['id'] : null;
-$editing = !empty($event_id);
+$event_id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$editing = $event_id > 0;
 
 $formData = [];
+function canEditEventStatus(string $status): bool
+{
+  return in_array($status, ['Draft', 'Pending Review', 'Needs Revision'], true);
+}
 
-/* ================= HELPER: FETCH FORM DATA ================= */
-function fetchFormData($event_id, $ce_fields, $editing)
+/* ================= FETCH FORM DATA ================= */
+function fetchFormData(int $event_id, array $ce_fields, bool $editing): array
 {
   global $conn;
 
   $formData = [];
 
   if ($editing) {
-    $fetchEventFormDataSql =
-      "
-    SELECT
-      e.organizing_body,
-      et.background,
-      et.activity_type,
-      et.series,
-      e.nature,
-      e.event_name,
-      ed.start_datetime,
-      ed.end_datetime,
-      ep.participants,
-      el.venue_platform,
-      elg.extraneous,
-      elg.collect_payments,
-      em.target_metric,
-      el.distance,
-      ep.participant_range,
-      elg.overnight,
-      ep.has_visitors
-    FROM events e
-
-    LEFT JOIN event_type et ON e.event_id = et.event_id
-    LEFT JOIN event_dates ed ON e.event_id = ed.event_id
-    LEFT JOIN event_participants ep ON e.event_id = ep.event_id
-    LEFT JOIN event_location el ON e.event_id = el.event_id
-    LEFT JOIN event_logistics elg ON e.event_id = elg.event_id
-    LEFT JOIN event_metrics em ON e.event_id = em.event_id
-
-    WHERE e.event_id = ?
-      AND e.user_id = ?
-      AND e.archived_at IS NULL
-      
-    LIMIT 1
-    ";
+    $sql = "
+            SELECT
+                e.organizing_body,
+                e.event_status,
+                et.background,
+                et.activity_type,
+                et.series,
+                e.nature,
+                e.event_name,
+                ed.start_datetime,
+                ed.end_datetime,
+                ep.participants,
+                el.venue_platform,
+                elg.extraneous,
+                elg.collect_payments,
+                em.target_metric,
+                el.distance,
+                ep.participant_range,
+                elg.overnight,
+                ep.has_visitors
+            FROM events e
+            LEFT JOIN event_type et ON e.event_id = et.event_id
+            LEFT JOIN event_dates ed ON e.event_id = ed.event_id
+            LEFT JOIN event_participants ep ON e.event_id = ep.event_id
+            LEFT JOIN event_location el ON e.event_id = el.event_id
+            LEFT JOIN event_logistics elg ON e.event_id = elg.event_id
+            LEFT JOIN event_metrics em ON e.event_id = em.event_id
+            WHERE e.event_id = ?
+              AND e.user_id = ?
+              AND e.archived_at IS NULL
+            LIMIT 1
+        ";
 
     $existing_event = fetchOne(
       $conn,
-      $fetchEventFormDataSql,
+      $sql,
       "ii",
       [$event_id, $_SESSION["user_id"]]
     );
 
     if (!$existing_event) {
-      popup_error("Event not found or you don't have permission to edit it.");
+      popup_error("Event not found or you do not have permission to edit it.");
+    }
+
+    if (!canEditEventStatus($existing_event['event_status'] ?? '')) {
+      popup_error("This event can no longer be edited.");
     }
 
     foreach ($ce_fields as $field) {
       $formData[$field] = $existing_event[$field] ?? '';
     }
 
+    $formData['event_status'] = $existing_event['event_status'] ?? 'Draft';
   } else {
     foreach ($ce_fields as $field) {
       $formData[$field] = $_SESSION[$field] ?? '';
     }
+
+    $formData['event_status'] = 'Draft';
   }
 
   return $formData;
 }
 
-/* ================= HELPER: FETCH TEMPLATE DATA ================= */
-function fetchTemplateData()
+/* ================= FETCH TEMPLATE DATA ================= */
+function fetchTemplateData(): array
 {
   global $conn;
 
   $rows = fetchAll(
     $conn,
     "
-  SELECT req_name, req_desc, template_url
-  FROM requirement_templates
-  WHERE is_active = 1
-  "
+        SELECT req_name, req_desc, template_url
+        FROM requirement_templates
+        WHERE is_active = 1
+        "
   );
 
   $templates = [];
@@ -130,175 +136,246 @@ function fetchTemplateData()
   return [$templates, $descs];
 }
 
-/* ================= HELPER: UPSERT EVENT CORE + CHILD TABLES ================= */
-function saveEventData($event_id, $editing)
+/* ================= VALIDATION ================= */
+function validateEventSubmission(array $data): void
+{
+  $requiredFields = [
+    'background',
+    'activity_type',
+    'nature',
+    'event_name',
+    'start_datetime',
+    'end_datetime',
+    'participants',
+    'venue_platform',
+    'extraneous',
+    'collect_payments'
+  ];
+
+  foreach ($requiredFields as $field) {
+    if (!isset($data[$field]) || trim((string) $data[$field]) === '') {
+      popup_error("Please complete all required event fields before submitting.");
+    }
+  }
+
+  if (empty($data['organizing_body']) || !is_array($data['organizing_body'])) {
+    popup_error("Please select at least one organizing body.");
+  }
+
+  $target_metric = trim($data['target_metric'] ?? '');
+  if ($target_metric !== '' && !preg_match('/^(100|[1-9]?\d)\%\s+.+$/', $target_metric)) {
+    popup_error("Target Metric must follow this format: 75% Satisfaction Rating");
+  }
+
+  $start_datetime = trim($data['start_datetime'] ?? '');
+  $end_datetime = trim($data['end_datetime'] ?? '');
+
+  if ($start_datetime !== '' && $end_datetime !== '') {
+    $start_ts = strtotime($start_datetime);
+    $end_ts = strtotime($end_datetime);
+
+    if ($start_ts === false || $end_ts === false) {
+      popup_error("Invalid start or end date/time.");
+    }
+
+    if (($end_ts - $start_ts) < 7200) {
+      popup_error("End Date and Time must be at least 2 hours after the Start Date and Time.");
+    }
+  }
+}
+
+/* ================= SAVE EVENT CORE + CHILD TABLES ================= */
+function saveEventData(int $event_id, bool $editing, string $event_status): int
 {
   global $conn;
 
-  $organizing_body_json = isset($_SESSION['organizing_body']) ? json_encode($_SESSION['organizing_body']) : '[]';
-  $event_status = "Pending Review";
+  $organizing_body_json = isset($_SESSION['organizing_body'])
+    ? json_encode($_SESSION['organizing_body'])
+    : '[]';
 
-  $nature = $_SESSION['nature'] ?? '';
-  $event_name = $_SESSION['event_name'] ?? '';
+  $nature = trim($_SESSION['nature'] ?? '');
+  $event_name = trim($_SESSION['event_name'] ?? '');
 
-  $background = $_SESSION['background'] ?? '';
-  $activity_type = $_SESSION['activity_type'] ?? '';
+  $background = trim($_SESSION['background'] ?? '');
+  $activity_type = trim($_SESSION['activity_type'] ?? '');
   $series = $_SESSION['series'] ?? null;
 
   $start_datetime = $_SESSION['start_datetime'] ?? '';
   $end_datetime = $_SESSION['end_datetime'] ?? '';
 
-  $participants = $_SESSION['participants'] ?? '';
+  $participants = trim($_SESSION['participants'] ?? '');
   $participant_range = $_SESSION['participant_range'] ?? null;
   $has_visitors = $_SESSION['has_visitors'] ?? null;
 
-  $venue_platform = $_SESSION['venue_platform'] ?? '';
+  $venue_platform = trim($_SESSION['venue_platform'] ?? '');
   $distance = $_SESSION['distance'] ?? null;
 
   $extraneous = $_SESSION['extraneous'] ?? 'No';
   $collect_payments = $_SESSION['collect_payments'] ?? 'No';
   $target_metric = trim($_SESSION['target_metric'] ?? '');
-  $overnight = (!isset($_SESSION['overnight']) || $_SESSION['overnight'] === '') ? null : (int) $_SESSION['overnight'];
+  $overnight = (!isset($_SESSION['overnight']) || $_SESSION['overnight'] === '')
+    ? null
+    : (int) $_SESSION['overnight'];
 
   if ($editing) {
-    $updateEventsSql = "
-    UPDATE events
-    SET organizing_body = ?, nature = ?, event_name = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE event_id = ? AND user_id = ?
-  ";
+    $sql = "
+            UPDATE events
+            SET
+                organizing_body = ?,
+                nature = ?,
+                event_name = ?,
+                event_status = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE event_id = ? AND user_id = ?
+        ";
     execQuery(
       $conn,
-      $updateEventsSql,
-      "sssii",
-      [$organizing_body_json, $nature, $event_name, $event_id, $_SESSION["user_id"]]
+      $sql,
+      "ssssii",
+      [$organizing_body_json, $nature, $event_name, $event_status, $event_id, $_SESSION["user_id"]]
     );
 
-    $updateEventTypeSql = "
-    UPDATE event_type
-    SET background = ?, activity_type = ?, series = ?
-    WHERE event_id = ?
-  ";
     execQuery(
       $conn,
-      $updateEventTypeSql,
+      "
+            UPDATE event_type
+            SET background = ?, activity_type = ?, series = ?
+            WHERE event_id = ?
+            ",
       "sssi",
       [$background, $activity_type, $series, $event_id]
     );
 
-    $updateEventDatesSql = "
-    UPDATE event_dates
-    SET start_datetime = ?, end_datetime = ?
-    WHERE event_id = ?
-  ";
     execQuery(
       $conn,
-      $updateEventDatesSql,
+      "
+            UPDATE event_dates
+            SET start_datetime = ?, end_datetime = ?
+            WHERE event_id = ?
+            ",
       "ssi",
       [$start_datetime, $end_datetime, $event_id]
     );
 
-    $updateEventParticipantsSql = "
-    UPDATE event_participants
-    SET participants = ?, participant_range = ?, has_visitors = ?
-    WHERE event_id = ?
-  ";
     execQuery(
       $conn,
-      $updateEventParticipantsSql,
+      "
+            UPDATE event_participants
+            SET participants = ?, participant_range = ?, has_visitors = ?
+            WHERE event_id = ?
+            ",
       "sssi",
       [$participants, $participant_range, $has_visitors, $event_id]
     );
 
-    $updateEventLocationSql = "
-    UPDATE event_location
-    SET venue_platform = ?, distance = ?
-    WHERE event_id = ?
-  ";
     execQuery(
       $conn,
-      $updateEventLocationSql,
+      "
+            UPDATE event_location
+            SET venue_platform = ?, distance = ?
+            WHERE event_id = ?
+            ",
       "ssi",
       [$venue_platform, $distance, $event_id]
     );
 
-    $updateEventLogisticsSql = "
-    UPDATE event_logistics
-    SET extraneous = ?, collect_payments = ?, overnight = ?
-    WHERE event_id = ?
-  ";
     execQuery(
       $conn,
-      $updateEventLogisticsSql,
+      "
+            UPDATE event_logistics
+            SET extraneous = ?, collect_payments = ?, overnight = ?
+            WHERE event_id = ?
+            ",
       "ssii",
       [$extraneous, $collect_payments, $overnight, $event_id]
     );
 
-    $checkEventMetricSql = "
-    SELECT event_id
-    FROM event_metrics
-    WHERE event_id = ?
-    LIMIT 1
-  ";
     $metricExists = fetchOne(
       $conn,
-      $checkEventMetricSql,
+      "
+            SELECT event_id
+            FROM event_metrics
+            WHERE event_id = ?
+            LIMIT 1
+            ",
       "i",
       [$event_id]
     );
 
     if ($metricExists) {
-      $updateEventMetricsSql = "
-      UPDATE event_metrics
-      SET target_metric = ?
-      WHERE event_id = ?
-    ";
       execQuery(
         $conn,
-        $updateEventMetricsSql,
+        "
+                UPDATE event_metrics
+                SET target_metric = ?
+                WHERE event_id = ?
+                ",
         "si",
         [$target_metric, $event_id]
       );
     } else {
-      $insertEventMetricsSql = "
-      INSERT INTO event_metrics (event_id, target_metric, actual_metric)
-      VALUES (?, ?, NULL)
-    ";
       execQuery(
         $conn,
-        $insertEventMetricsSql,
+        "
+                INSERT INTO event_metrics (event_id, target_metric, actual_metric)
+                VALUES (?, ?, NULL)
+                ",
         "is",
         [$event_id, $target_metric]
       );
     }
 
-    $notes = "Event updated via Event Manager";
+    $notes = ($event_status === 'Draft')
+      ? "Draft event updated via Event Manager"
+      : "Event submitted/updated via Event Manager";
 
-    $updateCalendarEntrySql = "
-    UPDATE calendar_entries
-    SET title = ?, start_datetime = ?, end_datetime = ?, notes = ?
-    WHERE event_id = ? AND user_id = ?
-  ";
-    execQuery(
+    $calendarExists = fetchOne(
       $conn,
-      $updateCalendarEntrySql,
-      "ssssii",
-      [$event_name, $start_datetime, $end_datetime, $notes, $event_id, $_SESSION['user_id']]
+      "
+            SELECT entry_id
+            FROM calendar_entries
+            WHERE event_id = ? AND user_id = ?
+            LIMIT 1
+            ",
+      "ii",
+      [$event_id, $_SESSION['user_id']]
     );
 
+    if ($calendarExists) {
+      execQuery(
+        $conn,
+        "
+                UPDATE calendar_entries
+                SET title = ?, start_datetime = ?, end_datetime = ?, notes = ?
+                WHERE event_id = ? AND user_id = ?
+                ",
+        "ssssii",
+        [$event_name, $start_datetime, $end_datetime, $notes, $event_id, $_SESSION['user_id']]
+      );
+    } else {
+      execQuery(
+        $conn,
+        "
+                INSERT INTO calendar_entries (user_id, event_id, title, start_datetime, end_datetime, notes)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ",
+        "iissss",
+        [$_SESSION["user_id"], $event_id, $event_name, $start_datetime, $end_datetime, $notes]
+      );
+    }
   } else {
     $docs_total = 0;
     $docs_uploaded = 0;
     $is_system_event = 0;
 
-    $insertEventSql = "
-    INSERT INTO events (
-      user_id, organizing_body, nature, event_name,
-      event_status, docs_total, docs_uploaded, is_system_event
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  ";
     $insertEventStmt = execQuery(
       $conn,
-      $insertEventSql,
+      "
+            INSERT INTO events (
+                user_id, organizing_body, nature, event_name,
+                event_status, docs_total, docs_uploaded, is_system_event
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ",
       "issssiii",
       [
         $_SESSION["user_id"],
@@ -311,83 +388,79 @@ function saveEventData($event_id, $editing)
         $is_system_event
       ]
     );
+
     $event_id = $insertEventStmt->insert_id;
 
-    $insertEventTypeSql = "
-    INSERT INTO event_type (event_id, background, activity_type, series)
-    VALUES (?, ?, ?, ?)
-  ";
     execQuery(
       $conn,
-      $insertEventTypeSql,
+      "
+            INSERT INTO event_type (event_id, background, activity_type, series)
+            VALUES (?, ?, ?, ?)
+            ",
       "isss",
       [$event_id, $background, $activity_type, $series]
     );
 
-    $insertEventDatesSql = "
-    INSERT INTO event_dates (event_id, start_datetime, end_datetime)
-    VALUES (?, ?, ?)
-  ";
     execQuery(
       $conn,
-      $insertEventDatesSql,
+      "
+            INSERT INTO event_dates (event_id, start_datetime, end_datetime)
+            VALUES (?, ?, ?)
+            ",
       "iss",
       [$event_id, $start_datetime, $end_datetime]
     );
 
-    $insertEventParticipantsSql = "
-    INSERT INTO event_participants (event_id, participants, participant_range, has_visitors)
-    VALUES (?, ?, ?, ?)
-  ";
     execQuery(
       $conn,
-      $insertEventParticipantsSql,
+      "
+            INSERT INTO event_participants (event_id, participants, participant_range, has_visitors)
+            VALUES (?, ?, ?, ?)
+            ",
       "isss",
       [$event_id, $participants, $participant_range, $has_visitors]
     );
 
-    $insertEventLocationSql = "
-    INSERT INTO event_location (event_id, venue_platform, distance)
-    VALUES (?, ?, ?)
-  ";
     execQuery(
       $conn,
-      $insertEventLocationSql,
+      "
+            INSERT INTO event_location (event_id, venue_platform, distance)
+            VALUES (?, ?, ?)
+            ",
       "iss",
       [$event_id, $venue_platform, $distance]
     );
 
-    $insertEventLogisticsSql = "
-    INSERT INTO event_logistics (event_id, extraneous, collect_payments, overnight)
-    VALUES (?, ?, ?, ?)
-  ";
     execQuery(
       $conn,
-      $insertEventLogisticsSql,
+      "
+            INSERT INTO event_logistics (event_id, extraneous, collect_payments, overnight)
+            VALUES (?, ?, ?, ?)
+            ",
       "issi",
       [$event_id, $extraneous, $collect_payments, $overnight]
     );
 
-    $insertEventMetricsSql = "
-    INSERT INTO event_metrics (event_id, target_metric, actual_metric)
-    VALUES (?, ?, NULL)
-  ";
     execQuery(
       $conn,
-      $insertEventMetricsSql,
+      "
+            INSERT INTO event_metrics (event_id, target_metric, actual_metric)
+            VALUES (?, ?, NULL)
+            ",
       "is",
       [$event_id, $target_metric]
     );
 
-    $notes = "Event created via Event Manager";
+    $notes = ($event_status === 'Draft')
+      ? "Draft event created via Event Manager"
+      : "Event created via Event Manager";
 
-    $insertCalendarEntrySql = "
-    INSERT INTO calendar_entries (user_id, event_id, title, start_datetime, end_datetime, notes)
-    VALUES (?, ?, ?, ?, ?, ?)
-  ";
     execQuery(
       $conn,
-      $insertCalendarEntrySql,
+      "
+            INSERT INTO calendar_entries (user_id, event_id, title, start_datetime, end_datetime, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ",
       "iissss",
       [$_SESSION["user_id"], $event_id, $event_name, $start_datetime, $end_datetime, $notes]
     );
@@ -396,8 +469,8 @@ function saveEventData($event_id, $editing)
   return $event_id;
 }
 
-/* ================= HELPER: SYNC REQUIREMENTS ================= */
-function computeRequirementDeadline($start_datetime, $end_datetime, $offset_days, $basis)
+/* ================= REQUIREMENT DEADLINE ================= */
+function computeRequirementDeadline(string $start_datetime, string $end_datetime, $offset_days, string $basis): ?string
 {
   if ($offset_days === null || $basis === 'manual') {
     return null;
@@ -423,7 +496,9 @@ function computeRequirementDeadline($start_datetime, $end_datetime, $offset_days
 
   return $baseDate->format('Y-m-d H:i:s');
 }
-function syncEventRequirements($event_id, $requirements_map)
+
+/* ================= SYNC REQUIREMENTS ================= */
+function syncEventRequirements(int $event_id, array $requirements_map): void
 {
   global $conn;
 
@@ -455,19 +530,16 @@ function syncEventRequirements($event_id, $requirements_map)
   }
 
   $checklist[] = 'Narrative Report';
-
   $checklist = array_values(array_unique($checklist));
-
-  $fetchCurrentRequirementsSql = "
-  SELECT er.event_req_id, rt.req_name, er.submission_status
-  FROM event_requirements er
-  INNER JOIN requirement_templates rt ON er.req_template_id = rt.req_template_id
-  WHERE er.event_id = ?
-";
 
   $rows = fetchAll(
     $conn,
-    $fetchCurrentRequirementsSql,
+    "
+        SELECT er.event_req_id, rt.req_name, er.submission_status
+        FROM event_requirements er
+        INNER JOIN requirement_templates rt ON er.req_template_id = rt.req_template_id
+        WHERE er.event_id = ?
+        ",
     "i",
     [$event_id]
   );
@@ -483,16 +555,14 @@ function syncEventRequirements($event_id, $requirements_map)
     $placeholders = implode(',', array_fill(0, count($checklist), '?'));
     $types = str_repeat('s', count($checklist));
 
-    $fetchDesiredTemplatesSql = "
-    SELECT req_template_id, req_name, default_due_offset_days, default_due_basis
-    FROM requirement_templates
-    WHERE is_active = 1
-      AND req_name IN ($placeholders)
-  ";
-
     $rows = fetchAll(
       $conn,
-      $fetchDesiredTemplatesSql,
+      "
+            SELECT req_template_id, req_name, default_due_offset_days, default_due_basis
+            FROM requirement_templates
+            WHERE is_active = 1
+              AND req_name IN ($placeholders)
+            ",
       $types,
       $checklist
     );
@@ -510,182 +580,176 @@ function syncEventRequirements($event_id, $requirements_map)
   $toRemove = array_diff(array_keys($current), $checklist);
   $toKeep = array_intersect($checklist, array_keys($current));
 
-  if (!empty($toKeep)) {
-    $updateRequirementDeadlineSql = "
-    UPDATE event_requirements
-    SET deadline = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE event_id = ? AND req_template_id = ?
-  ";
+  foreach ($toKeep as $reqName) {
+    if (!isset($desiredTemplates[$reqName])) {
+      continue;
+    }
 
-    foreach ($toKeep as $reqName) {
-      if (!isset($desiredTemplates[$reqName])) {
-        continue;
-      }
+    $template = $desiredTemplates[$reqName];
+    $templateId = (int) $template['req_template_id'];
+    $deadline = computeRequirementDeadline(
+      $start_datetime,
+      $end_datetime,
+      $template['default_due_offset_days'],
+      $template['default_due_basis']
+    );
 
-      $template = $desiredTemplates[$reqName];
-      $templateId = (int) $template['req_template_id'];
-      $offset_days = $template['default_due_offset_days'];
-      $basis = $template['default_due_basis'];
+    execQuery(
+      $conn,
+      "
+            UPDATE event_requirements
+            SET deadline = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE event_id = ? AND req_template_id = ?
+            ",
+      "sii",
+      [$deadline, $event_id, $templateId]
+    );
 
-      $deadline = computeRequirementDeadline($start_datetime, $end_datetime, $offset_days, $basis);
+    if ($reqName === 'Narrative Report') {
+      $eventReqRow = fetchOne(
+        $conn,
+        "
+                SELECT event_req_id
+                FROM event_requirements
+                WHERE event_id = ? AND req_template_id = ?
+                LIMIT 1
+                ",
+        "ii",
+        [$event_id, $templateId]
+      );
 
-      if ($reqName === 'Narrative Report') {
-        $eventReqRow = fetchOne(
+      if ($eventReqRow) {
+        execQuery(
           $conn,
           "
-    SELECT event_req_id
-    FROM event_requirements
-    WHERE event_id = ? AND req_template_id = ?
-    LIMIT 1
-    ",
-          "ii",
-          [$event_id, $templateId]
+                    INSERT INTO narrative_report_details (event_req_id)
+                    VALUES (?)
+                    ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
+                    ",
+          "i",
+          [(int) $eventReqRow['event_req_id']]
         );
-
-        if ($eventReqRow) {
-          execQuery(
-            $conn,
-            "
-      INSERT INTO narrative_report_details (event_req_id)
-      VALUES (?)
-      ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
-      ",
-            "i",
-            [(int) $eventReqRow['event_req_id']]
-          );
-        }
       }
-
-      execQuery(
-        $conn,
-        $updateRequirementDeadlineSql,
-        "sii",
-        [$deadline, $event_id, $templateId]
-      );
     }
   }
 
-  if (!empty($toRemove)) {
-    $deleteEventRequirementSql = "
-    DELETE er
-    FROM event_requirements er
-    INNER JOIN requirement_templates rt ON er.req_template_id = rt.req_template_id
-    WHERE er.event_id = ? AND rt.req_name = ?
-  ";
+  foreach ($toRemove as $reqName) {
+    $submissionStatus = $current[$reqName]['submission_status'] ?? 'Pending';
 
-    foreach ($toRemove as $reqName) {
-      if (($current[$reqName]['submission_status'] ?? 'pending') === 'uploaded') {
-        continue;
-      }
-
-      execQuery(
-        $conn,
-        $deleteEventRequirementSql,
-        "is",
-        [$event_id, $reqName]
-      );
+    if ($submissionStatus === 'Uploaded') {
+      continue;
     }
+
+    execQuery(
+      $conn,
+      "
+            DELETE er
+            FROM event_requirements er
+            INNER JOIN requirement_templates rt ON er.req_template_id = rt.req_template_id
+            WHERE er.event_id = ? AND rt.req_name = ?
+            ",
+      "is",
+      [$event_id, $reqName]
+    );
   }
 
-  if (!empty($toAdd)) {
-    $insertEventRequirementSql = "
-    INSERT INTO event_requirements (
-      event_id, req_template_id, submission_status, review_status, deadline
-    ) VALUES (?, ?, 'pending', 'not_reviewed', ?)
-  ";
+  foreach ($toAdd as $reqName) {
+    if (!isset($desiredTemplates[$reqName])) {
+      continue;
+    }
 
-    foreach ($toAdd as $reqName) {
-      if (!isset($desiredTemplates[$reqName])) {
-        continue;
-      }
+    $template = $desiredTemplates[$reqName];
+    $templateId = (int) $template['req_template_id'];
+    $deadline = computeRequirementDeadline(
+      $start_datetime,
+      $end_datetime,
+      $template['default_due_offset_days'],
+      $template['default_due_basis']
+    );
 
-      $template = $desiredTemplates[$reqName];
-      $templateId = (int) $template['req_template_id'];
-      $offset_days = $template['default_due_offset_days'];
-      $basis = $template['default_due_basis'];
+    execQuery(
+      $conn,
+      "
+            INSERT INTO event_requirements (
+                event_id, req_template_id, submission_status, review_status, deadline
+            ) VALUES (?, ?, 'Pending', 'Not Reviewed', ?)
+            ",
+      "iis",
+      [$event_id, $templateId, $deadline]
+    );
 
-      $deadline = computeRequirementDeadline($start_datetime, $end_datetime, $offset_days, $basis);
-
-      execQuery(
+    if ($reqName === 'Narrative Report') {
+      $eventReqRow = fetchOne(
         $conn,
-        $insertEventRequirementSql,
-        "iis",
-        [$event_id, $templateId, $deadline]
+        "
+                SELECT event_req_id
+                FROM event_requirements
+                WHERE event_id = ? AND req_template_id = ?
+                LIMIT 1
+                ",
+        "ii",
+        [$event_id, $templateId]
       );
 
-      if ($reqName === 'Narrative Report') {
-        $eventReqRow = fetchOne(
+      if ($eventReqRow) {
+        execQuery(
           $conn,
           "
-    SELECT event_req_id
-    FROM event_requirements
-    WHERE event_id = ? AND req_template_id = ?
-    LIMIT 1
-    ",
-          "ii",
-          [$event_id, $templateId]
+                    INSERT INTO narrative_report_details (event_req_id)
+                    VALUES (?)
+                    ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
+                    ",
+          "i",
+          [(int) $eventReqRow['event_req_id']]
         );
-
-        if ($eventReqRow) {
-          execQuery(
-            $conn,
-            "
-      INSERT INTO narrative_report_details (event_req_id)
-      VALUES (?)
-      ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
-      ",
-            "i",
-            [(int) $eventReqRow['event_req_id']]
-          );
-        }
       }
     }
   }
 
-  $countEventRequirementsSql = "
-  SELECT COUNT(*) AS total
-  FROM event_requirements
-  WHERE event_id = ?
-";
   $countRes = fetchOne(
     $conn,
-    $countEventRequirementsSql,
+    "
+        SELECT COUNT(*) AS total
+        FROM event_requirements
+        WHERE event_id = ?
+        ",
     "i",
     [$event_id]
   );
   $docs_total = (int) ($countRes['total'] ?? 0);
 
-  $countUploadedRequirementsSql = "
-  SELECT COUNT(*) AS uploaded_total
-  FROM event_requirements
-  WHERE event_id = ? AND submission_status = 'uploaded'
-";
   $uploadedRes = fetchOne(
     $conn,
-    $countUploadedRequirementsSql,
+    "
+        SELECT COUNT(*) AS uploaded_total
+        FROM event_requirements
+        WHERE event_id = ? AND submission_status = 'Uploaded'
+        ",
     "i",
     [$event_id]
   );
   $docs_uploaded = (int) ($uploadedRes['uploaded_total'] ?? 0);
 
-  $updateEventDocumentCountsSql = "
-  UPDATE events
-  SET docs_total = ?, docs_uploaded = ?
-  WHERE event_id = ?
-";
   execQuery(
     $conn,
-    $updateEventDocumentCountsSql,
+    "
+        UPDATE events
+        SET docs_total = ?, docs_uploaded = ?
+        WHERE event_id = ?
+        ",
     "iii",
     [$docs_total, $docs_uploaded, $event_id]
   );
 }
 
+/* ================= LOAD ================= */
 $formData = fetchFormData($event_id, $ce_fields, $editing);
 list($requirements_templates, $requirements_descs) = fetchTemplateData();
 
-/* ================= FORM SUBMISSION ================= */
-if (isset($_POST['create_event'])) {
+/* ================= SUBMIT ================= */
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $submit_action = $_POST['submit_action'] ?? '';
+
   foreach ($ce_fields as $field) {
     if ($field === 'organizing_body') {
       $_SESSION[$field] = $_POST[$field] ?? [];
@@ -694,32 +758,56 @@ if (isset($_POST['create_event'])) {
     }
   }
 
-  $target_metric = trim($_SESSION['target_metric'] ?? '');
-  $start_datetime = trim($_SESSION['start_datetime'] ?? '');
-  $end_datetime = trim($_SESSION['end_datetime'] ?? '');
+  $isDraft = ($submit_action === 'save_draft');
+  $event_status = $isDraft ? 'Draft' : 'Pending Review';
 
-  if ($target_metric !== '' && !preg_match('/^(100|[1-9]?\d)\%\s+.+$/', $target_metric)) {
-    popup_error("Target Metric must follow this format: 75% Satisfaction Rating");
-  }
+  if ($editing) {
+    $editableEventRow = fetchOne(
+      $conn,
+      "
+    SELECT event_status
+    FROM events
+    WHERE event_id = ?
+      AND user_id = ?
+      AND archived_at IS NULL
+    LIMIT 1
+    ",
+      "ii",
+      [$event_id, $_SESSION["user_id"]]
+    );
 
-  if ($start_datetime !== '' && $end_datetime !== '') {
-    $start_ts = strtotime($start_datetime);
-    $end_ts = strtotime($end_datetime);
-
-    if ($start_ts === false || $end_ts === false) {
-      popup_error("Invalid start or end date/time.");
+    if (!$editableEventRow) {
+      popup_error("Event not found or you do not have permission to edit it.");
     }
 
-    if (($end_ts - $start_ts) < 7200) {
-      popup_error("End Date and Time must be at least 2 hours after the Start Date and Time.");
+    if (!canEditEventStatus($editableEventRow['event_status'] ?? '')) {
+      popup_error("This event can no longer be edited.");
     }
   }
 
   try {
     $conn->begin_transaction();
 
-    $event_id = saveEventData($event_id, $editing);
-    syncEventRequirements($event_id, $requirements_map);
+    if (!$isDraft) {
+      validateEventSubmission($_SESSION);
+    }
+
+    $event_id = saveEventData($event_id, $editing, $event_status);
+
+    if ($isDraft) {
+      execQuery(
+        $conn,
+        "
+                UPDATE events
+                SET docs_total = 0, docs_uploaded = 0
+                WHERE event_id = ?
+                ",
+        "i",
+        [$event_id]
+      );
+    } else {
+      syncEventRequirements($event_id, $requirements_map);
+    }
 
     $conn->commit();
 
@@ -727,10 +815,10 @@ if (isset($_POST['create_event'])) {
       unset($_SESSION[$field]);
     }
 
-    if ($editing) {
+    if ($isDraft) {
       header("Location: view_event.php?id=" . $event_id);
     } else {
-      header("Location: home.php");
+      header("Location: view_event.php?id=" . $event_id);
     }
     exit();
   } catch (Exception $e) {
@@ -1081,8 +1169,13 @@ if (isset($_POST['create_event'])) {
 
         <div class="step-actions step-2-actions">
           <button type="button" class="btn-secondary back-btn">Back</button>
-          <button type="submit" name="create_event" class="btn-primary create-btn" disabled>
-            <?= $editing ? 'Update Event' : 'Create Event' ?>
+
+          <button type="submit" name="submit_action" value="save_draft" class="btn-secondary">
+            Save as Draft
+          </button>
+
+          <button type="submit" name="submit_action" value="submit_event" class="btn-primary create-btn" disabled>
+            <?= $editing ? 'Submit Event' : 'Create Event' ?>
           </button>
         </div>
       </form>

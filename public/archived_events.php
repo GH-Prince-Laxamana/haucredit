@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once "../app/database.php";
+require_once "../app/security_headers.php";
+require_once "../app/query_builder_functions.php";
+send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
@@ -10,6 +13,12 @@ if (!isset($_SESSION["user_id"])) {
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
 $user_id = (int) $_SESSION['user_id'];
+
+/* ================= HELPERS ================= */
+function normalizeEventStatusClass(string $status): string
+{
+    return strtolower(str_replace(' ', '-', $status));
+}
 
 /* ================= CLEANUP OF EXPIRED ARCHIVED EVENTS =================
    Delete archived events older than 30 days for this user.
@@ -85,28 +94,18 @@ foreach ($expiredArchivedEvents as $row) {
     }
 }
 
-/* ================= FETCH ARCHIVED EVENTS =================
-   Uses:
-   - events
-   - event_dates
-   - event_location
-   - events.docs_total / docs_uploaded
-*/
+/* ================= FETCH ARCHIVED EVENTS ================= */
 $fetchArchivedEventsSql = "
     SELECT
         e.event_id,
         e.event_name,
         e.docs_total,
         e.docs_uploaded,
+        e.event_status,
         e.archived_at,
         ed.start_datetime,
         ed.end_datetime,
-        el.venue_platform,
-        CASE
-            WHEN e.docs_total > 0 AND e.docs_uploaded < e.docs_total THEN 'pending'
-            WHEN ed.end_datetime IS NOT NULL AND ed.end_datetime >= NOW() THEN 'active'
-            ELSE 'completed'
-        END AS event_phase
+        el.venue_platform
     FROM events e
     LEFT JOIN event_dates ed
         ON e.event_id = ed.event_id
@@ -168,7 +167,8 @@ $events = fetchAll(
 
                 <ul class="events-table">
                     <?php if (!empty($events)): ?>
-                        <?php foreach ($events as $event):
+                        <?php foreach ($events as $event): ?>
+                            <?php
                             $total = (int) ($event['docs_total'] ?? 0);
                             $uploaded = (int) ($event['docs_uploaded'] ?? 0);
                             $progress = $total > 0 ? round(($uploaded / $total) * 100) : 0;
@@ -179,6 +179,8 @@ $events = fetchAll(
                             } elseif ($progress >= 40) {
                                 $progress_color = '#f9a825';
                             }
+
+                            $status_class = normalizeEventStatusClass($event['event_status'] ?? 'Draft');
                             ?>
                             <li>
                                 <a class="event-card-container" href="view_event.php?id=<?= (int) $event['event_id'] ?>">
@@ -186,6 +188,7 @@ $events = fetchAll(
                                         <div class="event-main">
                                             <div class="event-info">
                                                 <div class="event-title"><?= htmlspecialchars($event['event_name']) ?></div>
+
                                                 <div class="event-sub">
                                                     <?php if (!empty($event['start_datetime'])): ?>
                                                         <time datetime="<?= htmlspecialchars($event['start_datetime']) ?>">
@@ -196,6 +199,13 @@ $events = fetchAll(
                                                     <?php endif; ?>
 
                                                     • <?= htmlspecialchars($event['venue_platform'] ?? 'No venue set') ?>
+                                                </div>
+
+                                                <div class="event-sub">
+                                                    Archived on
+                                                    <strong>
+                                                        <?= !empty($event['archived_at']) ? date("F j, Y g:i A", strtotime($event['archived_at'])) : 'N/A' ?>
+                                                    </strong>
                                                 </div>
                                             </div>
 
@@ -209,8 +219,8 @@ $events = fetchAll(
                                             </div>
                                         </div>
 
-                                        <span class="home-status-badge <?= htmlspecialchars($event['event_phase']) ?>">
-                                            <?= ucfirst($event['event_phase']) ?>
+                                        <span class="home-status-badge <?= htmlspecialchars($status_class) ?>">
+                                            <?= htmlspecialchars($event['event_status'] ?? 'Unknown') ?>
                                         </span>
                                     </article>
                                 </a>

@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once "../app/database.php";
+require_once "../app/security_headers.php";
+require_once "../app/query_builder_functions.php";
+send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
@@ -27,16 +30,24 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
     popup_error("Upload failed.");
 }
 
-/* ================= VALIDATE OWNERSHIP ================= */
+/* ================= VALIDATE OWNERSHIP + EVENT STATUS ================= */
 $owned_requirement = fetchOne(
     $conn,
     "
     SELECT
         er.event_req_id,
         er.event_id,
-        e.user_id
+        er.submission_status,
+        er.review_status,
+        rt.req_name,
+        e.user_id,
+        e.event_status,
+        e.archived_at
     FROM event_requirements er
-    INNER JOIN events e ON er.event_id = e.event_id
+    INNER JOIN events e
+        ON er.event_id = e.event_id
+    INNER JOIN requirement_templates rt
+        ON er.req_template_id = rt.req_template_id
     WHERE er.event_req_id = ?
       AND e.user_id = ?
       AND e.archived_at IS NULL
@@ -51,13 +62,27 @@ if (!$owned_requirement) {
 }
 
 $event_id = (int) $owned_requirement['event_id'];
+$event_status = $owned_requirement['event_status'] ?? '';
+$req_name = $owned_requirement['req_name'] ?? '';
+
+/* ================= BLOCK NARRATIVE REPORT HERE ================= */
+if ($req_name === 'Narrative Report') {
+    popup_error("Narrative Report must be submitted through the Narrative Report page.");
+}
+
+/* ================= ENFORCE ALLOWED EVENT STATUSES ================= */
+$allowed_upload_statuses = ['Pending Review', 'Needs Revision'];
+
+if (!in_array($event_status, $allowed_upload_statuses, true)) {
+    popup_error("Document uploads are not allowed for events with status: " . $event_status);
+}
 
 /* ================= FILE TYPE VALIDATION ================= */
 $allowed_extensions = ['pdf'];
 $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
 if (!in_array($file_extension, $allowed_extensions, true)) {
-    popup_error("Invalid file type.");
+    popup_error("Invalid file type. Only PDF files are allowed.");
 }
 
 /* ================= MIME TYPE VALIDATION ================= */
@@ -68,7 +93,7 @@ finfo_close($finfo);
 $allowed_mime_types = ['application/pdf'];
 
 if (!in_array($mime_type, $allowed_mime_types, true)) {
-    popup_error("Invalid file type.");
+    popup_error("Invalid file type. Only PDF files are allowed.");
 }
 
 /* ================= FILE SIZE VALIDATION ================= */
@@ -90,7 +115,7 @@ $unique_filename = uniqid("req_", true) . "." . $file_extension;
 $file_relative_path = "uploads/requirements/" . $unique_filename;
 $file_full_path = $upload_dir . $unique_filename;
 
-/* ================= SAVE FILE FIRST ================= */
+/* ================= SAVE FILE TO DISK FIRST ================= */
 if (!move_uploaded_file($file['tmp_name'], $file_full_path)) {
     popup_error("Upload failed.");
 }
@@ -98,7 +123,7 @@ if (!move_uploaded_file($file['tmp_name'], $file_full_path)) {
 try {
     $conn->begin_transaction();
 
-    /* ================= GET ALL OLD FILES FOR THIS REQUIREMENT ================= */
+    /* ================= GET OLD FILES ================= */
     $oldFileRows = fetchAll(
         $conn,
         "
@@ -117,7 +142,7 @@ try {
         $old_paths[] = $row['file_path'];
     }
 
-    /* ================= DELETE ALL OLD FILE ROWS ================= */
+    /* ================= REMOVE OLD FILE ROWS ================= */
     execQuery(
         $conn,
         "
@@ -143,19 +168,25 @@ try {
             file_type,
             file_size,
             uploaded_by,
-            uploaded_at
+            uploaded_at,
+            is_current
         ) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)
         ",
         "isssii",
         [$event_req_id, $file_relative_path, $original_file_name, $mime_type, $file_size, $uploaded_by]
     );
 
-    /* ================= UPDATE REQUIREMENT STATUS ================= */
+    /* ================= RESET REQUIREMENT REVIEW CYCLE ================= */
     execQuery(
         $conn,
         "
         UPDATE event_requirements
-        SET submission_status = 'uploaded',
+        SET
+            submission_status = 'Uploaded',
+            review_status = 'Not Reviewed',
+            reviewed_at = NULL,
+            reviewer_id = NULL,
+            remarks = NULL,
             updated_at = CURRENT_TIMESTAMP
         WHERE event_req_id = ?
         ",
@@ -182,7 +213,7 @@ try {
         SELECT COUNT(*) AS uploaded_docs
         FROM event_requirements
         WHERE event_id = ?
-          AND submission_status = 'uploaded'
+          AND submission_status = 'Uploaded'
         ",
         "i",
         [$event_id]
@@ -221,7 +252,7 @@ try {
 }
 
 /* ================= REDIRECT BACK ================= */
-$redirect_url = $_SERVER['HTTP_REFERER'] ?? 'requirements.php';
+$redirect_url = $_SERVER['HTTP_REFERER'] ?? 'my_events.php';
 header("Location: " . $redirect_url);
 exit();
 ?>

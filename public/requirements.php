@@ -12,14 +12,55 @@ if (!isset($_SESSION["user_id"])) {
 $user_id = (int) $_SESSION["user_id"];
 $event_filter = isset($_GET['event_id']) && $_GET['event_id'] !== '' ? (int) $_GET['event_id'] : null;
 
-/* ================= LOAD REQUIREMENTS FROM DATABASE =================
-   Uses:
-   - event_requirements
-   - requirement_templates
-   - requirement_files (current file only)
-   - events
-   - event_dates
-*/
+/* ================= HELPERS ================= */
+function getRequirementDisplayDate(?string $deadline, ?string $event_start): ?string
+{
+    if (!empty($deadline)) {
+        return $deadline;
+    }
+
+    if (!empty($event_start)) {
+        return $event_start;
+    }
+
+    return null;
+}
+
+function formatSubmissionStatus(string $status): string
+{
+    return match ($status) {
+        'Uploaded' => 'Uploaded',
+        'Pending' => 'Pending',
+        default => $status
+    };
+}
+
+function getRequirementGroup(array $requirement, DateTime $todayStart, DateTime $tomorrowStart): string
+{
+    if (empty($requirement['deadline'])) {
+        return 'No Deadline';
+    }
+
+    $deadlineTs = strtotime($requirement['deadline']);
+    if ($deadlineTs === false) {
+        return 'No Deadline';
+    }
+
+    $todayStartTs = $todayStart->getTimestamp();
+    $tomorrowStartTs = $tomorrowStart->getTimestamp();
+
+    if ($deadlineTs < $todayStartTs) {
+        return 'Overdue';
+    }
+
+    if ($deadlineTs >= $todayStartTs && $deadlineTs < $tomorrowStartTs) {
+        return 'Today';
+    }
+
+    return 'Upcoming';
+}
+
+/* ================= LOAD REQUIREMENTS FROM DATABASE ================= */
 $fetchRequirementsSql = "
     SELECT
         er.event_req_id,
@@ -39,6 +80,7 @@ $fetchRequirementsSql = "
 
         e.event_id,
         e.event_name,
+        e.event_status,
         ed.start_datetime,
         ed.end_datetime
     FROM event_requirements er
@@ -53,6 +95,7 @@ $fetchRequirementsSql = "
        AND rf.is_current = 1
     WHERE e.user_id = ?
       AND e.archived_at IS NULL
+      AND e.event_status IN ('Pending Review', 'Needs Revision', 'Approved')
 ";
 
 $requirementParams = [$user_id];
@@ -66,8 +109,8 @@ if ($event_filter) {
 
 $fetchRequirementsSql .= "
     ORDER BY
-        CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
-        ed.start_datetime ASC,
+        CASE WHEN er.deadline IS NULL AND ed.start_datetime IS NULL THEN 1 ELSE 0 END,
+        COALESCE(er.deadline, ed.start_datetime) ASC,
         er.created_at ASC
 ";
 
@@ -80,21 +123,19 @@ $requirementRows = fetchAll(
 
 $requirements = [];
 
-/* ================= LOAD EVENTS FOR FILTER DROPDOWN =================
-   Uses:
-   - events
-   - event_dates
-*/
+/* ================= LOAD EVENTS FOR FILTER DROPDOWN ================= */
 $fetchFilterEventsSql = "
     SELECT
         e.event_id,
         e.event_name,
+        e.event_status,
         ed.start_datetime
     FROM events e
     LEFT JOIN event_dates ed
         ON e.event_id = ed.event_id
     WHERE e.user_id = ?
       AND e.archived_at IS NULL
+      AND e.event_status IN ('Pending Review', 'Needs Revision', 'Approved')
     ORDER BY
         CASE WHEN ed.start_datetime IS NULL THEN 1 ELSE 0 END,
         ed.start_datetime ASC,
@@ -112,6 +153,7 @@ $events_map = [];
 foreach ($eventRows as $row) {
     $events_map[$row['event_id']] = [
         'name' => $row['event_name'],
+        'status' => $row['event_status'],
         'start' => $row['start_datetime']
     ];
 }
@@ -133,71 +175,70 @@ foreach ($requirementRows as $row) {
         'updated_at' => $row['updated_at'],
         'event_id' => (int) $row['event_id'],
         'event_name' => $row['event_name'],
+        'event_status' => $row['event_status'],
         'event_start' => $row['start_datetime'],
         'event_end' => $row['end_datetime'],
+        'display_datetime' => getRequirementDisplayDate($row['deadline'] ?? null, $row['start_datetime'] ?? null)
     ];
 }
 
 /* ================= DATE GROUPING SETUP ================= */
-$today = new DateTime('today');
-$yesterday = (clone $today)->modify('-1 day');
-$tomorrow = (clone $today)->modify('+1 day');
+$todayStart = new DateTime('today');
+$tomorrowStart = (clone $todayStart)->modify('+1 day');
 
-/* ================= FUNCTION TO GROUP REQUIREMENTS BY EVENT FOR A DATE ================= */
-function eventsForDate(array $requirements, string $date): array
-{
-    $filtered = array_filter($requirements, function ($r) use ($date) {
-        if (empty($r['event_start'])) {
-            return false;
-        }
-        return substr($r['event_start'], 0, 10) === $date;
-    });
+/* ================= GROUP REQUIREMENTS ================= */
+$grouped = [
+    'Overdue' => [],
+    'Today' => [],
+    'Upcoming' => [],
+    'No Deadline' => []
+];
 
-    $events = [];
+foreach ($requirements as $r) {
+    $groupName = getRequirementGroup($r, $todayStart, $tomorrowStart);
+    $eventId = $r['event_id'];
 
-    foreach ($filtered as $r) {
-        $eventId = $r['event_id'];
-
-        if (!isset($events[$eventId])) {
-            $events[$eventId] = [
-                'event_name' => $r['event_name'],
-                'event_id' => $eventId,
-                'event_start' => $r['event_start'],
-                'requirements' => []
-            ];
-        }
-
-        $events[$eventId]['requirements'][] = $r;
+    if (!isset($grouped[$groupName][$eventId])) {
+        $grouped[$groupName][$eventId] = [
+            'event_name' => $r['event_name'],
+            'event_id' => $eventId,
+            'event_status' => $r['event_status'],
+            'event_start' => $r['event_start'],
+            'requirements' => []
+        ];
     }
 
-    return $events;
+    $grouped[$groupName][$eventId]['requirements'][] = $r;
 }
 
-/* ================= CREATE DATE GROUPS ================= */
 $groups = [
     [
-        'title' => 'Yesterday',
-        'date' => $yesterday,
-        'items' => eventsForDate($requirements, $yesterday->format('Y-m-d'))
+        'title' => 'Overdue',
+        'subtitle' => 'Requirements with deadlines before today',
+        'items' => $grouped['Overdue']
     ],
     [
         'title' => 'Today',
-        'date' => $today,
-        'items' => eventsForDate($requirements, $today->format('Y-m-d'))
+        'subtitle' => 'Requirements due today',
+        'items' => $grouped['Today']
     ],
     [
-        'title' => 'Tomorrow',
-        'date' => $tomorrow,
-        'items' => eventsForDate($requirements, $tomorrow->format('Y-m-d'))
+        'title' => 'Upcoming',
+        'subtitle' => 'Requirements due after today',
+        'items' => $grouped['Upcoming']
+    ],
+    [
+        'title' => 'No Deadline',
+        'subtitle' => 'Requirements without a computed deadline',
+        'items' => $grouped['No Deadline']
     ]
 ];
 
 /* ================= PROGRESS CALCULATION ================= */
 $total = count($requirements);
-$uploaded = count(array_filter($requirements, fn($r) => $r['status'] === 'uploaded'));
+$uploaded = count(array_filter($requirements, fn($r) => ($r['status'] ?? '') === 'Uploaded'));
 $percent = $total ? round(($uploaded / $total) * 100) : 0;
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -235,10 +276,10 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                 <form method="GET">
                     <label>Filter by Event:</label>
                     <select name="event_id" onchange="this.form.submit()">
-                        <option value="">-- All Events --</option>
+                        <option value="">-- All Active Compliance Events --</option>
                         <?php foreach ($events_map as $id => $ev): ?>
                             <option value="<?= (int) $id ?>" <?= ($event_filter == $id) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($ev['name']) ?>
+                                <?= htmlspecialchars($ev['name']) ?> - <?= htmlspecialchars($ev['status']) ?>
                                 <?php if (!empty($ev['start'])): ?>
                                     (<?= date('M j, Y', strtotime($ev['start'])) ?>)
                                 <?php else: ?>
@@ -254,35 +295,41 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                 <?php foreach ($groups as $group): ?>
                     <div class="req-group">
                         <div class="req-head">
-                            <h2><?= htmlspecialchars($group['title']) ?></h2>
-                            <p><?= $group['date']->format('F j, Y') ?></p>
+                            <div>
+                                <h2><?= htmlspecialchars($group['title']) ?></h2>
+                                <p><?= htmlspecialchars($group['subtitle']) ?></p>
+                            </div>
                         </div>
 
                         <?php if (empty($group['items'])): ?>
-                            <p class="empty-msg">No requirements for this day.</p>
+                            <p class="empty-msg">No requirements in this group.</p>
                         <?php endif; ?>
 
-                        <?php foreach ($group['items'] as $event):
+                        <?php foreach ($group['items'] as $event): ?>
+                            <?php
                             usort($event['requirements'], function ($a, $b) {
-                                $a_uploaded = ($a['status'] === 'uploaded');
-                                $b_uploaded = ($b['status'] === 'uploaded');
+                                $a_uploaded = (($a['status'] ?? '') === 'Uploaded');
+                                $b_uploaded = (($b['status'] ?? '') === 'Uploaded');
 
                                 if ($a_uploaded !== $b_uploaded) {
                                     return $a_uploaded <=> $b_uploaded;
                                 }
 
-                                $a_deadline = strtotime($a['deadline'] ?? $a['event_start'] ?? '9999-12-31 23:59:59');
-                                $b_deadline = strtotime($b['deadline'] ?? $b['event_start'] ?? '9999-12-31 23:59:59');
+                                $a_deadline = strtotime($a['display_datetime'] ?? '9999-12-31 23:59:59');
+                                $b_deadline = strtotime($b['display_datetime'] ?? '9999-12-31 23:59:59');
 
                                 return $a_deadline <=> $b_deadline;
                             });
                             ?>
+
                             <div class="event-block">
-                                <?php foreach ($event['requirements'] as $req):
-                                    $status = ($req['status'] === 'uploaded') ? 'Uploaded' : 'Pending';
-                                    $deadline_source = $req['deadline'] ?: $req['event_start'];
+                                <?php foreach ($event['requirements'] as $req): ?>
+                                    <?php
+                                    $status = formatSubmissionStatus($req['status'] ?? 'Pending');
+                                    $deadline_source = $req['display_datetime'];
                                     $deadline_ts = $deadline_source ? strtotime($deadline_source) : null;
                                     ?>
+
                                     <a class="req-card" href="view_event.php?id=<?= (int) $event['event_id'] ?>">
                                         <div class="req-item">
                                             <div class="req-title">
@@ -299,11 +346,23 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                                             </div>
 
                                             <div class="req-sub">
-                                                From <?= htmlspecialchars($event['event_name']) ?>:
-                                                <?php if ($deadline_ts): ?>
+                                                From <?= htmlspecialchars($event['event_name']) ?>
+                                                (<?= htmlspecialchars($event['event_status']) ?>)
+                                            </div>
+
+                                            <div class="req-sub">
+                                                <?php if (!empty($req['deadline']) && $deadline_ts): ?>
+                                                    Deadline:
+                                                    <strong>
+                                                        <time datetime="<?= htmlspecialchars($req['deadline']) ?>">
+                                                            <?= date("M j, Y g:i A", $deadline_ts) ?>
+                                                        </time>
+                                                    </strong>
+                                                <?php elseif ($deadline_ts): ?>
+                                                    Event Date:
                                                     <strong>
                                                         <time datetime="<?= htmlspecialchars($deadline_source) ?>">
-                                                            <?= date("g:i A", $deadline_ts) ?>
+                                                            <?= date("M j, Y g:i A", $deadline_ts) ?>
                                                         </time>
                                                     </strong>
                                                 <?php else: ?>
@@ -329,7 +388,7 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
                                         </div>
 
                                         <span class="status <?= strtolower($status) ?>">
-                                            <?= $status ?>
+                                            <?= htmlspecialchars($status) ?>
                                         </span>
                                     </a>
                                 <?php endforeach; ?>

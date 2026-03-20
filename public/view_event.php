@@ -1,9 +1,6 @@
 <?php
 session_start();
 require_once "../app/database.php";
-require_once "../app/security_headers.php";
-require_once "../app/query_builder_functions.php";
-send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
@@ -21,18 +18,19 @@ if ($event_id <= 0) {
 function formatSubmissionStatus(string $status): string
 {
     return match ($status) {
-        'uploaded' => 'Submitted',
-        'pending' => 'Pending',
-        default => ucwords(str_replace('_', ' ', $status))
+        'Uploaded' => 'Submitted',
+        'Pending' => 'Pending',
+        default => $status
     };
 }
 
 function formatReviewStatus(string $status): string
 {
     return match ($status) {
-        'not_reviewed' => 'Not Reviewed',
-        'needs_revision' => 'Needs Revision',
-        default => ucwords(str_replace('_', ' ', $status))
+        'Not Reviewed' => 'Not Reviewed',
+        'Needs Revision' => 'Needs Revision',
+        'Approved' => 'Approved',
+        default => $status
     };
 }
 
@@ -122,6 +120,49 @@ function getMetricAchievementStatus(?string $target_metric, ?string $actual_metr
     ];
 }
 
+function getEventStatusBanner(string $event_status, ?string $admin_remarks = null): array
+{
+    $title = "Event Status: " . $event_status;
+    $message = '';
+    $class = strtolower(str_replace(' ', '-', $event_status));
+
+    switch ($event_status) {
+        case 'Draft':
+            $message = "This event is currently saved as a draft. It is not yet submitted for admin review.";
+            break;
+
+        case 'Pending Review':
+            $message = "This event has been submitted and is currently awaiting admin review.";
+            break;
+
+        case 'Needs Revision':
+            $message = "This event needs revisions based on admin review. Please check the remarks and update the necessary details or documents.";
+            break;
+
+        case 'Approved':
+            $message = "This event has been approved. You may now proceed with the activity and complete the remaining post-event requirements when applicable.";
+            break;
+
+        case 'Completed':
+            $message = "This event is completed. All required event processing, including the Narrative Report review, has been finalized.";
+            break;
+
+        default:
+            $message = "This event is currently in the system.";
+            break;
+    }
+
+    if (!empty($admin_remarks)) {
+        $message .= "<br><strong>Admin remarks:</strong> " . htmlspecialchars($admin_remarks);
+    }
+
+    return [
+        'title' => $title,
+        'message' => $message,
+        'class' => $class
+    ];
+}
+
 /* ================= EVENT DATA FETCH ================= */
 $fetchEventSql = "
     SELECT
@@ -187,12 +228,25 @@ if (!$event) {
 /* ================= EVENT STATE ================= */
 $is_archived = !empty($event['archived_at']);
 
+$event_status = $event['event_status'] ?? 'Draft';
+$is_completed = ($event_status === 'Completed');
+$is_approved = ($event_status === 'Approved');
+$is_draft = ($event_status === 'Draft');
+$is_pending_review = ($event_status === 'Pending Review');
+$is_needs_revision = ($event_status === 'Needs Revision');
+
+/* editable states */
+$can_edit_event = !$is_archived && in_array($event_status, ['Draft', 'Pending Review', 'Needs Revision'], true);
+$can_modify_documents = !$is_archived && in_array($event_status, ['Draft', 'Pending Review', 'Needs Revision', 'Approved'], true);
+
 $days_remaining = null;
 if ($is_archived) {
     $archived_time = strtotime($event['archived_at']);
     $expiry_time = $archived_time + (30 * 24 * 60 * 60);
     $days_remaining = ceil(($expiry_time - time()) / 86400);
 }
+
+$status_banner = getEventStatusBanner($event_status, $event['admin_remarks'] ?? null);
 
 /* ================= REQUIRED DOCUMENTS FETCH ================= */
 $fetchRequiredDocsSql = "
@@ -241,8 +295,8 @@ $fetchRequiredDocsSql = "
 $required_docs = fetchAll($conn, $fetchRequiredDocsSql, "i", [$event_id]);
 
 $required_docs = array_map(function ($doc) {
-    $submission_status = $doc['submission_status'] ?? 'pending';
-    $review_status = $doc['review_status'] ?? 'not_reviewed';
+    $submission_status = $doc['submission_status'] ?? 'Pending';
+    $review_status = $doc['review_status'] ?? 'Not Reviewed';
 
     $doc['is_narrative_report'] = (($doc['req_name'] ?? '') === 'Narrative Report');
     $doc['display_submission_status'] = formatSubmissionStatus($submission_status);
@@ -316,7 +370,7 @@ $metric_status = getMetricAchievementStatus(
                         <?php endif; ?>
                     </form>
 
-                    <?php if (!$is_archived): ?>
+                    <?php if ($can_edit_event): ?>
                         <a href="create_event.php?id=<?= (int) $event['event_id'] ?>" class="btn-primary">Edit Event</a>
                     <?php endif; ?>
                 </div>
@@ -327,16 +381,12 @@ $metric_status = getMetricAchievementStatus(
                     <button type="button" class="btn-secondary" onclick="history.back()">Back</button>
                 </div>
 
-                <div class="status-banner status-<?= strtolower(str_replace(' ', '-', $event['event_status'])) ?>">
+                <div
+                    class="status-banner status-<?= htmlspecialchars($is_archived ? 'archived' : $status_banner['class']) ?>">
                     <div class="status-content">
                         <?php if (!$is_archived): ?>
-                            <h3>Event Status: <?= htmlspecialchars($event['event_status']) ?></h3>
-                            <p>
-                                Your event is currently under review by the Office of Student Affairs.
-                                <?php if (!empty($event['admin_remarks'])): ?>
-                                    <br><strong>Admin remarks:</strong> <?= htmlspecialchars($event['admin_remarks']) ?>
-                                <?php endif; ?>
-                            </p>
+                            <h3><?= htmlspecialchars($status_banner['title']) ?></h3>
+                            <p><?= $status_banner['message'] ?></p>
                         <?php else: ?>
                             <h3>This event is archived</h3>
                             <p>
@@ -486,10 +536,11 @@ $metric_status = getMetricAchievementStatus(
                                     $has_narrative_content = !empty($doc['narrative']) || !empty($doc['video_documentation_link']);
                                     [$preview_url, $no_template_msg, $has_upload] = buildPreviewUrl($doc);
                                     ?>
-                                    <div class="doc-item status-<?= strtolower($doc['submission_status'] ?? 'pending') ?>">
+                                    <div
+                                        class="doc-item status-<?= strtolower(str_replace(' ', '-', $doc['submission_status'] ?? 'Pending')) ?>">
 
                                         <div class="doc-checkbox">
-                                            <?php if (($doc['submission_status'] ?? 'pending') === 'uploaded'): ?>
+                                            <?php if (($doc['submission_status'] ?? 'Pending') === 'Uploaded'): ?>
                                                 <i class="fa-solid fa-file-circle-check"></i>
                                             <?php else: ?>
                                                 <i class="fa-solid fa-hourglass-half"></i>
@@ -569,7 +620,7 @@ $metric_status = getMetricAchievementStatus(
                                             <?php if ($is_narrative_report): ?>
                                                 <a href="narrative_report_submission.php?event_id=<?= (int) $event_id ?>"
                                                     class="btn-file">
-                                                    <?= ($doc['submission_status'] ?? 'pending') === 'uploaded' ? 'View / Edit' : 'Open' ?>
+                                                    <?= ($doc['submission_status'] ?? 'Pending') === 'Uploaded' ? 'View / Edit' : 'Open' ?>
                                                 </a>
                                             <?php else: ?>
                                                 <button type="button" class="btn-file" onclick="previewDocument(
@@ -580,7 +631,7 @@ $metric_status = getMetricAchievementStatus(
                                                     View
                                                 </button>
 
-                                                <?php if (!$is_archived && ($doc['submission_status'] ?? 'pending') !== 'uploaded'): ?>
+                                                <?php if ($can_modify_documents && ($doc['submission_status'] ?? 'Pending') !== 'Uploaded'): ?>
                                                     <form action="create_requirement.php" method="POST"
                                                         enctype="multipart/form-data" class="upload-form">
                                                         <input type="hidden" name="event_req_id"
@@ -593,7 +644,7 @@ $metric_status = getMetricAchievementStatus(
                                                     </form>
                                                 <?php endif; ?>
 
-                                                <?php if ($has_upload && !$is_archived): ?>
+                                                <?php if ($has_upload && $can_modify_documents): ?>
                                                     <form data-confirm="Remove uploaded document?" action="delete_requirement.php"
                                                         method="POST">
                                                         <input type="hidden" name="event_req_id"
@@ -620,8 +671,16 @@ $metric_status = getMetricAchievementStatus(
                             </div>
                         </div>
                         <div class="tracker-list">
-                            <div class="t-row"><span>Total Documents</span><span
-                                    class="t-score"><?= $total_docs ?></span></div>
+                            <div class="t-row">
+                                <span>Total Documents</span>
+                                <span class="t-score"><?= $total_docs ?></span>
+                            </div>
+                            <?php if ($event_status === 'Draft' && $total_docs === 0): ?>
+                                <div class="t-row">
+                                    <span>Status</span>
+                                    <span class="t-score">Not yet generated</span>
+                                </div>
+                            <?php endif; ?>
                             <div class="t-row"><span>Uploaded</span><span class="t-score"><?= $uploaded_docs ?></span>
                             </div>
                             <div class="t-row"><span>Pending</span><span class="t-score"><?= $pending_docs ?></span>
