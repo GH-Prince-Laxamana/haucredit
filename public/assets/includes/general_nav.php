@@ -43,60 +43,72 @@ if ($user_id) {
 
         <!-- Dashboard -->
         <a class="nav-item <?= ($current_page == 'home.php') ? 'active' : '' ?>" href="home.php">
-            <span><i class="fa-regular fa-house"></i> Dashboard</span>
+            <i class="fa-regular fa-house"></i>
+            <span>Dashboard</span>
         </a>
 
         <!-- Create Event -->
         <a class="nav-item <?= ($current_page == 'create_event.php') ? 'active' : '' ?>" href="create_event.php">
-            <span><i class="fa-solid fa-plus"></i> Create Event</span>
+            <i class="fa-solid fa-plus"></i>
+            <span>Create Event</span>
         </a>
 
         <!-- My Events — active on both my_events.php and view_event.php -->
         <a class="nav-item <?= in_array($current_page, ['my_events.php', 'view_event.php']) ? 'active' : '' ?>"
             href="my_events.php">
-            <span><i class="fa-regular fa-clipboard"></i> My Events</span>
+            <i class="fa-regular fa-clipboard"></i>
+            <span>My Events</span>
         </a>
 
         <!-- Calendar -->
         <a class="nav-item <?= ($current_page == 'calendar.php') ? 'active' : '' ?>" href="calendar.php">
-            <span><i class="fa-regular fa-calendar"></i> Calendar</span>
+            <i class="fa-regular fa-calendar"></i>
+            <span>Calendar</span>
         </a>
 
         <!-- Requirements -->
         <a class="nav-item <?= ($current_page == 'requirements.php') ? 'active' : '' ?>" href="requirements.php">
-            <span><i class="fa-solid fa-list-check"></i> Requirements</span>
+            <i class="fa-solid fa-list-check"></i>
+            <span>Requirements</span>
         </a>
 
         <!-- About -->
         <a class="nav-item <?= ($current_page == 'about.php') ? 'active' : '' ?>" href="about.php">
-            <span><i class="fa-regular fa-circle-question"></i> About Us</span>
+            <i class="fa-regular fa-circle-question"></i>
+            <span>About Us</span>
         </a>
 
-        <!-- Account -->
+        <!-- Account Section -->
         <div class="account">
-
             <?php
             if ($current_page === 'about.php' && $username === "") {
                 echo '<button class="account-btn" type="button">
-                            <span style="text-align: center; margin: auto;"> Please Sign In to Continue </span>
-                        </button>';
+                        <i class="fa-regular fa-circle-user"></i>
+                        <span style="text-align: center;">Please Sign In to Continue</span>
+                      </button>';
             } else {
                 echo '<a class="account-btn" href="profile.php">
-                            <span>My Account</span>
-                        </a>';
+                        <i class="fa-regular fa-circle-user"></i>
+                        <span>My Account</span>
+                      </a>';
             }
             ?>
 
             <form action="logout.php" method="POST">
                 <?php
                 if ($current_page === 'about.php' && $username === "") {
-                    echo '<button type="submit" class="logout-link">Sign In</button>';
+                    echo '<button type="submit" class="logout-link">
+                            <i class="fa-solid fa-right-to-bracket"></i>
+                            <span>Sign In</span>
+                          </button>';
                 } else {
-                    echo '<button type="submit" class="logout-link">Logout</button>';
+                    echo '<button type="submit" class="logout-link">
+                            <i class="fa-solid fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                          </button>';
                 }
                 ?>
             </form>
-
         </div>
 
     </nav>
