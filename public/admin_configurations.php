@@ -1,8 +1,6 @@
 <?php
 session_start();
 require_once "../app/database.php";
-require_once "../app/security_headers.php";
-send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
@@ -12,6 +10,17 @@ if (!isset($_SESSION["user_id"])) {
 if (($_SESSION["role"] ?? "") !== "admin") {
     popup_error("Access denied.");
 }
+
+/* ================= CSRF ================= */
+if (empty($_SESSION["csrf_token"])) {
+    $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
+}
+$csrf_token = $_SESSION["csrf_token"];
+
+/* ================= FLASH MESSAGES ================= */
+$success = $_SESSION["success"] ?? "";
+$error = $_SESSION["error"] ?? "";
+unset($_SESSION["success"], $_SESSION["error"]);
 
 /* ================= HELPERS ================= */
 function normalizeActiveClass($is_active): string
@@ -177,6 +186,18 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
             </header>
 
             <section class="content my-events-page">
+                <?php if ($success !== ""): ?>
+                    <div class="notice success" style="margin-bottom: 1rem;">
+                        <?= htmlspecialchars($success) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($error !== ""): ?>
+                    <div class="notice error" style="margin-bottom: 1rem;">
+                        <?= htmlspecialchars($error) ?>
+                    </div>
+                <?php endif; ?>
+
                 <div class="summary-strip">
                     <div class="summary-card">
                         <span class="summary-num"><?= $summary['background_total'] ?></span>
@@ -216,6 +237,7 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                     <div class="card-body">
                         <form action="admin_update_configuration.php" method="POST" class="search-wrap"
                             style="margin-bottom:1rem;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="config_type" value="background">
                             <input type="text" name="background_name" class="search-input"
                                 placeholder="Add new background..." required>
@@ -251,6 +273,8 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                                     <footer class="event-card-footer" style="display:block;">
                                         <form action="admin_update_configuration.php" method="POST"
                                             style="display:grid; gap:.75rem;">
+                                            <input type="hidden" name="csrf_token"
+                                                value="<?= htmlspecialchars($csrf_token) ?>">
                                             <input type="hidden" name="config_type" value="background">
                                             <input type="hidden" name="background_id"
                                                 value="<?= (int) $background['background_id'] ?>">
@@ -292,6 +316,7 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                     <div class="card-body">
                         <form action="admin_update_configuration.php" method="POST" class="search-wrap"
                             style="margin-bottom:1rem;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="config_type" value="org">
                             <input type="text" name="org_name" class="search-input"
                                 placeholder="Add new organization..." required>
@@ -327,6 +352,8 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                                     <footer class="event-card-footer" style="display:block;">
                                         <form action="admin_update_configuration.php" method="POST"
                                             style="display:grid; gap:.75rem;">
+                                            <input type="hidden" name="csrf_token"
+                                                value="<?= htmlspecialchars($csrf_token) ?>">
                                             <input type="hidden" name="config_type" value="org">
                                             <input type="hidden" name="org_option_id"
                                                 value="<?= (int) $org['org_option_id'] ?>">
@@ -366,6 +393,7 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                     <div class="card-body">
                         <form action="admin_update_configuration.php" method="POST" class="search-wrap"
                             style="margin-bottom:1rem;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="config_type" value="activity_type">
                             <input type="text" name="activity_type_name" class="search-input"
                                 placeholder="Add new activity type..." required>
@@ -395,6 +423,8 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                                     <footer class="event-card-footer" style="display:block;">
                                         <form action="admin_update_configuration.php" method="POST"
                                             style="display:grid; gap:.75rem;">
+                                            <input type="hidden" name="csrf_token"
+                                                value="<?= htmlspecialchars($csrf_token) ?>">
                                             <input type="hidden" name="config_type" value="activity_type">
                                             <input type="hidden" name="activity_type_id"
                                                 value="<?= (int) $type['activity_type_id'] ?>">
@@ -436,6 +466,7 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                     <div class="card-body">
                         <form action="admin_update_configuration.php" method="POST" class="search-wrap"
                             style="margin-bottom:1rem;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="config_type" value="series">
                             <input type="text" name="series_name" class="search-input"
                                 placeholder="Add new series option..." required>
@@ -464,6 +495,8 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                                     <footer class="event-card-footer" style="display:block;">
                                         <form action="admin_update_configuration.php" method="POST"
                                             style="display:grid; gap:.75rem;">
+                                            <input type="hidden" name="csrf_token"
+                                                value="<?= htmlspecialchars($csrf_token) ?>">
                                             <input type="hidden" name="config_type" value="series">
                                             <input type="hidden" name="series_option_id"
                                                 value="<?= (int) $series['series_option_id'] ?>">
@@ -505,6 +538,7 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                     <div class="card-body">
                         <form action="admin_update_configuration.php" method="POST" class="search-wrap"
                             style="margin-bottom:1rem; flex-wrap:wrap;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="config_type" value="mapping">
 
                             <select name="background_id" class="search-input" style="max-width:220px;" required>
@@ -562,6 +596,8 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
 
                                                         <form action="admin_update_configuration.php" method="POST"
                                                             style="display:inline-flex; gap:.5rem; margin-left:auto;">
+                                                            <input type="hidden" name="csrf_token"
+                                                                value="<?= htmlspecialchars($csrf_token) ?>">
                                                             <input type="hidden" name="config_type" value="mapping">
                                                             <input type="hidden" name="config_map_id"
                                                                 value="<?= (int) $map['config_map_id'] ?>">
@@ -647,6 +683,8 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                                     <footer class="event-card-footer" style="display:block;">
                                         <form action="admin_update_configuration.php" method="POST"
                                             style="display:grid; gap:.75rem;">
+                                            <input type="hidden" name="csrf_token"
+                                                value="<?= htmlspecialchars($csrf_token) ?>">
                                             <input type="hidden" name="config_type" value="template">
                                             <input type="hidden" name="req_template_id"
                                                 value="<?= (int) $tpl['req_template_id'] ?>">
@@ -694,6 +732,8 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
 
                                     <form action="admin_update_configuration.php" method="POST"
                                         style="display:grid; gap:.75rem;">
+                                        <input type="hidden" name="csrf_token"
+                                            value="<?= htmlspecialchars($csrf_token) ?>">
                                         <input type="hidden" name="config_type" value="template">
 
                                         <input type="text" name="req_name" class="search-input"
@@ -708,7 +748,8 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                                         <select name="default_due_basis" class="search-input">
                                             <?php foreach ($basis_options as $basis): ?>
                                                 <option value="<?= htmlspecialchars($basis) ?>">
-                                                    <?= htmlspecialchars($basis) ?></option>
+                                                    <?= htmlspecialchars($basis) ?>
+                                                </option>
                                             <?php endforeach; ?>
                                         </select>
 
