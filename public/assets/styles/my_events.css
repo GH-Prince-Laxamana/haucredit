@@ -17,7 +17,7 @@
 }
 
 .summary-card {
-  background: linear-gradient(90deg, #ecdfe3, #ece9e2, #ecdfe3);;
+  background: var(--bg-gradient);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -43,7 +43,6 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #4b0014, #c2a14d, #4b0014);
   z-index: 2;
 }
 
