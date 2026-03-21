@@ -1,14 +1,9 @@
 <?php
 
-// ===== POPUP BASE FUNCTION =====
-// Generates a full HTML page to display a popup message with optional redirect
-// Parameters:
-// - $message: The message text to display (will be HTML-escaped)
-// - $type: The type of message (e.g., "info", "error") - defaults to "info"
-// - $redirect: Optional URL to redirect to; if null, shows a "Go Back" button
-function popup_base($message, $type = "info", $redirect = null)
+function popup_base($message, $type = "info", $redirect = null, $fallback = "index.php")
 {
-    // Output the HTML document structure
+    $referrer = $_SERVER['HTTP_REFERER'] ?? '';
+    $return_url = $redirect ?: ($referrer !== '' ? $referrer : $fallback);
     ?>
     <!DOCTYPE html>
     <html lang="en">
@@ -21,36 +16,20 @@ function popup_base($message, $type = "info", $redirect = null)
     </head>
 
     <body>
-        <!-- ===== ERROR CONTAINER ===== -->
-        <!-- Main container for the error/popup display -->
         <div class="error-container">
             <div class="error-content">
-                <!-- ===== ERROR TITLE ===== -->
-                <!-- Display the message type as the title -->
                 <div class="error-title">
                     <?= htmlspecialchars(ucfirst($type)) ?>
                 </div>
 
-                <!-- ===== ERROR MESSAGE ===== -->
-                <!-- Display the main message, properly escaped for security -->
                 <div class="error-message">
                     <?= htmlspecialchars($message) ?>
                 </div>
 
-                <!-- ===== ERROR BUTTONS ===== -->
-                <!-- Action buttons: either redirect link or go back button -->
                 <div class="error-buttons">
-                    <?php if ($redirect): ?>
-                        <!-- If redirect URL provided, show continue button -->
-                        <a href="<?= htmlspecialchars($redirect) ?>" class="btn-primary">
-                            Continue
-                        </a>
-                    <?php else: ?>
-                        <!-- Otherwise, show go back button -->
-                        <button class="btn-primary" onclick="history.back()">
-                            Go Back
-                        </button>
-                    <?php endif; ?>
+                    <a href="<?= htmlspecialchars($return_url) ?>" class="btn-primary">
+                        <?= $redirect ? 'Continue' : 'Go Back' ?>
+                    </a>
                 </div>
             </div>
         </div>
@@ -58,17 +37,10 @@ function popup_base($message, $type = "info", $redirect = null)
 
     </html>
     <?php
-    // Exit to prevent further execution after displaying the popup
     exit();
 }
 
-// ===== POPUP ERROR FUNCTION =====
-// Wrapper function for displaying error messages with a default "Oops!" title
-// Parameters:
-// - $msg: The error message to display
-// - $redirect: Optional redirect URL (passed to popup_base)
-function popup_error($msg, $redirect = null)
+function popup_error($msg, $redirect = null, $fallback = "index.php")
 {
-    // Call popup_base with "Oops!" as the type for error messages
-    popup_base($msg, "Oops!", $redirect);
+    popup_base($msg, "Oops!", $redirect, $fallback);
 }
