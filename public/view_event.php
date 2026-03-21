@@ -152,9 +152,9 @@ function getEventStatusBanner(string $event_status, ?string $admin_remarks = nul
             break;
     }
 
-    if (!empty($admin_remarks)) {
-        $message .= "<br><strong>Admin remarks:</strong> " . htmlspecialchars($admin_remarks);
-    }
+    // if (!empty($admin_remarks)) {
+    //     $message .= "<br><strong>Admin remarks:</strong> " . htmlspecialchars($admin_remarks);
+    // }
 
     return [
         'title' => $title,
@@ -247,7 +247,20 @@ $is_needs_revision = ($event_status === 'Needs Revision');
 
 /* editable states */
 $can_edit_event = !$is_archived && in_array($event_status, ['Draft', 'Pending Review', 'Needs Revision'], true);
-$can_modify_documents = !$is_archived && in_array($event_status, ['Draft', 'Pending Review', 'Needs Revision', 'Approved'], true);
+$can_modify_documents = !$is_archived && in_array($event_status, ['Draft', 'Pending Review', 'Needs Revision'], true);
+
+function canModifyRequirement(array $doc, bool $can_modify_documents): bool
+{
+    if (!$can_modify_documents) {
+        return false;
+    }
+
+    if (($doc['review_status'] ?? '') === 'Approved') {
+        return false;
+    }
+
+    return true;
+}
 
 $days_remaining = null;
 if ($is_archived) {
@@ -397,6 +410,15 @@ $metric_status = getMetricAchievementStatus(
                         <?php if (!$is_archived): ?>
                             <h3><?= htmlspecialchars($status_banner['title']) ?></h3>
                             <p><?= $status_banner['message'] ?></p>
+
+                            <?php if (!empty($event['admin_remarks'])): ?>
+                                <div class="hero-remarks">
+                                    <strong>Current Admin Remarks</strong>
+                                    <p>
+                                        <?= nl2br(htmlspecialchars($event['admin_remarks'])) ?>
+                                    </p>
+                                </div>
+                            <?php endif; ?>
                         <?php else: ?>
                             <h3>This event is archived</h3>
                             <p>
@@ -405,6 +427,27 @@ $metric_status = getMetricAchievementStatus(
                                 <strong><?= max((int) $days_remaining, 0) ?> days</strong>
                             </p>
                         <?php endif; ?>
+                    </div>
+
+                    <div class="event-hero-meta">
+                        <div class="hero-meta-item">
+                            <span class="hero-meta-label">Created</span>
+                            <span class="hero-meta-value">
+                                <?= formatDateTimeValue($event['created_at'] ?? null) ?>
+                            </span>
+                        </div>
+                        <div class="hero-meta-item">
+                            <span class="hero-meta-label">Updated</span>
+                            <span class="hero-meta-value">
+                                <?= formatDateTimeValue($event['updated_at'] ?? null) ?>
+                            </span>
+                        </div>
+                        <div class="hero-meta-item">
+                            <span class="hero-meta-label">Activity Type</span>
+                            <span class="hero-meta-value">
+                                <?= htmlspecialchars($event['activity_type'] ?? 'N/A') ?>
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -535,137 +578,153 @@ $metric_status = getMetricAchievementStatus(
 
                         <div class="card-body">
                             <div class="doc-checklist">
-                                <p class="doc-help">
-                                    Upload your documents in PDF format. If no file is uploaded, you may preview
-                                    or download the template when available.
-                                </p>
+                                <div class="requirement-list user-requirement-list">
+                                    <p class="doc-help">
+                                        Upload your documents in PDF format. If no file is uploaded, you may preview
+                                        or download the template when available.
+                                    </p>
 
-                                <?php foreach ($required_docs as $doc): ?>
-                                    <?php
-                                    $is_narrative_report = !empty($doc['is_narrative_report']);
-                                    $has_narrative_content = !empty($doc['narrative']) || !empty($doc['video_documentation_link']);
-                                    [$preview_url, $no_template_msg, $has_upload] = buildPreviewUrl($doc);
-                                    ?>
-                                    <div
-                                        class="doc-item status-<?= strtolower(str_replace(' ', '-', $doc['submission_status'] ?? 'Pending')) ?>">
+                                    <?php foreach ($required_docs as $doc): ?>
+                                        <?php
+                                        $is_narrative_report = !empty($doc['is_narrative_report']);
+                                        $has_narrative_content = !empty($doc['narrative']) || !empty($doc['video_documentation_link']);
+                                        [$preview_url, $no_template_msg, $has_upload] = buildPreviewUrl($doc);
 
-                                        <div class="doc-checkbox">
-                                            <?php if (($doc['submission_status'] ?? 'Pending') === 'Uploaded'): ?>
-                                                <i class="fa-solid fa-file-circle-check"></i>
-                                            <?php else: ?>
-                                                <i class="fa-solid fa-hourglass-half"></i>
-                                            <?php endif; ?>
-                                        </div>
+                                        $submission_class = strtolower(str_replace(' ', '-', $doc['submission_status'] ?? 'Pending'));
+                                        $review_class = strtolower(str_replace(' ', '-', $doc['display_review_status'] ?? 'Not Reviewed'));
+                                        $can_modify_this_doc = canModifyRequirement($doc, $can_modify_documents);
+                                        ?>
+                                        <article
+                                            class="requirement-card user-requirement-card status-<?= htmlspecialchars($submission_class) ?>">
+                                            <div class="requirement-top">
+                                                <div class="requirement-title-wrap">
+                                                    <h3>
+                                                        <?= htmlspecialchars($doc['req_name'] ?? '') ?>
+                                                        <?php if (!empty($doc['req_desc'])): ?>
+                                                            <span class="tooltip-icon">
+                                                                <i class="fa-regular fa-circle-question"></i>
+                                                                <span class="tooltip-text">
+                                                                    <?= htmlspecialchars($doc['req_desc']) ?>
+                                                                </span>
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </h3>
 
-                                        <div class="doc-info">
-                                            <h4>
-                                                <?= htmlspecialchars($doc['req_name'] ?? '') ?>
-                                                <?php if (!empty($doc['req_desc'])): ?>
-                                                    <span class="tooltip-icon">
-                                                        <i class="fa-regular fa-circle-question"></i>
-                                                        <span class="tooltip-text">
-                                                            <?= htmlspecialchars($doc['req_desc']) ?>
+                                                    <div class="requirement-meta">
+                                                        <span
+                                                            class="mini-badge submission-<?= htmlspecialchars($submission_class) ?>">
+                                                            <?= htmlspecialchars($doc['display_submission_status']) ?>
                                                         </span>
-                                                    </span>
-                                                <?php endif; ?>
-                                            </h4>
+                                                        <span
+                                                            class="mini-badge review-<?= htmlspecialchars($review_class) ?>">
+                                                            <?= htmlspecialchars($doc['display_review_status']) ?>
+                                                        </span>
+                                                    </div>
+                                                </div>
 
-                                            <div class="doc-status">
-                                                <?= htmlspecialchars($doc['display_submission_status']) ?> •
-                                                <?= htmlspecialchars($doc['display_review_status']) ?>
+                                                <div class="requirement-actions">
+                                                    <?php if ($is_narrative_report): ?>
+                                                        <?php
+                                                        $narrative_locked = (($doc['review_status'] ?? '') === 'Approved') || !$can_modify_documents;
+                                                        ?>
+                                                        <a href="narrative_report_submission.php?event_id=<?= (int) $event_id ?>"
+                                                            class="btn-file">
+                                                            <?php if ($narrative_locked): ?>
+                                                                View
+                                                            <?php else: ?>
+                                                                <?= ($doc['submission_status'] ?? 'Pending') === 'Uploaded' ? 'View / Edit' : 'Open' ?>
+                                                            <?php endif; ?>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <button type="button" class="btn-file" onclick="previewDocument(
+                                                                '<?= htmlspecialchars($preview_url, ENT_QUOTES) ?>',
+                                                                '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
+                                                                '<?= htmlspecialchars($no_template_msg, ENT_QUOTES) ?>'
+                                                            )">
+                                                            View
+                                                        </button>
+
+                                                        <?php if ($can_modify_this_doc && ($doc['submission_status'] ?? 'Pending') !== 'Uploaded'): ?>
+                                                            <form action="create_requirement.php" method="POST"
+                                                                enctype="multipart/form-data" class="inline-form">
+                                                                <input type="hidden" name="event_req_id"
+                                                                    value="<?= (int) $doc['event_req_id'] ?>">
+                                                                <label class="btn-file">
+                                                                    Upload
+                                                                    <input type="file" name="document" hidden required
+                                                                        onchange="this.form.submit()">
+                                                                </label>
+                                                            </form>
+                                                        <?php endif; ?>
+
+                                                        <?php if ($has_upload && $can_modify_this_doc): ?>
+                                                            <form data-confirm="Remove uploaded document?"
+                                                                action="delete_requirement.php" method="POST" class="inline-form">
+                                                                <input type="hidden" name="event_req_id"
+                                                                    value="<?= (int) $doc['event_req_id'] ?>">
+                                                                <button type="submit" class="btn-file btn-danger">Remove</button>
+                                                            </form>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
 
-                                            <?php if (!empty($doc['deadline'])): ?>
-                                                <div class="doc-status doc-deadline">
-                                                    Deadline: <?= formatDateTimeValue($doc['deadline']) ?>
-                                                </div>
-                                            <?php endif; ?>
-
-                                            <?php if (!empty($doc['remarks'])): ?>
-                                                <div class="doc-remarks-box">
-                                                    <strong>Remarks</strong>
-                                                    <p><?= nl2br(htmlspecialchars($doc['remarks'])) ?></p>
-                                                </div>
-                                            <?php endif; ?>
-
-                                            <?php if ($is_narrative_report): ?>
-                                                <?php if (!empty($doc['submitted_at'])): ?>
-                                                    <div class="doc-status">
-                                                        Submitted: <?= formatDateTimeValue($doc['submitted_at']) ?>
+                                            <div class="requirement-body">
+                                                <?php if (!empty($doc['deadline'])): ?>
+                                                    <div class="req-line">
+                                                        <strong>Deadline:</strong> <?= formatDateTimeValue($doc['deadline']) ?>
                                                     </div>
                                                 <?php endif; ?>
 
-                                                <?php if (!empty($doc['video_documentation_link'])): ?>
-                                                    <div class="doc-meta-line">
-                                                        Video Link:
-                                                        <a class="doc-inline-link"
-                                                            href="<?= htmlspecialchars($doc['video_documentation_link']) ?>"
-                                                            target="_blank" rel="noopener noreferrer">
-                                                            Open Link
-                                                        </a>
+                                                <?php if (!empty($doc['remarks'])): ?>
+                                                    <div class="doc-remarks-box">
+                                                        <strong>Remarks</strong>
+                                                        <p><?= nl2br(htmlspecialchars($doc['remarks'])) ?></p>
                                                     </div>
                                                 <?php endif; ?>
 
-                                                <?php if (!empty($doc['narrative'])): ?>
-                                                    <div class="doc-narrative-preview">
-                                                        <strong>Narrative Preview</strong>
-                                                        <p><?= nl2br(htmlspecialchars(mb_strimwidth($doc['narrative'], 0, 300, '...'))) ?>
-                                                        </p>
-                                                    </div>
-                                                <?php endif; ?>
+                                                <?php if ($is_narrative_report): ?>
+                                                    <?php if (!empty($doc['submitted_at'])): ?>
+                                                        <div class="req-line">
+                                                            <strong>Submitted:</strong>
+                                                            <?= formatDateTimeValue($doc['submitted_at']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
 
-                                                <?php if (!$has_narrative_content && empty($doc['template_url'])): ?>
-                                                    <div class="doc-status">No submission yet.</div>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                <?php if ($has_upload && !empty($doc['original_file_name'])): ?>
-                                                    <div class="doc-status">
-                                                        File: <?= htmlspecialchars($doc['original_file_name']) ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                            <?php endif; ?>
-                                        </div>
+                                                    <?php if (!empty($doc['video_documentation_link'])): ?>
+                                                        <div class="req-line">
+                                                            <strong>Video Link:</strong>
+                                                            <a class="doc-inline-link"
+                                                                href="<?= htmlspecialchars($doc['video_documentation_link']) ?>"
+                                                                target="_blank" rel="noopener noreferrer">
+                                                                Open Link
+                                                            </a>
+                                                        </div>
+                                                    <?php endif; ?>
 
-                                        <div class="doc-actions">
-                                            <?php if ($is_narrative_report): ?>
-                                                <a href="narrative_report_submission.php?event_id=<?= (int) $event_id ?>"
-                                                    class="btn-file">
-                                                    <?= ($doc['submission_status'] ?? 'Pending') === 'Uploaded' ? 'View / Edit' : 'Open' ?>
-                                                </a>
-                                            <?php else: ?>
-                                                <button type="button" class="btn-file" onclick="previewDocument(
-                                                        '<?= htmlspecialchars($preview_url, ENT_QUOTES) ?>',
-                                                        '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
-                                                        '<?= htmlspecialchars($no_template_msg, ENT_QUOTES) ?>'
-                                                    )">
-                                                    View
-                                                </button>
+                                                    <?php if (!empty($doc['narrative'])): ?>
+                                                        <div class="doc-narrative-preview">
+                                                            <strong>Narrative Preview</strong>
+                                                            <p><?= nl2br(htmlspecialchars(mb_strimwidth($doc['narrative'], 0, 300, '...'))) ?>
+                                                            </p>
+                                                        </div>
+                                                    <?php endif; ?>
 
-                                                <?php if ($can_modify_documents && ($doc['submission_status'] ?? 'Pending') !== 'Uploaded'): ?>
-                                                    <form action="create_requirement.php" method="POST"
-                                                        enctype="multipart/form-data" class="upload-form">
-                                                        <input type="hidden" name="event_req_id"
-                                                            value="<?= (int) $doc['event_req_id'] ?>">
-                                                        <label class="btn-file">
-                                                            Upload
-                                                            <input type="file" name="document" hidden required
-                                                                onchange="this.form.submit()">
-                                                        </label>
-                                                    </form>
+                                                    <?php if (!$has_narrative_content && empty($doc['template_url'])): ?>
+                                                        <div class="req-line">No submission yet.</div>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <?php if ($has_upload && !empty($doc['original_file_name'])): ?>
+                                                        <div class="req-line">
+                                                            <strong>File:</strong>
+                                                            <?= htmlspecialchars($doc['original_file_name']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
-
-                                                <?php if ($has_upload && $can_modify_documents): ?>
-                                                    <form data-confirm="Remove uploaded document?" action="delete_requirement.php"
-                                                        method="POST">
-                                                        <input type="hidden" name="event_req_id"
-                                                            value="<?= (int) $doc['event_req_id'] ?>">
-                                                        <button type="submit" class="btn-file btn-danger">Remove</button>
-                                                    </form>
-                                                <?php endif; ?>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
+                                            </div>
+                                        </article>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
                         </div>
                     </section>

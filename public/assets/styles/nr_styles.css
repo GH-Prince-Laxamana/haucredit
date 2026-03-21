@@ -57,3 +57,19 @@
     font-size: var(--title-smaller-size);
     line-height: 1.6;
 }
+
+.status-banner.status-Pending {
+    background: linear-gradient(135deg, #efdfdf 0%, #f7eada 100%);
+}
+
+.status-banner.status-Needs {
+    background: linear-gradient(135deg, #efdfdf 0%, #f7eada 100%);
+}
+
+.status-banner.status-Approved {
+    background: linear-gradient(135deg, #def5df 0%, #fcf9f5 100%);
+}
+
+.status-banner.status-Completed {
+    background: linear-gradient(135deg, #def5df 0%, #fcf9f5 100%);
+}

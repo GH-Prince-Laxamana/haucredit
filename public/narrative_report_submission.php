@@ -44,36 +44,40 @@ function formatDateTimeValue(?string $value): string
     return $ts ? date('F j, Y g:i A', $ts) : 'N/A';
 }
 
-function getNarrativeBanner(string $event_status, ?string $admin_remarks = null): array
+function getNarrativeBanner(string $event_status, ?string $admin_remarks = null, string $review_status = 'Not Reviewed'): array
 {
     $class = strtolower(str_replace(' ', '-', $event_status));
     $title = 'Narrative Report Status';
     $message = '';
 
-    switch ($event_status) {
-        case 'Approved':
-            $message = "This event is approved. You may now submit the Narrative Report and post-event details.";
-            break;
+    if ($review_status === 'Approved') {
+        $message = "This Narrative Report has already been approved. Editing is no longer available.";
+    } else {
+        switch ($event_status) {
+            case 'Approved':
+                $message = "This event is approved. You may now submit the Narrative Report and post-event details.";
+                break;
 
-        case 'Needs Revision':
-            $message = "This Narrative Report or related event submission needs revision. Please review the remarks and update your submission.";
-            break;
+            case 'Needs Revision':
+                $message = "This Narrative Report or related event submission needs revision. Please review the remarks and update your submission.";
+                break;
 
-        case 'Completed':
-            $message = "This event is already completed. Narrative Report editing is no longer available.";
-            break;
+            case 'Completed':
+                $message = "This event is already completed. Narrative Report editing is no longer available.";
+                break;
 
-        case 'Pending Review':
-            $message = "This event is still in the pre-event review stage. Narrative Report submission is not yet available.";
-            break;
+            case 'Pending Review':
+                $message = "This event is still in the pre-event review stage. Narrative Report submission is not yet available.";
+                break;
 
-        case 'Draft':
-            $message = "This event is still in draft status. Narrative Report submission is not yet available.";
-            break;
+            case 'Draft':
+                $message = "This event is still in draft status. Narrative Report submission is not yet available.";
+                break;
 
-        default:
-            $message = "Narrative Report status is currently unavailable.";
-            break;
+            default:
+                $message = "Narrative Report status is currently unavailable.";
+                break;
+        }
     }
 
     if (!empty($admin_remarks)) {
@@ -145,9 +149,21 @@ $is_archived = !empty($row['archived_at']);
 
 /* ================= ENFORCE EDIT RULES ================= */
 $allowed_narrative_statuses = ['Approved', 'Needs Revision'];
-$can_edit_narrative = !$is_archived && in_array($event_status, $allowed_narrative_statuses, true);
 
-$status_banner = getNarrativeBanner($event_status, $row['admin_remarks'] ?? null);
+$narrative_review_status = $row['review_status'] ?? 'Not Reviewed';
+$narrative_submission_status = $row['submission_status'] ?? 'Pending';
+
+$can_edit_narrative = (
+    !$is_archived
+    && in_array($event_status, $allowed_narrative_statuses, true)
+    && $narrative_review_status !== 'Approved'
+);
+
+$status_banner = getNarrativeBanner(
+    $event_status,
+    $row['admin_remarks'] ?? null,
+    $narrative_review_status
+);
 
 /* ================= HANDLE SUBMISSION ================= */
 if (isset($_POST["save_narrative_report"])) {
@@ -328,7 +344,7 @@ if (isset($_POST["save_narrative_report"])) {
                     <a href="view_event.php?id=<?= (int) $event_id ?>" class="btn-secondary">Back</a>
                 </div>
 
-                <div class="status-banner status-<?= htmlspecialchars($status_banner['class']) ?>"
+                <div class="status-banner status-<?= htmlspecialchars($narrative_review_status) ?>"
                     style="flex-direction: column;">
                     <div class="status-content">
                         <h3><?= htmlspecialchars($status_banner['title']) ?></h3>

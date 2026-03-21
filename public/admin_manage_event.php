@@ -21,7 +21,7 @@ if ($event_id <= 0) {
 /* ================= HELPERS ================= */
 function normalizeStatusClass(string $status): string
 {
-    return strtolower(str_replace(' ', '-', $status));
+    return strtolower(str_replace(' ', '-', trim($status)));
 }
 
 function formatDateTimeValue(?string $value): string
@@ -310,7 +310,7 @@ foreach ($requirements as $doc) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manage Event - HAUCREDIT</title>
     <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/view_event.css" />
+    <link rel="stylesheet" href="assets/styles/admin_manage_event.css" />
 </head>
 
 <body>
@@ -328,394 +328,431 @@ foreach ($requirements as $doc) {
                     <p>Admin Event Management</p>
                 </div>
 
-                <div class="action-btns">
+                <div class="home-top-actions">
                     <a href="admin_events.php" class="btn-secondary">Back to Events</a>
                 </div>
             </header>
 
-            <section class="content view-event-page">
-                <div class="status-banner status-<?= htmlspecialchars(normalizeStatusClass($event_status)) ?>">
-                    <div class="status-content">
-                        <h3>Event Status: <?= htmlspecialchars($event_status) ?></h3>
-                        <p>
-                            Submitted by <strong><?= htmlspecialchars($event['user_name'] ?? 'Unknown User') ?></strong>
-                            (<?= htmlspecialchars($event['org_body'] ?? 'No organization') ?>)
-                            <?php if (!empty($event['admin_remarks'])): ?>
-                                <br><strong>Current Admin Remarks:</strong>
-                                <?= htmlspecialchars($event['admin_remarks']) ?>
-                            <?php endif; ?>
+            <section class="content admin-manage-event-page">
+                <section class="event-hero-card status-<?= htmlspecialchars(normalizeStatusClass($event_status)) ?>">
+                    <div class="event-hero-main">
+                        <div class="event-hero-status">
+                            <span class="hero-status-badge status-<?= htmlspecialchars(normalizeStatusClass($event_status)) ?>">
+                                <?= htmlspecialchars($event_status) ?>
+                            </span>
+                        </div>
+
+                        <h2><?= htmlspecialchars($event['event_name']) ?></h2>
+
+                        <p class="event-hero-subtitle">
+                            Submitted by
+                            <strong><?= htmlspecialchars($event['user_name'] ?? 'Unknown User') ?></strong>
+                            •
+                            <?= htmlspecialchars($event['org_body'] ?? 'No organization') ?>
                         </p>
+
+                        <?php if (!empty($event['admin_remarks'])): ?>
+                            <div class="hero-remarks">
+                                <strong>Current Admin Remarks</strong>
+                                <p><?= nl2br(htmlspecialchars($event['admin_remarks'])) ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                </div>
 
-                <div class="col-left">
-                    <section class="detail-card">
-                        <div class="card-header">
-                            <h2><i class="fa-solid fa-user"></i> Submission Details</h2>
-                            <span
-                                class="badge badge-primary"><?= htmlspecialchars($event['activity_type'] ?? 'N/A') ?></span>
+                    <div class="event-hero-meta">
+                        <div class="hero-meta-item">
+                            <span class="hero-meta-label">Created</span>
+                            <span class="hero-meta-value"><?= formatDateTimeValue($event['created_at'] ?? null) ?></span>
                         </div>
-                        <div class="card-body">
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <label>Submitted By</label>
-                                    <p><?= htmlspecialchars($event['user_name'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Email</label>
-                                    <p><?= htmlspecialchars($event['user_email'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Organization</label>
-                                    <p><?= htmlspecialchars($event['org_body'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Organizing Body</label>
-                                    <p><?= htmlspecialchars($organizing_body_display) ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Background</label>
-                                    <p><?= htmlspecialchars($event['background'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Nature</label>
-                                    <p><?= htmlspecialchars($event['nature'] ?? 'N/A') ?></p>
-                                </div>
-                                <?php if (!empty($event['series'])): ?>
+                        <div class="hero-meta-item">
+                            <span class="hero-meta-label">Updated</span>
+                            <span class="hero-meta-value"><?= formatDateTimeValue($event['updated_at'] ?? null) ?></span>
+                        </div>
+                        <div class="hero-meta-item">
+                            <span class="hero-meta-label">Activity Type</span>
+                            <span class="hero-meta-value"><?= htmlspecialchars($event['activity_type'] ?? 'N/A') ?></span>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="manage-layout">
+                    <div class="manage-main">
+                        <section class="detail-card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-user"></i> Submission Details</h2>
+                                <span class="badge badge-primary"><?= htmlspecialchars($event['activity_type'] ?? 'N/A') ?></span>
+                            </div>
+
+                            <div class="card-body">
+                                <div class="detail-grid">
                                     <div class="detail-item">
-                                        <label>Series</label>
-                                        <p><?= htmlspecialchars($event['series']) ?></p>
+                                        <label>Submitted By</label>
+                                        <p><?= htmlspecialchars($event['user_name'] ?? 'N/A') ?></p>
                                     </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="detail-card">
-                        <div class="card-header">
-                            <h2><i class="fa-solid fa-calendar-days"></i> Schedule & Logistics</h2>
-                        </div>
-                        <div class="card-body">
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <label>Start Date & Time</label>
-                                    <p><?= formatDateTimeValue($event['start_datetime'] ?? null) ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>End Date & Time</label>
-                                    <p><?= formatDateTimeValue($event['end_datetime'] ?? null) ?></p>
-                                </div>
-                                <div class="detail-item full-width">
-                                    <label>Venue / Platform</label>
-                                    <p><?= htmlspecialchars($event['venue_platform'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item full-width">
-                                    <label>Participants</label>
-                                    <p><?= htmlspecialchars($event['participants'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Payment Collection</label>
-                                    <p><?= htmlspecialchars($event['collect_payments'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Extraneous</label>
-                                    <p><?= htmlspecialchars($event['extraneous'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Visitors</label>
-                                    <p><?= htmlspecialchars($event['has_visitors'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Distance</label>
-                                    <p><?= htmlspecialchars($event['distance'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Participant Range</label>
-                                    <p><?= htmlspecialchars($event['participant_range'] ?? 'N/A') ?></p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Overnight</label>
-                                    <p><?= ((string) ($event['overnight'] ?? '') === '1') ? 'Yes' : 'No' ?></p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="detail-card">
-                        <div class="card-header">
-                            <h2><i class="fa-solid fa-chart-column"></i> Metrics</h2>
-                        </div>
-                        <div class="card-body">
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <label>Target Metric</label>
-                                    <p><?= !empty($event['target_metric']) ? htmlspecialchars($event['target_metric']) : 'N/A' ?>
-                                    </p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Actual Metric</label>
-                                    <p><?= !empty($event['actual_metric']) ? htmlspecialchars($event['actual_metric']) : 'N/A' ?>
-                                    </p>
-                                </div>
-                                <div class="detail-item">
-                                    <label>Metric Result</label>
-                                    <p class="<?= htmlspecialchars($metric_status['class']) ?>">
-                                        <?= htmlspecialchars($metric_status['label']) ?>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="detail-card">
-                        <div class="card-header">
-                            <h2><i class="fa-solid fa-file-circle-question"></i> Requirement Review</h2>
-                            <span class="badge badge-success"><?= $uploaded_docs ?>/<?= $total_docs ?> Uploaded</span>
-                        </div>
-
-                        <div class="card-body">
-                            <div class="doc-checklist">
-                                <?php foreach ($requirements as $doc): ?>
-                                    <?php
-                                    $is_narrative = (($doc['req_name'] ?? '') === 'Narrative Report');
-                                    $has_narrative_content = !empty($doc['narrative']) || !empty($doc['video_documentation_link']);
-                                    [$preview_url, $no_template_msg, $has_upload] = buildPreviewUrl($doc);
-                                    $can_review = canReviewRequirement($doc, $event_status);
-                                    ?>
-
-                                    <div
-                                        class="doc-item status-<?= htmlspecialchars(normalizeStatusClass($doc['submission_status'] ?? 'Pending')) ?>">
-                                        <div class="doc-checkbox">
-                                            <?php if (($doc['submission_status'] ?? 'Pending') === 'Uploaded'): ?>
-                                                <i class="fa-solid fa-file-circle-check"></i>
-                                            <?php else: ?>
-                                                <i class="fa-solid fa-hourglass-half"></i>
-                                            <?php endif; ?>
+                                    <div class="detail-item">
+                                        <label>Email</label>
+                                        <p><?= htmlspecialchars($event['user_email'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Organization</label>
+                                        <p><?= htmlspecialchars($event['org_body'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Organizing Body</label>
+                                        <p><?= htmlspecialchars($organizing_body_display) ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Background</label>
+                                        <p><?= htmlspecialchars($event['background'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Nature</label>
+                                        <p><?= htmlspecialchars($event['nature'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <?php if (!empty($event['series'])): ?>
+                                        <div class="detail-item">
+                                            <label>Series</label>
+                                            <p><?= htmlspecialchars($event['series']) ?></p>
                                         </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </section>
 
-                                        <div class="doc-info">
-                                            <h4>
-                                                <?= htmlspecialchars($doc['req_name'] ?? '') ?>
-                                                <?php if (!empty($doc['req_desc'])): ?>
-                                                    <span class="tooltip-icon">
-                                                        <i class="fa-regular fa-circle-question"></i>
-                                                        <span class="tooltip-text">
-                                                            <?= htmlspecialchars($doc['req_desc']) ?>
-                                                        </span>
-                                                    </span>
-                                                <?php endif; ?>
-                                            </h4>
+                        <section class="detail-card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-calendar-days"></i> Schedule & Logistics</h2>
+                            </div>
 
-                                            <div class="doc-status">
-                                                <?= htmlspecialchars($doc['submission_status'] ?? 'Pending') ?> •
-                                                <?= htmlspecialchars($doc['review_status'] ?? 'Not Reviewed') ?>
+                            <div class="card-body">
+                                <div class="detail-grid">
+                                    <div class="detail-item">
+                                        <label>Start Date & Time</label>
+                                        <p><?= formatDateTimeValue($event['start_datetime'] ?? null) ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>End Date & Time</label>
+                                        <p><?= formatDateTimeValue($event['end_datetime'] ?? null) ?></p>
+                                    </div>
+                                    <div class="detail-item full-width">
+                                        <label>Venue / Platform</label>
+                                        <p><?= htmlspecialchars($event['venue_platform'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <div class="detail-item full-width">
+                                        <label>Participants</label>
+                                        <p><?= htmlspecialchars($event['participants'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Payment Collection</label>
+                                        <p><?= htmlspecialchars($event['collect_payments'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Extraneous</label>
+                                        <p><?= htmlspecialchars($event['extraneous'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Visitors</label>
+                                        <p><?= htmlspecialchars($event['has_visitors'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Distance</label>
+                                        <p><?= htmlspecialchars($event['distance'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Participant Range</label>
+                                        <p><?= htmlspecialchars($event['participant_range'] ?? 'N/A') ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Overnight</label>
+                                        <p><?= ((string) ($event['overnight'] ?? '') === '1') ? 'Yes' : 'No' ?></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="detail-card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-chart-column"></i> Metrics</h2>
+                            </div>
+
+                            <div class="card-body">
+                                <div class="detail-grid">
+                                    <div class="detail-item">
+                                        <label>Target Metric</label>
+                                        <p><?= !empty($event['target_metric']) ? htmlspecialchars($event['target_metric']) : 'N/A' ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Actual Metric</label>
+                                        <p><?= !empty($event['actual_metric']) ? htmlspecialchars($event['actual_metric']) : 'N/A' ?></p>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Metric Result</label>
+                                        <p class="<?= htmlspecialchars($metric_status['class']) ?>">
+                                            <?= htmlspecialchars($metric_status['label']) ?>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="detail-card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-file-circle-question"></i> Requirement Review</h2>
+                                <span class="badge badge-success"><?= $uploaded_docs ?>/<?= $total_docs ?> Uploaded</span>
+                            </div>
+
+                            <div class="card-body">
+                                <div class="requirement-list">
+                                    <?php foreach ($requirements as $doc): ?>
+                                        <?php
+                                        $is_narrative = (($doc['req_name'] ?? '') === 'Narrative Report');
+                                        $has_narrative_content = !empty($doc['narrative']) || !empty($doc['video_documentation_link']);
+                                        [$preview_url, $no_template_msg, $has_upload] = buildPreviewUrl($doc);
+                                        $can_review = canReviewRequirement($doc, $event_status);
+                                        ?>
+                                        <article class="requirement-card status-<?= htmlspecialchars(normalizeStatusClass($doc['submission_status'] ?? 'Pending')) ?>">
+                                            <div class="requirement-top">
+                                                <div class="requirement-title-wrap">
+                                                    <h3>
+                                                        <?= htmlspecialchars($doc['req_name'] ?? '') ?>
+                                                        <?php if (!empty($doc['req_desc'])): ?>
+                                                            <span class="tooltip-icon">
+                                                                <i class="fa-regular fa-circle-question"></i>
+                                                                <span class="tooltip-text">
+                                                                    <?= htmlspecialchars($doc['req_desc']) ?>
+                                                                </span>
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </h3>
+
+                                                    <div class="requirement-meta">
+                                                        <span class="mini-badge"><?= htmlspecialchars($doc['submission_status'] ?? 'Pending') ?></span>
+                                                        <span class="mini-badge review-<?= htmlspecialchars($doc['review_status'] ?? 'Not Reviewed') ?>"><?= htmlspecialchars($doc['review_status'] ?? 'Not Reviewed') ?></span>
+                                                    </div>
+                                                </div>
+
+                                                <div class="requirement-actions">
+                                                    <?php if ($is_narrative): ?>
+                                                        <a href="admin_review_narrative.php?event_id=<?= (int) $event_id ?>" class="btn-file">Review Narrative</a>
+                                                    <?php else: ?>
+                                                        <button
+                                                            type="button"
+                                                            class="btn-file"
+                                                            onclick="previewDocument(
+                                                                '<?= htmlspecialchars($preview_url, ENT_QUOTES) ?>',
+                                                                '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
+                                                                '<?= htmlspecialchars($no_template_msg, ENT_QUOTES) ?>'
+                                                            )">
+                                                            View
+                                                        </button>
+                                                    <?php endif; ?>
+
+                                                    <?php if ($can_review): ?>
+                                                        <form action="admin_update_requirement.php" method="POST" class="inline-form">
+                                                            <input type="hidden" name="event_id" value="<?= (int) $event_id ?>">
+                                                            <input type="hidden" name="event_req_id" value="<?= (int) $doc['event_req_id'] ?>">
+                                                            <input type="hidden" name="action" value="approve">
+                                                            <button type="submit" class="btn-file">Approve</button>
+                                                        </form>
+
+                                                        <form action="admin_update_requirement.php" method="POST" class="inline-form">
+                                                            <input type="hidden" name="event_id" value="<?= (int) $event_id ?>">
+                                                            <input type="hidden" name="event_req_id" value="<?= (int) $doc['event_req_id'] ?>">
+                                                            <input type="hidden" name="action" value="needs_revision">
+                                                            <button type="submit" class="btn-file btn-danger">Needs Revision</button>
+                                                        </form>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
 
-                                            <?php if (!empty($doc['deadline'])): ?>
-                                                <div class="doc-status doc-deadline">
-                                                    Deadline: <?= formatDateTimeValue($doc['deadline']) ?>
-                                                </div>
-                                            <?php endif; ?>
-
-                                            <?php if (!empty($doc['reviewed_at'])): ?>
-                                                <div class="doc-status">
-                                                    Reviewed: <?= formatDateTimeValue($doc['reviewed_at']) ?>
-                                                </div>
-                                            <?php endif; ?>
-
-                                            <?php if (!empty($doc['remarks'])): ?>
-                                                <div class="doc-remarks-box">
-                                                    <strong>Remarks</strong>
-                                                    <p><?= nl2br(htmlspecialchars($doc['remarks'])) ?></p>
-                                                </div>
-                                            <?php endif; ?>
-
-                                            <?php if ($is_narrative): ?>
-                                                <?php if (!empty($doc['submitted_at'])): ?>
-                                                    <div class="doc-status">
-                                                        Submitted: <?= formatDateTimeValue($doc['submitted_at']) ?>
+                                            <div class="requirement-body">
+                                                <?php if (!empty($doc['deadline'])): ?>
+                                                    <div class="req-line">
+                                                        <strong>Deadline:</strong> <?= formatDateTimeValue($doc['deadline']) ?>
                                                     </div>
                                                 <?php endif; ?>
 
-                                                <?php if (!empty($doc['video_documentation_link'])): ?>
-                                                    <div class="doc-meta-line">
-                                                        Video Link:
-                                                        <a class="doc-inline-link"
-                                                            href="<?= htmlspecialchars($doc['video_documentation_link']) ?>"
-                                                            target="_blank" rel="noopener noreferrer">
-                                                            Open Link
-                                                        </a>
+                                                <?php if (!empty($doc['reviewed_at'])): ?>
+                                                    <div class="req-line">
+                                                        <strong>Reviewed:</strong> <?= formatDateTimeValue($doc['reviewed_at']) ?>
                                                     </div>
                                                 <?php endif; ?>
 
-                                                <?php if (!empty($doc['narrative'])): ?>
-                                                    <div class="doc-narrative-preview">
-                                                        <strong>Narrative Preview</strong>
-                                                        <p><?= nl2br(htmlspecialchars(mb_strimwidth($doc['narrative'], 0, 300, '...'))) ?>
-                                                        </p>
+                                                <?php if (!empty($doc['remarks'])): ?>
+                                                    <div class="doc-remarks-box">
+                                                        <strong>Remarks</strong>
+                                                        <p><?= nl2br(htmlspecialchars($doc['remarks'])) ?></p>
                                                     </div>
                                                 <?php endif; ?>
 
-                                                <?php if (!$has_narrative_content): ?>
-                                                    <div class="doc-status">No Narrative Report content submitted yet.</div>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                <?php if ($has_upload && !empty($doc['original_file_name'])): ?>
-                                                    <div class="doc-status">
-                                                        File: <?= htmlspecialchars($doc['original_file_name']) ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                            <?php endif; ?>
-                                        </div>
+                                                <?php if ($is_narrative): ?>
+                                                    <?php if (!empty($doc['submitted_at'])): ?>
+                                                        <div class="req-line">
+                                                            <strong>Submitted:</strong> <?= formatDateTimeValue($doc['submitted_at']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
 
-                                        <div class="doc-actions">
-                                            <?php if ($is_narrative): ?>
-                                                <a href="admin_review_narrative.php?event_id=<?= (int) $event_id ?>"
-                                                    class="btn-file">
-                                                    Review Narrative
-                                                </a>
-                                            <?php else: ?>
-                                                <button type="button" class="btn-file" onclick="previewDocument(
-                                                    '<?= htmlspecialchars($preview_url, ENT_QUOTES) ?>',
-                                                    '<?= htmlspecialchars($doc['req_name'] . ($has_upload ? ' (Uploaded)' : ' Template'), ENT_QUOTES) ?>',
-                                                    '<?= htmlspecialchars($no_template_msg, ENT_QUOTES) ?>'
-                                                )">
-                                                    View
-                                                </button>
-                                            <?php endif; ?>
+                                                    <?php if (!empty($doc['video_documentation_link'])): ?>
+                                                        <div class="req-line">
+                                                            <strong>Video Link:</strong>
+                                                            <a class="doc-inline-link"
+                                                                href="<?= htmlspecialchars($doc['video_documentation_link']) ?>"
+                                                                target="_blank" rel="noopener noreferrer">
+                                                                Open Link
+                                                            </a>
+                                                        </div>
+                                                    <?php endif; ?>
+
+                                                    <?php if (!empty($doc['narrative'])): ?>
+                                                        <div class="doc-narrative-preview">
+                                                            <strong>Narrative Preview</strong>
+                                                            <p><?= nl2br(htmlspecialchars(mb_strimwidth($doc['narrative'], 0, 300, '...'))) ?></p>
+                                                        </div>
+                                                    <?php endif; ?>
+
+                                                    <?php if (!$has_narrative_content): ?>
+                                                        <div class="req-line">No Narrative Report content submitted yet.</div>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <?php if ($has_upload && !empty($doc['original_file_name'])): ?>
+                                                        <div class="req-line">
+                                                            <strong>File:</strong> <?= htmlspecialchars($doc['original_file_name']) ?>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                <?php endif; ?>
+                                            </div>
 
                                             <?php if ($can_review): ?>
-                                                <form action="admin_update_requirement.php" method="POST" class="inline-form">
+                                                <form action="admin_update_requirement.php" method="POST" class="requirement-remarks-form">
                                                     <input type="hidden" name="event_id" value="<?= (int) $event_id ?>">
-                                                    <input type="hidden" name="event_req_id"
-                                                        value="<?= (int) $doc['event_req_id'] ?>">
-                                                    <input type="hidden" name="action" value="approve">
-                                                    <button type="submit" class="btn-file">Approve</button>
-                                                </form>
+                                                    <input type="hidden" name="event_req_id" value="<?= (int) $doc['event_req_id'] ?>">
 
-                                                <form action="admin_update_requirement.php" method="POST" class="inline-form">
-                                                    <input type="hidden" name="event_id" value="<?= (int) $event_id ?>">
-                                                    <input type="hidden" name="event_req_id"
-                                                        value="<?= (int) $doc['event_req_id'] ?>">
-                                                    <input type="hidden" name="action" value="needs_revision">
-                                                    <button type="submit" class="btn-file btn-danger">Needs Revision</button>
+                                                    <div class="field long-field">
+                                                        <label class="field-title">Admin Remarks for <?= htmlspecialchars($doc['req_name']) ?></label>
+                                                        <textarea
+                                                            name="remarks"
+                                                            rows="3"
+                                                            placeholder="Write remarks or requested changes here..."><?= htmlspecialchars($doc['remarks'] ?? '') ?></textarea>
+                                                    </div>
+
+                                                    <div class="remarks-actions">
+                                                        <button type="submit" name="action" value="save_remarks" class="btn-secondary">
+                                                            Save Remarks
+                                                        </button>
+                                                        <button type="submit" name="action" value="needs_revision" class="btn-primary btn-danger">
+                                                            Save & Mark Needs Revision
+                                                        </button>
+                                                    </div>
                                                 </form>
+                                            <?php endif; ?>
+                                        </article>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <aside class="manage-sidebar">
+                        <section class="tracker-card">
+                            <h2>Progress Tracker</h2>
+
+                            <div class="ring" style="--progress: <?= $progress_percentage ?>; --progress-color: <?= $progress_color ?>;">
+                                <div class="ring-inner">
+                                    <span class="ring-number"><?= $progress_percentage ?>%</span>
+                                </div>
+                            </div>
+
+                            <div class="tracker-list">
+                                <div class="t-row"><span>Total Documents</span><span class="t-score"><?= $total_docs ?></span></div>
+                                <div class="t-row"><span>Uploaded</span><span class="t-score"><?= $uploaded_docs ?></span></div>
+                                <div class="t-row"><span>Pending</span><span class="t-score"><?= $pending_docs ?></span></div>
+                                <div class="t-row"><span>Completion</span><span class="t-score"><?= $progress_percentage ?>%</span></div>
+                            </div>
+                        </section>
+
+                        <section class="detail-card decision-card">
+                            <div class="card-header">
+                                <h2><i class="fa-solid fa-gavel"></i> Event Decision</h2>
+                            </div>
+
+                            <div class="card-body">
+                                <div class="decision-status-grid">
+                                    <div class="decision-status-item">
+                                        <div class="decision-status-label">Pre-event Requirements</div>
+                                        <div class="decision-status-value <?= $allPreEventReviewedOkay ? 'status-ready' : 'status-incomplete' ?>">
+                                            <?php if ($allPreEventReviewedOkay): ?>
+                                                <i class="fa-solid fa-circle-check"></i> Ready
+                                            <?php else: ?>
+                                                <i class="fa-solid fa-circle-xmark"></i> Incomplete
                                             <?php endif; ?>
                                         </div>
                                     </div>
 
-                                    <?php if ($can_review): ?>
-                                        <form action="admin_update_requirement.php" method="POST" class="detail-card"
-                                            style="margin-top: .75rem;">
-                                            <input type="hidden" name="event_id" value="<?= (int) $event_id ?>">
-                                            <input type="hidden" name="event_req_id" value="<?= (int) $doc['event_req_id'] ?>">
+                                    <div class="decision-status-item">
+                                        <div class="decision-status-label">Narrative Report</div>
+                                        <div class="decision-status-value <?= $narrativeApproved ? 'status-ready' : 'status-incomplete' ?>">
+                                            <?php if ($narrativeApproved): ?>
+                                                <i class="fa-solid fa-circle-check"></i> Approved
+                                            <?php else: ?>
+                                                <i class="fa-solid fa-circle-xmark"></i> Not Approved
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
 
-                                            <div class="card-body">
-                                                <div class="field long-field">
-                                                    <label class="field-title">Admin Remarks for
-                                                        <?= htmlspecialchars($doc['req_name']) ?></label>
-                                                    <textarea name="remarks" rows="3"
-                                                        placeholder="Write remarks or requested changes here..."><?= htmlspecialchars($doc['remarks'] ?? '') ?></textarea>
-                                                </div>
+                                    <div class="decision-status-item full-width-status">
+                                        <div class="decision-status-label">Current Event Status</div>
+                                        <div class="decision-status-value status-badge-display">
+                                            <span class="status-badge-decision status-<?= htmlspecialchars(normalizeStatusClass($event_status)) ?>">
+                                                <?= htmlspecialchars($event_status) ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                                                <div class="step-actions" style="justify-content:flex-end;">
-                                                    <button type="submit" name="action" value="save_remarks"
-                                                        class="btn-secondary">Save Remarks</button>
-                                                    <button type="submit" name="action" value="needs_revision"
-                                                        class="btn-primary btn-danger">Save & Mark Needs Revision</button>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    </section>
-                </div>
+                                <form action="admin_update_event_status.php" method="POST" class="decision-form">
+                                    <input type="hidden" name="event_id" value="<?= (int) $event_id ?>">
 
-                <div class="col-right">
-                    <aside class="tracker-card">
-                        <h2>Progress Tracker</h2>
-                        <div class="ring"
-                            style="--progress: <?= $progress_percentage ?>; --progress-color: <?= $progress_color ?>;">
-                            <div class="ring-inner">
-                                <span class="ring-number"><?= $progress_percentage ?>%</span>
-                            </div>
-                        </div>
+                                    <div class="field long-field">
+                                        <label class="field-title">
+                                            <i class="fa-solid fa-message"></i> Event-Level Admin Remarks
+                                        </label>
+                                        <textarea
+                                            name="admin_remarks"
+                                            rows="4"
+                                            class="decision-textarea"
+                                            placeholder="Write final remarks for this event..."><?= htmlspecialchars($event['admin_remarks'] ?? '') ?></textarea>
+                                    </div>
 
-                        <div class="tracker-list">
-                            <div class="t-row"><span>Total Documents</span><span
-                                    class="t-score"><?= $total_docs ?></span></div>
-                            <div class="t-row"><span>Uploaded</span><span class="t-score"><?= $uploaded_docs ?></span>
+                                    <div class="decision-actions">
+                                        <button type="submit" name="action" value="save_remarks" class="btn-decision btn-save">
+                                            <i class="fa-solid fa-floppy-disk"></i> Save Remarks
+                                        </button>
+
+                                        <?php if (canReturnEventForRevision($event_status)): ?>
+                                            <button type="submit" name="action" value="needs_revision" class="btn-decision btn-revision">
+                                                <i class="fa-solid fa-rotate-left"></i> Mark Needs Revision
+                                            </button>
+                                        <?php endif; ?>
+
+                                        <?php if (canApproveEvent($event_status)): ?>
+                                            <button type="submit" name="action" value="approve" class="btn-decision btn-approve">
+                                                <i class="fa-solid fa-circle-check"></i> Approve Event
+                                            </button>
+                                        <?php endif; ?>
+
+                                        <?php if (canCompleteEvent($event_status, $narrativeApproved)): ?>
+                                            <button type="submit" name="action" value="complete" class="btn-decision btn-complete">
+                                                <i class="fa-solid fa-flag-checkered"></i> Mark as Completed
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
+                                </form>
                             </div>
-                            <div class="t-row"><span>Pending</span><span class="t-score"><?= $pending_docs ?></span>
-                            </div>
-                            <div class="t-row"><span>Completion</span><span
-                                    class="t-score"><?= $progress_percentage ?>%</span></div>
-                        </div>
+                        </section>
                     </aside>
-
-                    <section class="detail-card" style="margin-top: 1rem;">
-                        <div class="card-header">
-                            <h2><i class="fa-solid fa-gavel"></i> Event Decision</h2>
-                        </div>
-
-                        <div class="card-body">
-                            <form action="admin_update_event_status.php" method="POST">
-                                <input type="hidden" name="event_id" value="<?= (int) $event_id ?>">
-
-                                <div class="field long-field">
-                                    <label class="field-title">Event-Level Admin Remarks</label>
-                                    <textarea name="admin_remarks" rows="4"
-                                        placeholder="Write final remarks for this event..."><?= htmlspecialchars($event['admin_remarks'] ?? '') ?></textarea>
-                                </div>
-
-                                <div class="step-actions" style="justify-content:flex-end; flex-wrap:wrap;">
-                                    <button type="submit" name="action" value="save_remarks" class="btn-secondary">
-                                        Save Remarks
-                                    </button>
-
-                                    <?php if (canReturnEventForRevision($event_status)): ?>
-                                        <button type="submit" name="action" value="needs_revision"
-                                            class="btn-primary btn-danger">
-                                            Mark Event Needs Revision
-                                        </button>
-                                    <?php endif; ?>
-
-                                    <?php if (canApproveEvent($event_status)): ?>
-                                        <button type="submit" name="action" value="approve" class="btn-primary">
-                                            Approve Event
-                                        </button>
-                                    <?php endif; ?>
-
-                                    <?php if (canCompleteEvent($event_status, $narrativeApproved)): ?>
-                                        <button type="submit" name="action" value="complete" class="btn-primary">
-                                            Mark as Completed
-                                        </button>
-                                    <?php endif; ?>
-                                </div>
-                            </form>
-
-                            <div class="tracker-list" style="margin-top: 1rem;">
-                                <div class="t-row">
-                                    <span>Pre-event Requirements</span>
-                                    <span
-                                        class="t-score"><?= $allPreEventReviewedOkay ? 'Ready' : 'Incomplete' ?></span>
-                                </div>
-                                <div class="t-row">
-                                    <span>Narrative Report Approved</span>
-                                    <span class="t-score"><?= $narrativeApproved ? 'Yes' : 'No' ?></span>
-                                </div>
-                                <div class="t-row">
-                                    <span>Current Status</span>
-                                    <span class="t-score"><?= htmlspecialchars($event_status) ?></span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
                 </div>
 
-                <?php include 'assets/includes/footer.php' ?>
+                <?php include 'assets/includes/footer.php'; ?>
             </section>
         </main>
     </div>
