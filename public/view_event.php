@@ -682,16 +682,9 @@ $metric_status = getMetricAchievementStatus(
                         </div>
                         <div class="tracker-list">
                             <div class="t-row">
-                                <span>Total Documents</span>
+                                <span><i class="fa-regular fa-file"></i> Total Documents</span>
                                 <span class="t-score"><?= $total_docs ?></span>
                             </div>
-
-                            <?php if ($event_status === 'Draft' && $total_docs === 0): ?>
-                                <div class="t-row">
-                                    <span>Status</span>
-                                    <span class="t-score">Not yet generated</span>
-                                </div>
-                            <?php endif; ?>
 
                             <div class="t-row">
                                 <span><i class="fa-regular fa-circle-check"></i> Uploaded</span>
