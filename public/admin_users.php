@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once "../app/database.php";
+require_once "../app/security_headers.php";
+require_once "../app/query_builder_functions.php";
+send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
@@ -70,7 +73,6 @@ $fetchUsersSql = "
         SUM(CASE WHEN e.event_status = 'Needs Revision' THEN 1 ELSE 0 END) AS needs_revision_count,
         SUM(CASE WHEN e.event_status = 'Approved' THEN 1 ELSE 0 END) AS approved_count,
         SUM(CASE WHEN e.event_status = 'Completed' THEN 1 ELSE 0 END) AS completed_count
-
     FROM users u
     LEFT JOIN events e
         ON u.user_id = e.user_id
@@ -137,7 +139,6 @@ foreach ($users as $user) {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -146,7 +147,8 @@ foreach ($users as $user) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Users - HAUCREDIT</title>
     <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/my_events.css" />
+    <link rel="stylesheet" href="assets/styles/home_styles.css" />
+    <link rel="stylesheet" href="assets/styles/admin_users.css" />
 </head>
 
 <body>
@@ -165,63 +167,65 @@ foreach ($users as $user) {
                 </div>
             </header>
 
-            <section class="content my-events-page">
+            <section class="content admin-users-page">
                 <?php if ($success !== ""): ?>
-                    <div class="notice success" style="margin-bottom: 1rem;"><?= htmlspecialchars($success) ?></div>
+                    <div class="notice success"><?= htmlspecialchars($success) ?></div>
                 <?php endif; ?>
 
                 <?php if ($error !== ""): ?>
-                    <div class="notice error" style="margin-bottom: 1rem;"><?= htmlspecialchars($error) ?></div>
+                    <div class="notice error"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
 
-                <div class="summary-strip">
-                    <div class="summary-card">
-                        <span class="summary-num"><?= $total_users ?></span>
-                        <span class="summary-label">Total Accounts</span>
-                    </div>
+                <!-- Stat Cards -->
+                <section class="users-stats">
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $total_users ?></div>
+                        <div class="stat-label">Total Accounts</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= $total_admins ?></span>
-                        <span class="summary-label">Admins</span>
-                    </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $total_admins ?></div>
+                        <div class="stat-label">Admins</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= $total_standard_users ?></span>
-                        <span class="summary-label">Standard Users</span>
-                    </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $total_standard_users ?></div>
+                        <div class="stat-label">Standard Users</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= $total_with_events ?></span>
-                        <span class="summary-label">With Events</span>
-                    </div>
-                </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $total_with_events ?></div>
+                        <div class="stat-label">With Events</div>
+                    </article>
+                </section>
 
-                <section class="detail-card" style="margin-bottom: 1.25rem;">
+                <!-- Add User -->
+                <section class="add-user-card">
                     <div class="card-header">
-                        <h2><i class="fa-solid fa-user-plus"></i> Add User</h2>
+                        <h2>Add User</h2>
                     </div>
 
                     <div class="card-body">
-                        <form method="POST" action="admin_update_user.php" class="search-wrap" id="addUserForm"
-                            style="display:grid; gap:.75rem;" novalidate>
+                        <form method="POST" action="admin_update_user.php" class="add-user-form" id="addUserForm"
+                            novalidate>
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="action" value="add_user">
 
-                            <input type="text" id="user_name" name="user_name" class="search-input"
-                                placeholder="Username" minlength="4" maxlength="50" pattern="[A-Za-z0-9._-]{4,50}"
+                            <input type="text" id="user_name" name="user_name" class="form-input" placeholder="Username"
+                                minlength="4" maxlength="50" pattern="[A-Za-z0-9._-]{4,50}"
                                 title="Username must be 4-50 characters and may contain letters, numbers, dot, underscore, and hyphen only."
                                 required>
 
-                            <input type="email" id="user_email" name="user_email" class="search-input"
+                            <input type="email" id="user_email" name="user_email" class="form-input"
                                 placeholder="name@student.hau.edu.ph"
                                 pattern="^[A-Za-z0-9._%+-]+@student\.hau\.edu\.ph$"
                                 title="Email must be a valid HAU student email." required>
 
-                            <input type="text" id="stud_num" name="stud_num" class="search-input" placeholder="20XXXXXX"
+                            <input type="text" id="stud_num" name="stud_num" class="form-input" placeholder="20XXXXXX"
                                 inputmode="numeric" minlength="8" maxlength="20" pattern="[0-9]{8,20}"
                                 title="Student number must contain 8 to 20 digits only." required>
 
-                            <select name="org_body" id="org_body" class="search-input" required>
+                            <select name="org_body" id="org_body" class="form-input" required>
                                 <option value="">Select organization</option>
                                 <?php foreach ($orgOptions as $org): ?>
                                     <option value="<?= htmlspecialchars($org['org_name']) ?>">
@@ -230,40 +234,40 @@ foreach ($users as $user) {
                                 <?php endforeach; ?>
                             </select>
 
-                            <select name="role" id="role" class="search-input" required>
-                                <option value="user">Standard User</option>
-                                <option value="admin">Admin</option>
-                            </select>
-
-                            <input type="password" id="user_password" name="user_password" class="search-input"
+                            <input type="password" id="user_password" name="user_password" class="form-input"
                                 placeholder="Temporary password" minlength="8" maxlength="255"
                                 pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}"
                                 title="Password must be at least 8 characters and include uppercase, lowercase, and number."
                                 required>
 
-                            <input type="password" id="confirm_password" name="confirm_password" class="search-input"
+                            <input type="password" id="confirm_password" name="confirm_password" class="form-input"
                                 placeholder="Confirm password" minlength="8" maxlength="255" required>
 
-                            <div id="addUserFormError" class="notice error" style="display:none; margin:0;"></div>
+                            <select name="role" id="role" class="form-input full-span" required>
+                                <option value="user">Standard User</option>
+                                <option value="admin">Admin</option>
+                            </select>
 
-                            <div class="card-actions" style="justify-content:flex-end;">
+                            <div id="addUserFormError" class="notice error form-error-hidden"></div>
+
+                            <div class="form-actions">
                                 <button type="submit" class="btn-primary">Create User</button>
                             </div>
                         </form>
                     </div>
                 </section>
 
-                <div class="list-toolbar" style="display:block;">
-                    <form method="GET" class="search-wrap" style="margin-bottom: 1rem;">
-                        <span class="search-icon">
+                <!-- Search Toolbar -->
+                <section class="users-toolbar">
+                    <form method="GET" class="toolbar-search" id="usersFilterForm">
+                        <div class="search-wrap">
                             <i class="fa-solid fa-magnifying-glass"></i>
-                        </span>
+                            <input type="text" id="searchInput" name="search" class="search-input"
+                                placeholder="Search by name, email, student number, org, role..."
+                                value="<?= htmlspecialchars($search) ?>">
+                        </div>
 
-                        <input type="text" name="search" class="search-input"
-                            placeholder="Search by name, email, student number, org, role..."
-                            value="<?= htmlspecialchars($search) ?>">
-
-                        <select name="org" class="search-input" style="max-width: 240px;">
+                        <select name="org" id="orgSelect" class="filter-select auto-submit-filter">
                             <option value="">All Organizations</option>
                             <?php foreach ($orgOptions as $org): ?>
                                 <?php $org_value = $org['org_name'] ?? ''; ?>
@@ -273,15 +277,16 @@ foreach ($users as $user) {
                             <?php endforeach; ?>
                         </select>
 
-                        <button type="submit" class="btn-primary">Apply</button>
-
                         <?php if ($search !== '' || $org_filter !== ''): ?>
-                            <a href="admin_users.php" class="btn-secondary">Reset</a>
+                            <a href="admin_users.php" class="btn-filter">
+                                <i class="fa-solid fa-xmark"></i> Clear
+                            </a>
                         <?php endif; ?>
                     </form>
-                </div>
+                </section>
 
-                <div class="events-grid">
+                <!-- Users Grid -->
+                <section class="users-grid">
                     <?php if (!empty($users)): ?>
                         <?php foreach ($users as $user): ?>
                             <?php
@@ -294,141 +299,165 @@ foreach ($users as $user) {
                             $completed_count = (int) ($user['completed_count'] ?? 0);
 
                             $is_self = ((int) $user['user_id'] === $current_admin_id);
-                            $role_class = normalizeRoleClass($user['role'] ?? 'user');
+                            $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-user';
                             ?>
-
-                            <article class="event-card">
-                                <div class="event-card-top">
-                                    <span class="event-type-tag">
-                                        <?= htmlspecialchars($user['org_body'] ?? 'No organization') ?>
-                                    </span>
-
-                                    <span class="event-status status-<?= htmlspecialchars($role_class) ?>">
-                                        <span class="status-dot"></span>
-                                        <span class="status-text">
-                                            <?= htmlspecialchars(ucfirst($user['role'] ?? 'user')) ?>
-                                        </span>
+                            <article class="user-card">
+                                <div class="user-card-top">
+                                    <span class="org-tag"><?= htmlspecialchars($user['org_body'] ?? 'No organization') ?></span>
+                                    <span class="role-badge <?= htmlspecialchars($role_class) ?>">
+                                        <?= htmlspecialchars(ucfirst($user['role'] ?? 'user')) ?>
                                     </span>
                                 </div>
 
-                                <div class="event-card-body">
-                                    <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem;">
+                                <div class="user-card-body">
+                                    <div class="user-profile-row">
                                         <img src="assets/profiles/<?= htmlspecialchars($profile_pic) ?>"
-                                            alt="<?= htmlspecialchars($user['user_name']) ?>"
-                                            style="width:56px; height:56px; border-radius:50%; object-fit:cover;">
+                                            alt="<?= htmlspecialchars($user['user_name']) ?>" class="user-avatar">
 
                                         <div>
-                                            <h3 class="event-title" style="margin-bottom:.15rem;">
+                                            <div class="user-name">
                                                 <?= htmlspecialchars($user['user_name']) ?>
                                                 <?php if ($is_self): ?>
-                                                    <span style="font-size:.85rem; opacity:.7;">(You)</span>
+                                                    <span class="user-self-tag">(You)</span>
                                                 <?php endif; ?>
-                                            </h3>
+                                            </div>
 
-                                            <div class="event-meta">
-                                                <div class="meta-row">
-                                                    <span class="meta-icon"><i class="fa-solid fa-envelope"></i></span>
-                                                    <span><?= htmlspecialchars($user['user_email']) ?></span>
-                                                </div>
-                                                <div class="meta-row">
-                                                    <span class="meta-icon"><i class="fa-solid fa-id-card"></i></span>
-                                                    <span><?= htmlspecialchars($user['stud_num']) ?></span>
-                                                </div>
+                                            <div class="user-meta-row">
+                                                <i class="fa-solid fa-envelope"></i>
+                                                <?= htmlspecialchars($user['user_email']) ?>
+                                            </div>
+
+                                            <div class="user-meta-row">
+                                                <i class="fa-solid fa-id-card"></i>
+                                                <?= htmlspecialchars($user['stud_num']) ?>
+                                            </div>
+
+                                            <div class="user-meta-row">
+                                                <i class="fa-solid fa-building-columns"></i>
+                                                <?= htmlspecialchars($user['org_body'] ?? 'No organization') ?>
+                                            </div>
+
+                                            <div class="user-meta-row">
+                                                <i class="fa-solid fa-calendar-plus"></i>
+                                                Registered
+                                                <?= !empty($user['user_reg_date']) ? date('M j, Y', strtotime($user['user_reg_date'])) : 'N/A' ?>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="event-meta">
-                                        <div class="meta-row">
-                                            <span class="meta-icon"><i class="fa-solid fa-calendar-plus"></i></span>
-                                            <span>
-                                                Registered
-                                                <?= !empty($user['user_reg_date']) ? date('M j, Y', strtotime($user['user_reg_date'])) : 'N/A' ?>
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div class="doc-progress" style="margin-top:1rem;">
-                                        <div class="doc-progress-label">
-                                            <span>Event Summary</span>
-                                            <span><?= $total_events ?> total events</span>
+                                    <div class="event-summary">
+                                        <div class="event-summary-title">
+                                            Event Summary — <?= $total_events ?> total
                                         </div>
 
-                                        <div class="tracker-list" style="margin-top:.5rem;">
-                                            <div class="t-row"><span>Draft</span><span
-                                                    class="t-score"><?= $draft_count ?></span></div>
-                                            <div class="t-row"><span>Pending Review</span><span
-                                                    class="t-score"><?= $pending_review_count ?></span></div>
-                                            <div class="t-row"><span>Needs Revision</span><span
-                                                    class="t-score"><?= $needs_revision_count ?></span></div>
-                                            <div class="t-row"><span>Approved</span><span
-                                                    class="t-score"><?= $approved_count ?></span></div>
-                                            <div class="t-row"><span>Completed</span><span
-                                                    class="t-score"><?= $completed_count ?></span></div>
-                                        </div>
+                                        <div class="summary-row"><span>Draft</span><span
+                                                class="summary-val"><?= $draft_count ?></span></div>
+                                        <div class="summary-row"><span>Pending Review</span><span
+                                                class="summary-val"><?= $pending_review_count ?></span></div>
+                                        <div class="summary-row"><span>Needs Revision</span><span
+                                                class="summary-val"><?= $needs_revision_count ?></span></div>
+                                        <div class="summary-row"><span>Approved</span><span
+                                                class="summary-val"><?= $approved_count ?></span></div>
+                                        <div class="summary-row"><span>Completed</span><span
+                                                class="summary-val"><?= $completed_count ?></span></div>
                                     </div>
                                 </div>
 
-                                <footer class="event-card-footer" style="display:block;">
-                                    <span class="event-created" style="display:block; margin-bottom:.75rem;">
-                                        User ID #<?= (int) $user['user_id'] ?>
-                                    </span>
+                                <div class="user-card-footer">
+                                    <span class="user-id-tag">User ID #<?= (int) $user['user_id'] ?></span>
 
-                                    <div class="card-actions" style="flex-wrap:wrap; gap:.5rem;">
+                                    <div class="footer-actions">
                                         <a href="admin_user_events.php?user_id=<?= (int) $user['user_id'] ?>"
-                                            class="btn-secondary btn-edit">
+                                            class="btn-secondary btn-smaller">
                                             View Events
                                         </a>
 
                                         <?php if (!$is_self && ($user['role'] ?? '') === 'user'): ?>
-                                            <form method="POST" action="admin_update_user.php">
+                                            <form method="POST" action="admin_update_user.php" class="inline-form">
                                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                                 <input type="hidden" name="user_id" value="<?= (int) $user['user_id'] ?>">
                                                 <input type="hidden" name="action" value="make_admin">
-                                                <button type="submit" class="btn-primary btn-view">Promote to Admin</button>
+                                                <button type="submit" class="btn-primary btn-smaller">Promote</button>
                                             </form>
                                         <?php endif; ?>
 
                                         <?php if (!$is_self && ($user['role'] ?? '') === 'admin'): ?>
-                                            <form method="POST" action="admin_update_user.php"
+                                            <form method="POST" action="admin_update_user.php" class="inline-form"
                                                 data-confirm="Set this admin back to standard user?">
                                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                                 <input type="hidden" name="user_id" value="<?= (int) $user['user_id'] ?>">
                                                 <input type="hidden" name="action" value="make_user">
-                                                <button type="submit" class="btn-secondary btn-edit">Set as User</button>
+                                                <button type="submit" class="btn-secondary btn-smaller">Set as User</button>
                                             </form>
                                         <?php endif; ?>
 
                                         <?php if (!$is_self): ?>
-                                            <form method="POST" action="admin_update_user.php"
+                                            <form method="POST" action="admin_update_user.php" class="inline-form"
                                                 data-confirm="Delete this user? This will also delete all their related records.">
                                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                                 <input type="hidden" name="user_id" value="<?= (int) $user['user_id'] ?>">
                                                 <input type="hidden" name="action" value="delete_user">
-                                                <button type="submit" class="btn-primary btn-danger">Delete</button>
+                                                <button type="submit" class="btn-primary btn-smaller btn-danger">Delete</button>
                                             </form>
                                         <?php endif; ?>
                                     </div>
-                                </footer>
+                                </div>
                             </article>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <div class="empty-state" style="grid-column: 1 / -1;">
-                            <div class="empty-icon">
-                                <i class="fa-solid fa-users-slash"></i>
-                            </div>
-                            <h3>No users found</h3>
-                            <p>Try adjusting your search or filters.</p>
+                        <div class="empty-state">
+                            <i class="fa-solid fa-users-slash"></i>
+                            <p>No users found. Try adjusting your search or filters.</p>
                         </div>
                     <?php endif; ?>
-                </div>
+                </section>
             </section>
 
-            <?php include 'assets/includes/footer.php' ?>
+            <?php include 'assets/includes/footer.php'; ?>
         </main>
     </div>
 
     <script src="../app/script/layout.js?v=1"></script>
+    <script>
+        (function () {
+            const filterForm = document.getElementById('usersFilterForm');
+            const orgSelect = document.getElementById('orgSelect');
+            const searchInput = document.getElementById('searchInput');
+
+            if (orgSelect) {
+                orgSelect.addEventListener('change', function () {
+                    filterForm.submit();
+                });
+            }
+
+            if (searchInput) {
+                let searchTimer;
+
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(function () {
+                        filterForm.submit();
+                    }, 500);
+                });
+
+                searchInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        clearTimeout(searchTimer);
+                        filterForm.submit();
+                    }
+                });
+            }
+
+            document.querySelectorAll('form[data-confirm]').forEach(form => {
+                form.addEventListener('submit', function (e) {
+                    if (!confirm(this.dataset.confirm)) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        })();
+    </script>
 </body>
 
 </html>

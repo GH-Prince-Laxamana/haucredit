@@ -281,12 +281,6 @@ $showing_to = min($offset + $per_page, $total_rows);
                     <h1><?= htmlspecialchars($page_title) ?></h1>
                     <p><?= htmlspecialchars($page_subtitle) ?></p>
                 </div>
-
-                <div class="home-top-actions">
-                    <a class="btn-primary" href="create_event.php">
-                        <i class="fa-solid fa-plus"></i> Create Event
-                    </a>
-                </div>
             </header>
 
             <section class="content admin-events-page">
@@ -573,19 +567,9 @@ $showing_to = min($offset + $per_page, $total_rows);
             });
 
             if (searchInput) {
-                let searchTimer;
-
-                searchInput.addEventListener('input', function () {
-                    clearTimeout(searchTimer);
-                    searchTimer = setTimeout(function () {
-                        form.submit();
-                    }, 500);
-                });
-
                 searchInput.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        clearTimeout(searchTimer);
                         form.submit();
                     }
                 });

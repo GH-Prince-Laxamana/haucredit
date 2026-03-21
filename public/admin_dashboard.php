@@ -207,12 +207,6 @@ $review_queue_count = (int) ($reviewDeadlineRow['total'] ?? 0);
                     <h1>Admin Dashboard</h1>
                     <p>Welcome back, <?= $admin_name ?></p>
                 </div>
-
-                <div class="home-top-actions">
-                    <a class="btn-primary" href="create_event.php">
-                        <i class="fa-solid fa-plus"></i> Create Event
-                    </a>
-                </div>
             </header>
 
             <section class="home-content">

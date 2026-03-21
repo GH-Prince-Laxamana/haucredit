@@ -22,13 +22,26 @@ if ($user_id <= 0) {
 /* ================= HELPERS ================= */
 function normalizeStatusClass(string $status): string
 {
-    return strtolower(str_replace(' ', '-', $status));
+    return strtolower(str_replace(' ', '-', trim($status)));
 }
 
 function isValidStatusFilter(string $status): bool
 {
     $allowed = ['all', 'Draft', 'Pending Review', 'Needs Revision', 'Approved', 'Completed'];
     return in_array($status, $allowed, true);
+}
+
+function buildQueryString(array $overrides = []): string
+{
+    $params = array_merge($_GET, $overrides);
+
+    foreach ($params as $key => $value) {
+        if ($value === '' || $value === null) {
+            unset($params[$key]);
+        }
+    }
+
+    return http_build_query($params);
 }
 
 if (!isValidStatusFilter($status_filter)) {
@@ -59,6 +72,8 @@ $user = fetchOne(
 if (!$user) {
     popup_error("User not found.");
 }
+
+$selected_user_id = (int) $user['user_id'];
 
 /* ================= USER EVENT COUNTS ================= */
 $countSql = "
@@ -156,8 +171,17 @@ $fetchEventsSql .= "
 ";
 
 $events = fetchAll($conn, $fetchEventsSql, $types, $params);
-?>
 
+$total_events = (int) ($counts['total_events'] ?? 0);
+$draft_count = (int) ($counts['draft_count'] ?? 0);
+$pending_review_count = (int) ($counts['pending_review_count'] ?? 0);
+$needs_revision_count = (int) ($counts['needs_revision_count'] ?? 0);
+$approved_count = (int) ($counts['approved_count'] ?? 0);
+$completed_count = (int) ($counts['completed_count'] ?? 0);
+
+$profile_pic = !empty($user['profile_pic']) ? $user['profile_pic'] : 'default.jpg';
+$role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-user';
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -166,7 +190,8 @@ $events = fetchAll($conn, $fetchEventsSql, $types, $params);
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>User Events - HAUCREDIT</title>
     <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/my_events.css" />
+    <link rel="stylesheet" href="assets/styles/home_styles.css" />
+    <link rel="stylesheet" href="assets/styles/admin_user_events.css" />
 </head>
 
 <body>
@@ -182,234 +207,315 @@ $events = fetchAll($conn, $fetchEventsSql, $types, $params);
                 <div class="title-wrap">
                     <h1>User Events</h1>
                     <p><?= htmlspecialchars($user['user_name']) ?> •
-                        <?= htmlspecialchars($user['org_body'] ?? 'No organization') ?></p>
+                        <?= htmlspecialchars($user['org_body'] ?? 'No organization') ?>
+                    </p>
                 </div>
 
-                <div class="action-btns">
+                <div class="home-top-actions">
                     <a href="admin_users.php" class="btn-secondary">Back to Users</a>
                 </div>
             </header>
 
-            <section class="content my-events-page">
-                <section class="detail-card" style="margin-bottom: 1.25rem;">
-                    <div class="card-body">
-                        <div style="display:flex; gap:1rem; align-items:center;">
-                            <img src="assets/profiles/<?= htmlspecialchars(!empty($user['profile_pic']) ? $user['profile_pic'] : 'default.jpg') ?>"
-                                alt="<?= htmlspecialchars($user['user_name']) ?>"
-                                style="width:72px; height:72px; border-radius:50%; object-fit:cover;">
+            <section class="content admin-user-events-page">
+                <!-- User Profile -->
+                <section class="user-profile-card">
+                    <img src="assets/profiles/<?= htmlspecialchars($profile_pic) ?>"
+                        alt="<?= htmlspecialchars($user['user_name']) ?>" class="user-profile-avatar">
 
-                            <div>
-                                <h2 style="margin:0 0 .35rem 0;"><?= htmlspecialchars($user['user_name']) ?></h2>
-                                <div class="event-meta">
-                                    <div class="meta-row">
-                                        <span class="meta-icon"><i class="fa-solid fa-envelope"></i></span>
-                                        <span><?= htmlspecialchars($user['user_email']) ?></span>
-                                    </div>
-                                    <div class="meta-row">
-                                        <span class="meta-icon"><i class="fa-solid fa-id-card"></i></span>
-                                        <span><?= htmlspecialchars($user['stud_num']) ?></span>
-                                    </div>
-                                    <div class="meta-row">
-                                        <span class="meta-icon"><i class="fa-solid fa-building-columns"></i></span>
-                                        <span><?= htmlspecialchars($user['org_body'] ?? 'No organization') ?></span>
-                                    </div>
-                                    <div class="meta-row">
-                                        <span class="meta-icon"><i class="fa-solid fa-user-shield"></i></span>
-                                        <span><?= htmlspecialchars(ucfirst($user['role'] ?? 'user')) ?></span>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="user-profile-info">
+                        <div class="user-profile-name"><?= htmlspecialchars($user['user_name']) ?></div>
+
+                        <div class="user-profile-meta">
+                            <span class="user-meta-item">
+                                <i class="fa-solid fa-envelope"></i>
+                                <?= htmlspecialchars($user['user_email']) ?>
+                            </span>
+
+                            <span class="user-meta-item">
+                                <i class="fa-solid fa-id-card"></i>
+                                <?= htmlspecialchars($user['stud_num'] ?? 'N/A') ?>
+                            </span>
+
+                            <span class="user-meta-item">
+                                <i class="fa-solid fa-building-columns"></i>
+                                <?= htmlspecialchars($user['org_body'] ?? 'No organization') ?>
+                            </span>
+
+                            <span class="user-meta-item">
+                                <i class="fa-solid fa-calendar-plus"></i>
+                                Registered
+                                <?= !empty($user['user_reg_date']) ? date('M j, Y', strtotime($user['user_reg_date'])) : 'N/A' ?>
+                            </span>
+
+                            <span class="role-badge <?= htmlspecialchars($role_class) ?>">
+                                <?= htmlspecialchars(ucfirst($user['role'] ?? 'user')) ?>
+                            </span>
                         </div>
                     </div>
                 </section>
 
-                <div class="summary-strip">
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($counts['total_events'] ?? 0) ?></span>
-                        <span class="summary-label">Total Events</span>
-                    </div>
+                <!-- Stats -->
+                <section class="events-stats">
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $total_events ?></div>
+                        <div class="stat-label">Total Events</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($counts['draft_count'] ?? 0) ?></span>
-                        <span class="summary-label">Draft</span>
-                    </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $draft_count ?></div>
+                        <div class="stat-label">Draft</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($counts['pending_review_count'] ?? 0) ?></span>
-                        <span class="summary-label">Pending Review</span>
-                    </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $pending_review_count ?></div>
+                        <div class="stat-label">Pending Review</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($counts['needs_revision_count'] ?? 0) ?></span>
-                        <span class="summary-label">Needs Revision</span>
-                    </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $needs_revision_count ?></div>
+                        <div class="stat-label">Needs Revision</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($counts['approved_count'] ?? 0) ?></span>
-                        <span class="summary-label">Approved</span>
-                    </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $approved_count ?></div>
+                        <div class="stat-label">Approved</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= (int) ($counts['completed_count'] ?? 0) ?></span>
-                        <span class="summary-label">Completed</span>
-                    </div>
-                </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $completed_count ?></div>
+                        <div class="stat-label">Completed</div>
+                    </article>
+                </section>
 
-                <div class="list-toolbar" style="display:block;">
-                    <form method="GET" class="search-wrap" style="margin-bottom: 1rem;">
-                        <input type="hidden" name="user_id" value="<?= (int) $user_id ?>">
+                <!-- Toolbar -->
+                <section class="events-toolbar">
+                    <div class="toolbar-top">
+                        <?php
+                        $tabs = [
+                            ['value' => 'all', 'label' => 'All', 'count' => $total_events, 'icon' => 'fa-solid fa-list'],
+                            ['value' => 'Pending Review', 'label' => 'Pending', 'count' => $pending_review_count, 'icon' => 'fa-solid fa-hourglass-half'],
+                            ['value' => 'Needs Revision', 'label' => 'Needs Revision', 'count' => $needs_revision_count, 'icon' => 'fa-solid fa-rotate-left'],
+                            ['value' => 'Approved', 'label' => 'Approved', 'count' => $approved_count, 'icon' => 'fa-solid fa-circle-check'],
+                            ['value' => 'Completed', 'label' => 'Completed', 'count' => $completed_count, 'icon' => 'fa-solid fa-flag-checkered'],
+                            ['value' => 'Draft', 'label' => 'Draft', 'count' => $draft_count, 'icon' => 'fa-regular fa-file']
+                        ];
 
-                        <span class="search-icon">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </span>
-
-                        <input type="text" name="search" class="search-input" placeholder="Search this user's events..."
-                            value="<?= htmlspecialchars($search) ?>">
-
-                        <select name="status" class="search-input" style="max-width: 220px;">
-                            <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>All Statuses</option>
-                            <option value="Draft" <?= $status_filter === 'Draft' ? 'selected' : '' ?>>Draft</option>
-                            <option value="Pending Review" <?= $status_filter === 'Pending Review' ? 'selected' : '' ?>>
-                                Pending Review</option>
-                            <option value="Needs Revision" <?= $status_filter === 'Needs Revision' ? 'selected' : '' ?>>
-                                Needs Revision</option>
-                            <option value="Approved" <?= $status_filter === 'Approved' ? 'selected' : '' ?>>Approved
-                            </option>
-                            <option value="Completed" <?= $status_filter === 'Completed' ? 'selected' : '' ?>>Completed
-                            </option>
-                        </select>
-
-                        <button type="submit" class="btn-primary">Apply</button>
-
-                        <?php if ($status_filter !== 'all' || $search !== ''): ?>
-                            <a href="admin_user_events.php?user_id=<?= (int) $user_id ?>" class="btn-secondary">Reset</a>
-                        <?php endif; ?>
-                    </form>
-                </div>
-
-                <div class="events-grid">
-                    <?php if (!empty($events)): ?>
-                        <?php foreach ($events as $event): ?>
-                            <?php
-                            $docs_total = (int) ($event['docs_total'] ?? 0);
-                            $docs_uploaded = (int) ($event['docs_uploaded'] ?? 0);
-                            $pct = $docs_total > 0 ? round(($docs_uploaded / $docs_total) * 100) : 0;
-
-                            $pct_color_ref = max(0, min(100, (int) $pct));
-                            $hue = ($pct_color_ref / 100) * 120;
-                            $progress_color = "hsl($hue, 70%, 45%)";
-
-                            $status_class = normalizeStatusClass($event['event_status'] ?? 'Draft');
-
-                            $org_clean = $event['organizing_body'] ?? '';
-                            $decoded_orgs = json_decode($org_clean, true);
-                            if (is_array($decoded_orgs)) {
-                                $org_clean = implode(', ', $decoded_orgs);
-                            } else {
-                                $org_clean = str_replace(['[', ']', '"', "'"], '', $org_clean);
-                                $org_clean = str_replace(',', ', ', $org_clean);
-                            }
+                        foreach ($tabs as $tab):
+                            $active = $status_filter === $tab['value'] ? 'active' : '';
+                            $tabUrl = 'admin_user_events.php?user_id=' . $selected_user_id
+                                . '&status=' . urlencode($tab['value'])
+                                . '&search=' . urlencode($search);
                             ?>
-
-                            <article class="event-card">
-                                <div class="event-card-top">
-                                    <span class="event-type-tag">
-                                        <?= htmlspecialchars($event['activity_type'] ?? 'N/A') ?>
-                                    </span>
-
-                                    <span class="event-status status-<?= htmlspecialchars($status_class) ?>">
-                                        <span class="status-dot"></span>
-                                        <span class="status-text">
-                                            <?= htmlspecialchars($event['event_status']) ?>
-                                        </span>
-                                    </span>
-                                </div>
-
-                                <div class="event-card-body">
-                                    <h3 class="event-title">
-                                        <?= htmlspecialchars($event['event_name']) ?>
-                                    </h3>
-
-                                    <div class="event-meta">
-                                        <div class="meta-row">
-                                            <span class="meta-icon"><i class="fa-solid fa-building-columns"></i></span>
-                                            <span><?= htmlspecialchars($org_clean) ?></span>
-                                        </div>
-
-                                        <div class="meta-row">
-                                            <span class="meta-icon"><i class="fa-solid fa-layer-group"></i></span>
-                                            <span><?= htmlspecialchars($event['background'] ?? 'N/A') ?></span>
-                                        </div>
-
-                                        <div class="meta-row">
-                                            <span class="meta-icon"><i class="fa-solid fa-location-dot"></i></span>
-                                            <span><?= htmlspecialchars($event['venue_platform'] ?? 'No venue set') ?></span>
-                                        </div>
-
-                                        <div class="meta-row">
-                                            <span class="meta-icon"><i class="fa-solid fa-calendar"></i></span>
-                                            <span>
-                                                <?php if (!empty($event['start_datetime'])): ?>
-                                                    <?= date('M j, Y', strtotime($event['start_datetime'])) ?>
-                                                <?php else: ?>
-                                                    No schedule set
-                                                <?php endif; ?>
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div class="doc-progress">
-                                        <div class="doc-progress-label">
-                                            <span>Documents</span>
-                                            <span><?= $docs_uploaded ?>/<?= $docs_total ?> uploaded</span>
-                                        </div>
-
-                                        <div class="progress-bar">
-                                            <div class="progress-fill"
-                                                style="width: <?= $pct ?>%; --progress-color: <?= $progress_color ?>">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <?php if (!empty($event['admin_remarks']) && $event['event_status'] === 'Needs Revision'): ?>
-                                        <div class="doc-remarks-box" style="margin-top: 1rem;">
-                                            <strong>Admin Remarks</strong>
-                                            <p><?= nl2br(htmlspecialchars($event['admin_remarks'])) ?></p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <footer class="event-card-footer">
-                                    <span class="event-created">
-                                        Created <?= date('M j, Y', strtotime($event['created_at'])) ?>
-                                    </span>
-
-                                    <div class="card-actions">
-                                        <a href="admin_manage_event.php?id=<?= (int) $event['event_id'] ?>"
-                                            class="btn-primary btn-view">
-                                            Manage Event
-                                        </a>
-                                    </div>
-                                </footer>
-                            </article>
+                            <a href="<?= htmlspecialchars($tabUrl) ?>" class="tab-btn <?= $active ?>">
+                                <i class="<?= htmlspecialchars($tab['icon']) ?>"></i>
+                                <?= htmlspecialchars($tab['label']) ?>
+                                <span class="tab-count"><?= (int) $tab['count'] ?></span>
+                            </a>
                         <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="empty-state" style="grid-column: 1 / -1;">
-                            <div class="empty-icon">
-                                <i class="fa-solid fa-file-circle-xmark"></i>
-                            </div>
-                            <h3>No events found</h3>
-                            <p>This user has no matching events for the current filter.</p>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </section>
+                    </div>
 
-            <?php include 'assets/includes/footer.php' ?>
+                    <div class="toolbar-search">
+                        <form method="GET" class="toolbar-form" id="userEventsFilterForm">
+                            <input type="hidden" name="user_id" value="<?= $selected_user_id ?>">
+                            <input type="hidden" name="page" value="1">
+
+                            <div class="search-wrap">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" name="search" id="searchInput" class="search-input"
+                                    placeholder="Search this user's events..." value="<?= htmlspecialchars($search) ?>">
+                            </div>
+
+                            <select name="status" class="toolbar-select auto-submit-filter">
+                                <option value="all" <?= $status_filter === 'all' ? 'selected' : '' ?>>All Statuses</option>
+                                <option value="Draft" <?= $status_filter === 'Draft' ? 'selected' : '' ?>>Draft</option>
+                                <option value="Pending Review" <?= $status_filter === 'Pending Review' ? 'selected' : '' ?>>Pending Review</option>
+                                <option value="Needs Revision" <?= $status_filter === 'Needs Revision' ? 'selected' : '' ?>>Needs Revision</option>
+                                <option value="Approved" <?= $status_filter === 'Approved' ? 'selected' : '' ?>>Approved
+                                </option>
+                                <option value="Completed" <?= $status_filter === 'Completed' ? 'selected' : '' ?>>Completed
+                                </option>
+                            </select>
+
+                            <?php if ($status_filter !== 'all' || $search !== ''): ?>
+                                <a href="admin_user_events.php?user_id=<?= $selected_user_id ?>" class="btn-filter">
+                                    <i class="fa-solid fa-xmark"></i> Reset
+                                </a>
+                            <?php endif; ?>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Events Table -->
+                <section class="events-table-container">
+                    <table class="events-table">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Background</th>
+                                <th>Venue</th>
+                                <th>Start Date</th>
+                                <th>Status</th>
+                                <th>Documents</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <?php if (!empty($events)): ?>
+                                <?php
+                                $dot_colors = ['#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+                                $i = 0;
+                                ?>
+
+                                <?php foreach ($events as $event): ?>
+                                    <?php
+                                    $dot = $dot_colors[$i % count($dot_colors)];
+                                    $i++;
+
+                                    $status = $event['event_status'] ?? 'Draft';
+                                    $badge_class = match ($status) {
+                                        'Pending Review' => 'badge-pending-review',
+                                        'Needs Revision' => 'badge-needs-revision',
+                                        'Approved' => 'badge-approved',
+                                        'Completed' => 'badge-completed',
+                                        default => 'badge-draft',
+                                    };
+
+                                    $docs_total = (int) ($event['docs_total'] ?? 0);
+                                    $docs_uploaded = (int) ($event['docs_uploaded'] ?? 0);
+                                    $pct = $docs_total > 0 ? round(($docs_uploaded / $docs_total) * 100) : 0;
+                                    $hue = ($pct / 100) * 120;
+                                    $progress_color = "hsl($hue, 70%, 45%)";
+
+                                    $org_clean = $event['organizing_body'] ?? '';
+                                    $decoded_orgs = json_decode($org_clean, true);
+                                    if (is_array($decoded_orgs)) {
+                                        $org_clean = implode(', ', $decoded_orgs);
+                                    } else {
+                                        $org_clean = str_replace(['[', ']', '"', "'"], '', $org_clean);
+                                        $org_clean = str_replace(',', ', ', $org_clean);
+                                    }
+                                    ?>
+                                    <tr>
+                                        <td>
+                                            <div class="event-name-cell">
+                                                <span class="event-color-dot"
+                                                    style="background:<?= htmlspecialchars($dot) ?>"></span>
+                                                <div>
+                                                    <div class="event-name-text"><?= htmlspecialchars($event['event_name']) ?>
+                                                    </div>
+                                                    <div class="event-subtext">
+                                                        <?= htmlspecialchars($event['activity_type'] ?? 'N/A') ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td class="muted-cell">
+                                            <?= htmlspecialchars($event['background'] ?? 'N/A') ?>
+                                        </td>
+
+                                        <td class="muted-cell">
+                                            <?= htmlspecialchars($event['venue_platform'] ?? '—') ?>
+                                        </td>
+
+                                        <td>
+                                            <?php if (!empty($event['start_datetime'])): ?>
+                                                <span class="date-chip">
+                                                    <i class="fa-regular fa-calendar"></i>
+                                                    <?= date('M j, Y', strtotime($event['start_datetime'])) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="muted-dash">—</span>
+                                            <?php endif; ?>
+                                        </td>
+
+                                        <td>
+                                            <span class="status-badge <?= htmlspecialchars($badge_class) ?>">
+                                                <?= htmlspecialchars($status) ?>
+                                            </span>
+
+                                            <?php if (!empty($event['admin_remarks']) && $status === 'Needs Revision'): ?>
+                                                <div class="event-inline-note"
+                                                    title="<?= htmlspecialchars($event['admin_remarks']) ?>">
+                                                    <?= htmlspecialchars($event['admin_remarks']) ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
+
+                                        <td>
+                                            <div class="progress-wrap">
+                                                <div class="progress-bar">
+                                                    <div class="progress-fill"
+                                                        style="width:<?= $pct ?>%; background:<?= htmlspecialchars($progress_color) ?>;">
+                                                    </div>
+                                                </div>
+                                                <span class="progress-text"><?= $docs_uploaded ?>/<?= $docs_total ?></span>
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            <a href="admin_manage_event.php?id=<?= (int) $event['event_id'] ?>"
+                                                class="btn-view">
+                                                <i class="fa-solid fa-eye"></i> Manage
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="empty-state">
+                                            <i class="fa-regular fa-calendar-xmark"></i>
+                                            <p>This user has no matching events for the current filter.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </section>
+
+                <?php include 'assets/includes/footer.php'; ?>
+            </section>
         </main>
     </div>
 
     <script src="../app/script/layout.js?v=1"></script>
+    <script>
+        (function () {
+            const form = document.getElementById('userEventsFilterForm');
+            if (!form) return;
+
+            const autoSubmitFields = form.querySelectorAll('.auto-submit-filter');
+            const searchInput = document.getElementById('searchInput');
+
+            autoSubmitFields.forEach(field => {
+                field.addEventListener('change', function () {
+                    form.submit();
+                });
+            });
+
+            if (searchInput) {
+                let searchTimer;
+
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(function () {
+                        form.submit();
+                    }, 500);
+                });
+
+                searchInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        clearTimeout(searchTimer);
+                        form.submit();
+                    }
+                });
+            }
+        })();
+    </script>
 </body>
 
 </html>
