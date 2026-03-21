@@ -79,6 +79,7 @@ $statusCountsSql = "
     FROM events e
     WHERE e.archived_at IS NULL
       AND e.is_system_event = 0
+      AND e.event_status <> 'Draft'
 ";
 $statusCounts = fetchOne($conn, $statusCountsSql);
 
@@ -90,6 +91,7 @@ $orgOptionsSql = "
         ON u.user_id = e.user_id
     WHERE e.archived_at IS NULL
       AND e.is_system_event = 0
+      AND e.event_status <> 'Draft'
       AND u.role = 'user'
       AND u.org_body IS NOT NULL
       AND u.org_body != ''
@@ -114,6 +116,7 @@ $baseSql = "
         ON e.event_id = el.event_id
     WHERE e.archived_at IS NULL
       AND e.is_system_event = 0
+      AND e.event_status <> 'Draft'
 ";
 
 $params = [];
