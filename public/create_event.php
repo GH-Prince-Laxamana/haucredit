@@ -2,7 +2,6 @@
 session_start();
 require_once "../app/database.php";
 require_once "../app/security_headers.php";
-require_once "../app/query_builder_functions.php";
 send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
@@ -1089,15 +1088,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <div class="radio-group two-col">
                                 <?php foreach ($background_options as $row): ?>
-                                      <label>
-                                          <input
-                                              type="radio"
-                                              name="background_id"
-                                              value="<?= (int) $row['background_id'] ?>"
-                                              required
-                                              <?= ((string) $formData['background_id'] === (string) $row['background_id']) ? 'checked' : '' ?>>
-                                          <?= htmlspecialchars($row['background_name']) ?>
-                                      </label>
+                                    <label>
+                                        <input
+                                            type="radio"
+                                            name="background_id"
+                                            value="<?= (int) $row['background_id'] ?>"
+                                            data-background-name="<?= htmlspecialchars($row['background_name']) ?>"
+                                            required
+                                            <?= ((string) $formData['background_id'] === (string) $row['background_id']) ? 'checked' : '' ?>>
+                                        <?= htmlspecialchars($row['background_name']) ?>
+                                    </label>
                                 <?php endforeach; ?>
                             </div>
                         </fieldset>
@@ -1108,15 +1108,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <div class="radio-group two-col">
                                 <?php foreach ($activity_types as $row): ?>
-                                      <label>
-                                          <input
-                                              type="radio"
-                                              name="activity_type_id"
-                                              value="<?= (int) $row['activity_type_id'] ?>"
-                                              required
-                                              <?= ((string) $formData['activity_type_id'] === (string) $row['activity_type_id']) ? 'checked' : '' ?>>
-                                          <?= htmlspecialchars($row['activity_type_name']) ?>
-                                      </label>
+                                    <label>
+                                        <input
+                                            type="radio"
+                                            name="activity_type_id"
+                                            value="<?= (int) $row['activity_type_id'] ?>"
+                                            data-activity-type-name="<?= htmlspecialchars($row['activity_type_name']) ?>"
+                                            required
+                                            <?= ((string) $formData['activity_type_id'] === (string) $row['activity_type_id']) ? 'checked' : '' ?>>
+                                        <?= htmlspecialchars($row['activity_type_name']) ?>
+                                    </label>
                                 <?php endforeach; ?>
                             </div>
                         </fieldset>
