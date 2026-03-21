@@ -302,7 +302,13 @@ if (isset($_POST["change_password"])) {
     <div class="sidebar-overlay"></div>
 
     <div class="app">
-        <?php include 'assets/includes/general_nav.php' ?>
+        <?php
+        $nav_file = (($_SESSION["role"] ?? "") === "admin")
+            ? 'assets/includes/admin_nav.php'
+            : 'assets/includes/general_nav.php';
+
+        include $nav_file;
+        ?>
 
         <main class="main">
             <header class="topbar">
