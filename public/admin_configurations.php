@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once "../app/database.php";
+require_once "../app/security_headers.php";
+require_once "../app/query_builder_functions.php";
+send_security_headers();
 
 if (!isset($_SESSION["user_id"])) {
     header("Location: index.php");
@@ -25,7 +28,7 @@ unset($_SESSION["success"], $_SESSION["error"]);
 /* ================= HELPERS ================= */
 function normalizeActiveClass($is_active): string
 {
-    return ((int) $is_active === 1) ? 'approved' : 'needs-revision';
+    return ((int) $is_active === 1) ? 'active' : 'inactive';
 }
 
 /* ================= LOAD BACKGROUNDS ================= */
@@ -165,7 +168,8 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Configurations - HAUCREDIT</title>
     <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/my_events.css" />
+    <link rel="stylesheet" href="assets/styles/home_styles.css" />
+    <link rel="stylesheet" href="assets/styles/admin_configurations.css" />
 </head>
 
 <body>
@@ -185,94 +189,88 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                 </div>
             </header>
 
-            <section class="content my-events-page">
+            <section class="content admin-config-page">
                 <?php if ($success !== ""): ?>
-                    <div class="notice success" style="margin-bottom: 1rem;">
-                        <?= htmlspecialchars($success) ?>
-                    </div>
+                    <div class="notice success"><?= htmlspecialchars($success) ?></div>
                 <?php endif; ?>
 
                 <?php if ($error !== ""): ?>
-                    <div class="notice error" style="margin-bottom: 1rem;">
-                        <?= htmlspecialchars($error) ?>
-                    </div>
+                    <div class="notice error"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
 
-                <div class="summary-strip">
-                    <div class="summary-card">
-                        <span class="summary-num"><?= $summary['background_total'] ?></span>
-                        <span class="summary-label">Backgrounds</span>
-                    </div>
+                <!-- Stat Cards -->
+                <section class="config-stats">
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $summary['background_total'] ?></div>
+                        <div class="stat-label">Backgrounds</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= $summary['org_total'] ?></span>
-                        <span class="summary-label">Organizations</span>
-                    </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $summary['org_total'] ?></div>
+                        <div class="stat-label">Organizations</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= $summary['activity_total'] ?></span>
-                        <span class="summary-label">Activity Types</span>
-                    </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $summary['activity_total'] ?></div>
+                        <div class="stat-label">Activity Types</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= $summary['series_total'] ?></span>
-                        <span class="summary-label">Series Options</span>
-                    </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $summary['series_total'] ?></div>
+                        <div class="stat-label">Series Options</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= $summary['template_total'] ?></span>
-                        <span class="summary-label">Requirement Templates</span>
-                    </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $summary['template_total'] ?></div>
+                        <div class="stat-label">Req. Templates</div>
+                    </article>
 
-                    <div class="summary-card">
-                        <span class="summary-num"><?= $summary['mapping_total'] ?></span>
-                        <span class="summary-label">Requirement Mappings</span>
-                    </div>
-                </div>
+                    <article class="stat-card">
+                        <div class="stat-number"><?= $summary['mapping_total'] ?></div>
+                        <div class="stat-label">Req. Mappings</div>
+                    </article>
+                </section>
 
-                <section class="detail-card" style="margin-bottom: 1.25rem;">
-                    <div class="card-header">
+                <!-- Background Options -->
+                <section class="config-section">
+                    <button type="button" class="section-header" onclick="toggleSection(this)">
                         <h2><i class="fa-solid fa-layer-group"></i> Background Options</h2>
-                    </div>
-                    <div class="card-body">
-                        <form action="admin_update_configuration.php" method="POST" class="search-wrap"
-                            style="margin-bottom:1rem;">
+                        <span class="section-toggle"><i class="fa-solid fa-chevron-down"></i></span>
+                    </button>
+
+                    <div class="section-body">
+                        <form action="admin_update_configuration.php" method="POST" class="add-form-row">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="config_type" value="background">
-                            <input type="text" name="background_name" class="search-input"
+                            <input type="text" name="background_name" class="form-input"
                                 placeholder="Add new background..." required>
-                            <input type="number" name="sort_order" class="search-input" placeholder="Sort"
-                                style="max-width:120px;" value="0">
-                            <button type="submit" name="action" value="add_background" class="btn-primary">Add</button>
+                            <input type="number" name="sort_order" class="form-input form-input-sm" placeholder="Sort"
+                                value="0">
+                            <button type="submit" name="action" value="add_background"
+                                class="btn-sm btn-add">Add</button>
                         </form>
 
-                        <div class="events-grid">
+                        <div class="config-grid">
                             <?php foreach ($background_options as $background): ?>
-                                <?php $status_class = normalizeActiveClass($background['is_active'] ?? 0); ?>
-                                <article class="event-card">
-                                    <div class="event-card-top">
-                                        <span class="event-type-tag">Background</span>
-                                        <span class="event-status status-<?= htmlspecialchars($status_class) ?>">
-                                            <span class="status-dot"></span>
-                                            <span
-                                                class="status-text"><?= ((int) $background['is_active'] === 1) ? 'Active' : 'Inactive' ?></span>
+                                    <?php $active = ((int) ($background['is_active'] ?? 0) === 1); ?>
+                                <article class="config-card">
+                                    <div class="config-card-top">
+                                        <span class="config-type-tag">Background</span>
+                                        <span class="status-badge <?= $active ? 'badge-active' : 'badge-inactive' ?>">
+                                                <?= $active ? 'Active' : 'Inactive' ?>
                                         </span>
                                     </div>
 
-                                    <div class="event-card-body">
-                                        <h3 class="event-title"><?= htmlspecialchars($background['background_name']) ?></h3>
-
-                                        <div class="event-meta">
-                                            <div class="meta-row">
-                                                <span class="meta-icon"><i class="fa-solid fa-sort"></i></span>
-                                                <span>Sort Order: <?= (int) ($background['sort_order'] ?? 0) ?></span>
-                                            </div>
+                                    <div class="config-card-body">
+                                        <div class="config-title"><?= htmlspecialchars($background['background_name']) ?>
+                                        </div>
+                                        <div class="config-meta">Sort order: <?= (int) ($background['sort_order'] ?? 0) ?>
                                         </div>
                                     </div>
 
-                                    <footer class="event-card-footer" style="display:block;">
+                                    <div class="config-card-footer">
                                         <form action="admin_update_configuration.php" method="POST"
-                                            style="display:grid; gap:.75rem;">
+                                            class="config-edit-grid">
                                             <input type="hidden" name="csrf_token"
                                                 value="<?= htmlspecialchars($csrf_token) ?>">
                                             <input type="hidden" name="config_type" value="background">
@@ -281,77 +279,71 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
 
                                             <input type="text" name="background_name"
                                                 value="<?= htmlspecialchars($background['background_name']) ?>"
-                                                class="search-input">
+                                                class="form-input">
                                             <input type="number" name="sort_order"
-                                                value="<?= (int) ($background['sort_order'] ?? 0) ?>" class="search-input">
+                                                value="<?= (int) ($background['sort_order'] ?? 0) ?>" class="form-input">
 
-                                            <div class="card-actions" style="flex-wrap:wrap; gap:.5rem;">
+                                            <div class="config-actions">
                                                 <button type="submit" name="action" value="update_background"
-                                                    class="btn-secondary btn-edit">Save</button>
+                                                    class="btn-sm btn-save">Save</button>
 
-                                                <?php if ((int) $background['is_active'] === 1): ?>
+                                                    <?php if ($active): ?>
                                                     <button type="submit" name="action" value="deactivate_background"
-                                                        class="btn-primary btn-danger">Deactivate</button>
-                                                <?php else: ?>
+                                                        class="btn-sm btn-deactivate">Deactivate</button>
+                                                    <?php else: ?>
                                                     <button type="submit" name="action" value="activate_background"
-                                                        class="btn-primary btn-view">Activate</button>
-                                                <?php endif; ?>
+                                                        class="btn-sm btn-activate">Activate</button>
+                                                    <?php endif; ?>
 
                                                 <button type="submit" name="action" value="delete_background"
-                                                    class="btn-secondary"
+                                                    class="btn-sm btn-delete"
                                                     onclick="return confirm('Delete this background?');">Delete</button>
                                             </div>
                                         </form>
-                                    </footer>
+                                    </div>
                                 </article>
                             <?php endforeach; ?>
                         </div>
                     </div>
                 </section>
 
-                <section class="detail-card" style="margin-bottom: 1.25rem;">
-                    <div class="card-header">
+                <!-- Organizations -->
+                <section class="config-section">
+                    <button type="button" class="section-header" onclick="toggleSection(this)">
                         <h2><i class="fa-solid fa-building-columns"></i> Organizations</h2>
-                    </div>
-                    <div class="card-body">
-                        <form action="admin_update_configuration.php" method="POST" class="search-wrap"
-                            style="margin-bottom:1rem;">
+                        <span class="section-toggle"><i class="fa-solid fa-chevron-down"></i></span>
+                    </button>
+
+                    <div class="section-body">
+                        <form action="admin_update_configuration.php" method="POST" class="add-form-row">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="config_type" value="org">
-                            <input type="text" name="org_name" class="search-input"
-                                placeholder="Add new organization..." required>
-                            <input type="number" name="sort_order" class="search-input" placeholder="Sort"
-                                style="max-width:120px;" value="0">
-                            <button type="submit" name="action" value="add_org" class="btn-primary">Add</button>
+                            <input type="text" name="org_name" class="form-input" placeholder="Add new organization..."
+                                required>
+                            <input type="number" name="sort_order" class="form-input form-input-sm" placeholder="Sort"
+                                value="0">
+                            <button type="submit" name="action" value="add_org" class="btn-sm btn-add">Add</button>
                         </form>
 
-                        <div class="events-grid">
+                        <div class="config-grid">
                             <?php foreach ($org_options as $org): ?>
-                                <?php $status_class = normalizeActiveClass($org['is_active'] ?? 0); ?>
-                                <article class="event-card">
-                                    <div class="event-card-top">
-                                        <span class="event-type-tag">Org</span>
-                                        <span class="event-status status-<?= htmlspecialchars($status_class) ?>">
-                                            <span class="status-dot"></span>
-                                            <span
-                                                class="status-text"><?= ((int) $org['is_active'] === 1) ? 'Active' : 'Inactive' ?></span>
+                                    <?php $active = ((int) ($org['is_active'] ?? 0) === 1); ?>
+                                <article class="config-card">
+                                    <div class="config-card-top">
+                                        <span class="config-type-tag">Organization</span>
+                                        <span class="status-badge <?= $active ? 'badge-active' : 'badge-inactive' ?>">
+                                                <?= $active ? 'Active' : 'Inactive' ?>
                                         </span>
                                     </div>
 
-                                    <div class="event-card-body">
-                                        <h3 class="event-title"><?= htmlspecialchars($org['org_name']) ?></h3>
-
-                                        <div class="event-meta">
-                                            <div class="meta-row">
-                                                <span class="meta-icon"><i class="fa-solid fa-sort"></i></span>
-                                                <span>Sort Order: <?= (int) ($org['sort_order'] ?? 0) ?></span>
-                                            </div>
-                                        </div>
+                                    <div class="config-card-body">
+                                        <div class="config-title"><?= htmlspecialchars($org['org_name']) ?></div>
+                                        <div class="config-meta">Sort order: <?= (int) ($org['sort_order'] ?? 0) ?></div>
                                     </div>
 
-                                    <footer class="event-card-footer" style="display:block;">
+                                    <div class="config-card-footer">
                                         <form action="admin_update_configuration.php" method="POST"
-                                            style="display:grid; gap:.75rem;">
+                                            class="config-edit-grid">
                                             <input type="hidden" name="csrf_token"
                                                 value="<?= htmlspecialchars($csrf_token) ?>">
                                             <input type="hidden" name="config_type" value="org">
@@ -359,70 +351,72 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                                                 value="<?= (int) $org['org_option_id'] ?>">
 
                                             <input type="text" name="org_name"
-                                                value="<?= htmlspecialchars($org['org_name']) ?>" class="search-input">
+                                                value="<?= htmlspecialchars($org['org_name']) ?>" class="form-input">
                                             <input type="number" name="sort_order"
-                                                value="<?= (int) ($org['sort_order'] ?? 0) ?>" class="search-input">
+                                                value="<?= (int) ($org['sort_order'] ?? 0) ?>" class="form-input">
 
-                                            <div class="card-actions" style="flex-wrap:wrap; gap:.5rem;">
+                                            <div class="config-actions">
                                                 <button type="submit" name="action" value="update_org"
-                                                    class="btn-secondary btn-edit">Save</button>
+                                                    class="btn-sm btn-save">Save</button>
 
-                                                <?php if ((int) $org['is_active'] === 1): ?>
+                                                    <?php if ($active): ?>
                                                     <button type="submit" name="action" value="deactivate_org"
-                                                        class="btn-primary btn-danger">Deactivate</button>
-                                                <?php else: ?>
+                                                        class="btn-sm btn-deactivate">Deactivate</button>
+                                                    <?php else: ?>
                                                     <button type="submit" name="action" value="activate_org"
-                                                        class="btn-primary btn-view">Activate</button>
-                                                <?php endif; ?>
+                                                        class="btn-sm btn-activate">Activate</button>
+                                                    <?php endif; ?>
 
-                                                <button type="submit" name="action" value="delete_org" class="btn-secondary"
+                                                <button type="submit" name="action" value="delete_org"
+                                                    class="btn-sm btn-delete"
                                                     onclick="return confirm('Delete this organization?');">Delete</button>
                                             </div>
                                         </form>
-                                    </footer>
+                                    </div>
                                 </article>
                             <?php endforeach; ?>
                         </div>
                     </div>
                 </section>
 
-                <section class="detail-card" style="margin-bottom: 1.25rem;">
-                    <div class="card-header">
+                <!-- Activity Types -->
+                <section class="config-section">
+                    <button type="button" class="section-header" onclick="toggleSection(this)">
                         <h2><i class="fa-solid fa-layer-group"></i> Activity Types</h2>
-                    </div>
-                    <div class="card-body">
-                        <form action="admin_update_configuration.php" method="POST" class="search-wrap"
-                            style="margin-bottom:1rem;">
+                        <span class="section-toggle"><i class="fa-solid fa-chevron-down"></i></span>
+                    </button>
+
+                    <div class="section-body">
+                        <form action="admin_update_configuration.php" method="POST" class="add-form-row">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="config_type" value="activity_type">
-                            <input type="text" name="activity_type_name" class="search-input"
+                            <input type="text" name="activity_type_name" class="form-input"
                                 placeholder="Add new activity type..." required>
-                            <input type="number" name="sort_order" class="search-input" placeholder="Sort"
-                                style="max-width:120px;" value="0">
+                            <input type="number" name="sort_order" class="form-input form-input-sm" placeholder="Sort"
+                                value="0">
                             <button type="submit" name="action" value="add_activity_type"
-                                class="btn-primary">Add</button>
+                                class="btn-sm btn-add">Add</button>
                         </form>
 
-                        <div class="events-grid">
+                        <div class="config-grid">
                             <?php foreach ($activity_types as $type): ?>
-                                <?php $status_class = normalizeActiveClass($type['is_active'] ?? 0); ?>
-                                <article class="event-card">
-                                    <div class="event-card-top">
-                                        <span class="event-type-tag">Type</span>
-                                        <span class="event-status status-<?= htmlspecialchars($status_class) ?>">
-                                            <span class="status-dot"></span>
-                                            <span
-                                                class="status-text"><?= ((int) $type['is_active'] === 1) ? 'Active' : 'Inactive' ?></span>
+                                    <?php $active = ((int) ($type['is_active'] ?? 0) === 1); ?>
+                                <article class="config-card">
+                                    <div class="config-card-top">
+                                        <span class="config-type-tag">Activity Type</span>
+                                        <span class="status-badge <?= $active ? 'badge-active' : 'badge-inactive' ?>">
+                                                <?= $active ? 'Active' : 'Inactive' ?>
                                         </span>
                                     </div>
 
-                                    <div class="event-card-body">
-                                        <h3 class="event-title"><?= htmlspecialchars($type['activity_type_name']) ?></h3>
+                                    <div class="config-card-body">
+                                        <div class="config-title"><?= htmlspecialchars($type['activity_type_name']) ?></div>
+                                        <div class="config-meta">Sort order: <?= (int) ($type['sort_order'] ?? 0) ?></div>
                                     </div>
 
-                                    <footer class="event-card-footer" style="display:block;">
+                                    <div class="config-card-footer">
                                         <form action="admin_update_configuration.php" method="POST"
-                                            style="display:grid; gap:.75rem;">
+                                            class="config-edit-grid">
                                             <input type="hidden" name="csrf_token"
                                                 value="<?= htmlspecialchars($csrf_token) ?>">
                                             <input type="hidden" name="config_type" value="activity_type">
@@ -431,70 +425,71 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
 
                                             <input type="text" name="activity_type_name"
                                                 value="<?= htmlspecialchars($type['activity_type_name']) ?>"
-                                                class="search-input">
+                                                class="form-input">
                                             <input type="number" name="sort_order"
-                                                value="<?= (int) ($type['sort_order'] ?? 0) ?>" class="search-input">
+                                                value="<?= (int) ($type['sort_order'] ?? 0) ?>" class="form-input">
 
-                                            <div class="card-actions" style="flex-wrap:wrap; gap:.5rem;">
+                                            <div class="config-actions">
                                                 <button type="submit" name="action" value="update_activity_type"
-                                                    class="btn-secondary btn-edit">Save</button>
+                                                    class="btn-sm btn-save">Save</button>
 
-                                                <?php if ((int) $type['is_active'] === 1): ?>
+                                                    <?php if ($active): ?>
                                                     <button type="submit" name="action" value="deactivate_activity_type"
-                                                        class="btn-primary btn-danger">Deactivate</button>
-                                                <?php else: ?>
+                                                        class="btn-sm btn-deactivate">Deactivate</button>
+                                                    <?php else: ?>
                                                     <button type="submit" name="action" value="activate_activity_type"
-                                                        class="btn-primary btn-view">Activate</button>
-                                                <?php endif; ?>
+                                                        class="btn-sm btn-activate">Activate</button>
+                                                    <?php endif; ?>
 
                                                 <button type="submit" name="action" value="delete_activity_type"
-                                                    class="btn-secondary"
+                                                    class="btn-sm btn-delete"
                                                     onclick="return confirm('Delete this activity type?');">Delete</button>
                                             </div>
                                         </form>
-                                    </footer>
+                                    </div>
                                 </article>
                             <?php endforeach; ?>
                         </div>
                     </div>
                 </section>
 
-                <section class="detail-card" style="margin-bottom: 1.25rem;">
-                    <div class="card-header">
+                <!-- Series Options -->
+                <section class="config-section">
+                    <button type="button" class="section-header" onclick="toggleSection(this)">
                         <h2><i class="fa-solid fa-diagram-project"></i> Series Options</h2>
-                    </div>
-                    <div class="card-body">
-                        <form action="admin_update_configuration.php" method="POST" class="search-wrap"
-                            style="margin-bottom:1rem;">
+                        <span class="section-toggle"><i class="fa-solid fa-chevron-down"></i></span>
+                    </button>
+
+                    <div class="section-body">
+                        <form action="admin_update_configuration.php" method="POST" class="add-form-row">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="config_type" value="series">
-                            <input type="text" name="series_name" class="search-input"
+                            <input type="text" name="series_name" class="form-input"
                                 placeholder="Add new series option..." required>
-                            <input type="number" name="sort_order" class="search-input" placeholder="Sort"
-                                style="max-width:120px;" value="0">
-                            <button type="submit" name="action" value="add_series" class="btn-primary">Add</button>
+                            <input type="number" name="sort_order" class="form-input form-input-sm" placeholder="Sort"
+                                value="0">
+                            <button type="submit" name="action" value="add_series" class="btn-sm btn-add">Add</button>
                         </form>
 
-                        <div class="events-grid">
+                        <div class="config-grid">
                             <?php foreach ($series_options as $series): ?>
-                                <?php $status_class = normalizeActiveClass($series['is_active'] ?? 0); ?>
-                                <article class="event-card">
-                                    <div class="event-card-top">
-                                        <span class="event-type-tag">Series</span>
-                                        <span class="event-status status-<?= htmlspecialchars($status_class) ?>">
-                                            <span class="status-dot"></span>
-                                            <span
-                                                class="status-text"><?= ((int) $series['is_active'] === 1) ? 'Active' : 'Inactive' ?></span>
+                                    <?php $active = ((int) ($series['is_active'] ?? 0) === 1); ?>
+                                <article class="config-card">
+                                    <div class="config-card-top">
+                                        <span class="config-type-tag">Series</span>
+                                        <span class="status-badge <?= $active ? 'badge-active' : 'badge-inactive' ?>">
+                                                <?= $active ? 'Active' : 'Inactive' ?>
                                         </span>
                                     </div>
 
-                                    <div class="event-card-body">
-                                        <h3 class="event-title"><?= htmlspecialchars($series['series_name']) ?></h3>
+                                    <div class="config-card-body">
+                                        <div class="config-title"><?= htmlspecialchars($series['series_name']) ?></div>
+                                        <div class="config-meta">Sort order: <?= (int) ($series['sort_order'] ?? 0) ?></div>
                                     </div>
 
-                                    <footer class="event-card-footer" style="display:block;">
+                                    <div class="config-card-footer">
                                         <form action="admin_update_configuration.php" method="POST"
-                                            style="display:grid; gap:.75rem;">
+                                            class="config-edit-grid">
                                             <input type="hidden" name="csrf_token"
                                                 value="<?= htmlspecialchars($csrf_token) ?>">
                                             <input type="hidden" name="config_type" value="series">
@@ -502,187 +497,163 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                                                 value="<?= (int) $series['series_option_id'] ?>">
 
                                             <input type="text" name="series_name"
-                                                value="<?= htmlspecialchars($series['series_name']) ?>"
-                                                class="search-input">
+                                                value="<?= htmlspecialchars($series['series_name']) ?>" class="form-input">
                                             <input type="number" name="sort_order"
-                                                value="<?= (int) ($series['sort_order'] ?? 0) ?>" class="search-input">
+                                                value="<?= (int) ($series['sort_order'] ?? 0) ?>" class="form-input">
 
-                                            <div class="card-actions" style="flex-wrap:wrap; gap:.5rem;">
+                                            <div class="config-actions">
                                                 <button type="submit" name="action" value="update_series"
-                                                    class="btn-secondary btn-edit">Save</button>
+                                                    class="btn-sm btn-save">Save</button>
 
-                                                <?php if ((int) $series['is_active'] === 1): ?>
+                                                    <?php if ($active): ?>
                                                     <button type="submit" name="action" value="deactivate_series"
-                                                        class="btn-primary btn-danger">Deactivate</button>
-                                                <?php else: ?>
+                                                        class="btn-sm btn-deactivate">Deactivate</button>
+                                                    <?php else: ?>
                                                     <button type="submit" name="action" value="activate_series"
-                                                        class="btn-primary btn-view">Activate</button>
-                                                <?php endif; ?>
+                                                        class="btn-sm btn-activate">Activate</button>
+                                                    <?php endif; ?>
 
                                                 <button type="submit" name="action" value="delete_series"
-                                                    class="btn-secondary"
+                                                    class="btn-sm btn-delete"
                                                     onclick="return confirm('Delete this series option?');">Delete</button>
                                             </div>
                                         </form>
-                                    </footer>
+                                    </div>
                                 </article>
                             <?php endforeach; ?>
                         </div>
                     </div>
                 </section>
 
-                <section class="detail-card" style="margin-bottom: 1.25rem;">
-                    <div class="card-header">
+                <!-- Requirement Mapping -->
+                <section class="config-section">
+                    <button type="button" class="section-header" onclick="toggleSection(this)">
                         <h2><i class="fa-solid fa-table-cells-large"></i> Requirement Mapping</h2>
-                    </div>
-                    <div class="card-body">
-                        <form action="admin_update_configuration.php" method="POST" class="search-wrap"
-                            style="margin-bottom:1rem; flex-wrap:wrap;">
+                        <span class="section-toggle"><i class="fa-solid fa-chevron-down"></i></span>
+                    </button>
+
+                    <div class="section-body">
+                        <form action="admin_update_configuration.php" method="POST" class="mapping-add-form">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                             <input type="hidden" name="config_type" value="mapping">
 
-                            <select name="background_id" class="search-input" style="max-width:220px;" required>
+                            <select name="background_id" class="form-input" required>
                                 <option value="">Select background</option>
                                 <?php foreach ($background_options as $background): ?>
                                     <option value="<?= (int) $background['background_id'] ?>">
-                                        <?= htmlspecialchars($background['background_name']) ?>
+                                            <?= htmlspecialchars($background['background_name']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
 
-                            <select name="activity_type_id" class="search-input" style="max-width:260px;" required>
+                            <select name="activity_type_id" class="form-input" required>
                                 <option value="">Select activity type</option>
                                 <?php foreach ($activity_types as $type): ?>
                                     <option value="<?= (int) $type['activity_type_id'] ?>">
-                                        <?= htmlspecialchars($type['activity_type_name']) ?>
+                                            <?= htmlspecialchars($type['activity_type_name']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
 
-                            <select name="req_template_id" class="search-input" style="max-width:300px;" required>
+                            <select name="req_template_id" class="form-input" required>
                                 <option value="">Select requirement template</option>
                                 <?php foreach ($requirement_templates as $tpl): ?>
                                     <option value="<?= (int) $tpl['req_template_id'] ?>">
-                                        <?= htmlspecialchars($tpl['req_name']) ?>
+                                            <?= htmlspecialchars($tpl['req_name']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
 
-                            <button type="submit" name="action" value="add_mapping" class="btn-primary">Add
+                            <button type="submit" name="action" value="add_mapping" class="btn-sm btn-add">Add
                                 Mapping</button>
                         </form>
 
                         <?php foreach ($grouped_map as $background => $type_map): ?>
-                            <section class="detail-card" style="margin-bottom: 1rem;">
-                                <div class="card-header">
-                                    <h2><?= htmlspecialchars($background) ?></h2>
-                                </div>
-                                <div class="card-body">
+                            <section class="mapping-group">
+                                <div class="mapping-group-header"><?= htmlspecialchars($background) ?></div>
+
                                     <?php foreach ($type_map as $activity_type_name => $map_rows): ?>
-                                        <div class="doc-remarks-box" style="margin-bottom: 1rem;">
-                                            <strong><?= htmlspecialchars($activity_type_name) ?></strong>
+                                    <div class="mapping-activity">
+                                        <div class="mapping-activity-title"><?= htmlspecialchars($activity_type_name) ?></div>
 
-                                            <div style="margin-top:.75rem; display:grid; gap:.5rem;">
                                                 <?php foreach ($map_rows as $map): ?>
-                                                    <?php $status_class = normalizeActiveClass($map['is_active'] ?? 0); ?>
-                                                    <div class="t-row" style="gap:.75rem; align-items:center;">
-                                                        <span><?= htmlspecialchars($map['req_name']) ?></span>
+                                                        <?php $map_active = ((int) ($map['is_active'] ?? 0) === 1); ?>
+                                            <div class="mapping-row">
+                                                <span class="mapping-req-name"><?= htmlspecialchars($map['req_name']) ?></span>
 
-                                                        <span class="event-status status-<?= htmlspecialchars($status_class) ?>">
-                                                            <span class="status-dot"></span>
-                                                            <span
-                                                                class="status-text"><?= ((int) $map['is_active'] === 1) ? 'Active' : 'Inactive' ?></span>
-                                                        </span>
+                                                <span class="status-badge <?= $map_active ? 'badge-active' : 'badge-inactive' ?>">
+                                                                <?= $map_active ? 'Active' : 'Inactive' ?>
+                                                </span>
 
-                                                        <form action="admin_update_configuration.php" method="POST"
-                                                            style="display:inline-flex; gap:.5rem; margin-left:auto;">
-                                                            <input type="hidden" name="csrf_token"
-                                                                value="<?= htmlspecialchars($csrf_token) ?>">
-                                                            <input type="hidden" name="config_type" value="mapping">
-                                                            <input type="hidden" name="config_map_id"
-                                                                value="<?= (int) $map['config_map_id'] ?>">
+                                                <form action="admin_update_configuration.php" method="POST" class="mapping-actions">
+                                                    <input type="hidden" name="csrf_token"
+                                                        value="<?= htmlspecialchars($csrf_token) ?>">
+                                                    <input type="hidden" name="config_type" value="mapping">
+                                                    <input type="hidden" name="config_map_id"
+                                                        value="<?= (int) $map['config_map_id'] ?>">
 
-                                                            <?php if ((int) $map['is_active'] === 1): ?>
-                                                                <button type="submit" name="action" value="deactivate_mapping"
-                                                                    class="btn-secondary btn-edit">Deactivate</button>
-                                                            <?php else: ?>
-                                                                <button type="submit" name="action" value="activate_mapping"
-                                                                    class="btn-primary btn-view">Activate</button>
-                                                            <?php endif; ?>
+                                                                <?php if ($map_active): ?>
+                                                        <button type="submit" name="action" value="deactivate_mapping"
+                                                            class="btn-sm btn-deactivate">Deactivate</button>
+                                                                <?php else: ?>
+                                                        <button type="submit" name="action" value="activate_mapping"
+                                                            class="btn-sm btn-activate">Activate</button>
+                                                                <?php endif; ?>
 
-                                                            <button type="submit" name="action" value="delete_mapping"
-                                                                class="btn-primary btn-danger"
-                                                                onclick="return confirm('Delete this mapping?');">Delete</button>
-                                                        </form>
-                                                    </div>
-                                                <?php endforeach; ?>
+                                                    <button type="submit" name="action" value="delete_mapping"
+                                                        class="btn-sm btn-delete"
+                                                        onclick="return confirm('Delete this mapping?');">Delete</button>
+                                                </form>
                                             </div>
-                                        </div>
+                                                <?php endforeach; ?>
+                                    </div>
                                     <?php endforeach; ?>
-                                </div>
                             </section>
                         <?php endforeach; ?>
                     </div>
                 </section>
 
-                <section class="detail-card">
-                    <div class="card-header">
+                <!-- Requirement Templates -->
+                <section class="config-section">
+                    <button type="button" class="section-header" onclick="toggleSection(this)">
                         <h2><i class="fa-solid fa-file-circle-check"></i> Requirement Templates & Deadline Rules</h2>
-                    </div>
+                        <span class="section-toggle"><i class="fa-solid fa-chevron-down"></i></span>
+                    </button>
 
-                    <div class="card-body">
-                        <div class="events-grid">
+                    <div class="section-body">
+                        <div class="template-grid">
                             <?php foreach ($requirement_templates as $tpl): ?>
-                                <?php $status_class = normalizeActiveClass($tpl['is_active'] ?? 0); ?>
-
-                                <article class="event-card">
-                                    <div class="event-card-top">
-                                        <span class="event-type-tag">
-                                            <?= htmlspecialchars($tpl['default_due_basis'] ?? 'manual') ?>
-                                        </span>
-
-                                        <span class="event-status status-<?= htmlspecialchars($status_class) ?>">
-                                            <span class="status-dot"></span>
-                                            <span class="status-text">
-                                                <?= ((int) ($tpl['is_active'] ?? 0) === 1) ? 'Active' : 'Inactive' ?>
-                                            </span>
+                                    <?php $active = ((int) ($tpl['is_active'] ?? 0) === 1); ?>
+                                <article class="template-card">
+                                    <div class="template-card-top">
+                                        <span
+                                            class="config-type-tag"><?= htmlspecialchars($tpl['default_due_basis'] ?? 'manual') ?></span>
+                                        <span class="status-badge <?= $active ? 'badge-active' : 'badge-inactive' ?>">
+                                                <?= $active ? 'Active' : 'Inactive' ?>
                                         </span>
                                     </div>
 
-                                    <div class="event-card-body">
-                                        <h3 class="event-title"><?= htmlspecialchars($tpl['req_name']) ?></h3>
+                                    <div class="template-card-body">
+                                        <div class="template-title"><?= htmlspecialchars($tpl['req_name']) ?></div>
 
-                                        <div class="event-meta">
-                                            <div class="meta-row">
-                                                <span class="meta-icon"><i class="fa-solid fa-clock"></i></span>
-                                                <span><?= (int) ($tpl['default_due_offset_days'] ?? 0) ?> day(s)</span>
-                                            </div>
-
-                                            <div class="meta-row">
-                                                <span class="meta-icon"><i class="fa-solid fa-link"></i></span>
-                                                <span><?= !empty($tpl['template_url']) ? 'Template linked' : 'No template link' ?></span>
-                                            </div>
-
-                                            <div class="meta-row">
-                                                <span class="meta-icon"><i class="fa-solid fa-calendar-plus"></i></span>
-                                                <span>
-                                                    Updated
-                                                    <?= !empty($tpl['updated_at']) ? date('M j, Y', strtotime($tpl['updated_at'])) : 'N/A' ?>
-                                                </span>
-                                            </div>
+                                        <div class="template-meta">
+                                            <i class="fa-solid fa-clock"></i>
+                                                <?= (int) ($tpl['default_due_offset_days'] ?? 0) ?> day(s) offset
                                         </div>
 
-                                        <?php if (!empty($tpl['req_desc'])): ?>
-                                            <div class="doc-remarks-box" style="margin-top: 1rem;">
-                                                <strong>Description</strong>
-                                                <p><?= nl2br(htmlspecialchars($tpl['req_desc'])) ?></p>
-                                            </div>
-                                        <?php endif; ?>
+                                        <div class="template-meta">
+                                            <i class="fa-solid fa-link"></i>
+                                                <?= !empty($tpl['template_url']) ? 'Template linked' : 'No template link' ?>
+                                        </div>
+
+                                            <?php if (!empty($tpl['req_desc'])): ?>
+                                            <div class="template-desc"><?= nl2br(htmlspecialchars($tpl['req_desc'])) ?></div>
+                                            <?php endif; ?>
                                     </div>
 
-                                    <footer class="event-card-footer" style="display:block;">
+                                    <div class="template-card-footer">
                                         <form action="admin_update_configuration.php" method="POST"
-                                            style="display:grid; gap:.75rem;">
+                                            class="config-edit-grid">
                                             <input type="hidden" name="csrf_token"
                                                 value="<?= htmlspecialchars($csrf_token) ?>">
                                             <input type="hidden" name="config_type" value="template">
@@ -690,71 +661,79 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                                                 value="<?= (int) $tpl['req_template_id'] ?>">
 
                                             <input type="text" name="req_name"
-                                                value="<?= htmlspecialchars($tpl['req_name']) ?>" class="search-input">
-                                            <textarea name="req_desc" class="search-input"
-                                                rows="3"><?= htmlspecialchars($tpl['req_desc'] ?? '') ?></textarea>
+                                                value="<?= htmlspecialchars($tpl['req_name']) ?>" class="form-input"
+                                                placeholder="Requirement name">
+                                            <textarea name="req_desc" class="form-input"
+                                                rows="2"><?= htmlspecialchars($tpl['req_desc'] ?? '') ?></textarea>
                                             <input type="text" name="template_url"
                                                 value="<?= htmlspecialchars($tpl['template_url'] ?? '') ?>"
-                                                class="search-input" placeholder="Template URL">
+                                                class="form-input" placeholder="Template URL">
                                             <input type="number" name="default_due_offset_days" min="0"
                                                 value="<?= (int) ($tpl['default_due_offset_days'] ?? 0) ?>"
-                                                class="search-input">
+                                                class="form-input" placeholder="Days offset">
 
-                                            <select name="default_due_basis" class="search-input">
-                                                <?php foreach ($basis_options as $basis): ?>
+                                            <select name="default_due_basis" class="form-input">
+                                                    <?php foreach ($basis_options as $basis): ?>
                                                     <option value="<?= htmlspecialchars($basis) ?>"
                                                         <?= (($tpl['default_due_basis'] ?? '') === $basis) ? 'selected' : '' ?>>
-                                                        <?= htmlspecialchars($basis) ?>
+                                                                <?= htmlspecialchars($basis) ?>
                                                     </option>
-                                                <?php endforeach; ?>
+                                                    <?php endforeach; ?>
                                             </select>
 
-                                            <div class="card-actions" style="flex-wrap:wrap; gap:.5rem;">
+                                            <div class="config-actions">
                                                 <button type="submit" name="action" value="update_template"
-                                                    class="btn-secondary btn-edit">Save</button>
+                                                    class="btn-sm btn-save">Save</button>
 
-                                                <?php if ((int) ($tpl['is_active'] ?? 0) === 1): ?>
+                                                    <?php if ($active): ?>
                                                     <button type="submit" name="action" value="deactivate_template"
-                                                        class="btn-primary btn-danger">Deactivate</button>
-                                                <?php else: ?>
+                                                        class="btn-sm btn-deactivate">Deactivate</button>
+                                                    <?php else: ?>
                                                     <button type="submit" name="action" value="activate_template"
-                                                        class="btn-primary btn-view">Activate</button>
-                                                <?php endif; ?>
+                                                        class="btn-sm btn-activate">Activate</button>
+                                                    <?php endif; ?>
                                             </div>
                                         </form>
-                                    </footer>
+                                    </div>
                                 </article>
                             <?php endforeach; ?>
 
-                            <article class="event-card">
-                                <div class="event-card-body">
-                                    <h3 class="event-title">Add Requirement Template</h3>
+                            <article class="template-card">
+                                <div class="template-card-top">
+                                    <span class="config-type-tag">New Template</span>
+                                </div>
 
+                                <div class="template-card-body">
+                                    <div class="template-title">Add Requirement Template</div>
+                                </div>
+
+                                <div class="template-card-footer">
                                     <form action="admin_update_configuration.php" method="POST"
-                                        style="display:grid; gap:.75rem;">
+                                        class="config-edit-grid">
                                         <input type="hidden" name="csrf_token"
                                             value="<?= htmlspecialchars($csrf_token) ?>">
                                         <input type="hidden" name="config_type" value="template">
 
-                                        <input type="text" name="req_name" class="search-input"
+                                        <input type="text" name="req_name" class="form-input"
                                             placeholder="Requirement name" required>
-                                        <textarea name="req_desc" class="search-input" rows="3"
+                                        <textarea name="req_desc" class="form-input" rows="2"
                                             placeholder="Description"></textarea>
-                                        <input type="text" name="template_url" class="search-input"
+                                        <input type="text" name="template_url" class="form-input"
                                             placeholder="Template URL">
                                         <input type="number" name="default_due_offset_days" min="0" value="7"
-                                            class="search-input">
+                                            class="form-input" placeholder="Days offset">
 
-                                        <select name="default_due_basis" class="search-input">
+                                        <select name="default_due_basis" class="form-input">
                                             <?php foreach ($basis_options as $basis): ?>
                                                 <option value="<?= htmlspecialchars($basis) ?>">
-                                                    <?= htmlspecialchars($basis) ?>
-                                                </option>
+                                                    <?= htmlspecialchars($basis) ?></option>
                                             <?php endforeach; ?>
                                         </select>
 
-                                        <button type="submit" name="action" value="add_template" class="btn-primary">Add
-                                            Template</button>
+                                        <div class="config-actions">
+                                            <button type="submit" name="action" value="add_template"
+                                                class="btn-sm btn-add">Add Template</button>
+                                        </div>
                                     </form>
                                 </div>
                             </article>
@@ -768,6 +747,41 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
     </div>
 
     <script src="../app/script/layout.js?v=1"></script>
+    <script>
+        function toggleSection(headerButton) {
+            const section = headerButton.closest('.config-section');
+            section.classList.toggle('collapsed');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const sections = document.querySelectorAll('.config-section');
+            sections.forEach((section, index) => {
+                if (index > 0) {
+                    section.classList.add('collapsed');
+                }
+            });
+        });
+
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                const btn = e.submitter;
+                if (!btn) return;
+
+                const destructiveActions = [
+                    'delete_background', 'delete_org', 'delete_activity_type', 'delete_series',
+                    'delete_mapping', 'deactivate_background', 'deactivate_org',
+                    'deactivate_activity_type', 'deactivate_series', 'deactivate_template'
+                ];
+
+                if (destructiveActions.includes(btn.value)) {
+                    const label = btn.textContent.trim();
+                    if (!confirm(`Are you sure you want to ${label.toLowerCase()} this item?`)) {
+                        e.preventDefault();
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>
