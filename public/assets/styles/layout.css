@@ -120,6 +120,10 @@ body {
   margin-top: 2px;
 }
 
+a {
+  text-decoration: none;
+}
+
 /* Nav */
 .nav {
   display: flex;
