@@ -173,11 +173,11 @@ $events = fetchAll(
                             $uploaded = (int) ($event['docs_uploaded'] ?? 0);
                             $progress = $total > 0 ? round(($uploaded / $total) * 100) : 0;
 
-                            $progress_color = '#d32f2f';
+                            $progress_color = '#992525';
                             if ($progress >= 75) {
-                                $progress_color = '#2e7d32';
+                                $progress_color = '#1e5221';
                             } elseif ($progress >= 40) {
-                                $progress_color = '#f9a825';
+                                $progress_color = '#9c6a18';
                             }
 
                             $status_class = normalizeEventStatusClass($event['event_status'] ?? 'Draft');
@@ -227,7 +227,13 @@ $events = fetchAll(
                             </li>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <li>No events have been put into archives.</li>
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <i class="fa-regular fa-folder-open"></i>
+                            </div>
+                            <h3>No archived events</h3>
+                            <p>Your archived events will appear here when you archive them.</p>
+                        </div>
                     <?php endif; ?>
                 </ul>
             </section>

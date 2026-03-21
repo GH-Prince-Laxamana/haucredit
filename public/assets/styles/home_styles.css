@@ -27,7 +27,7 @@
 }
 
 .home-stat-card {
-  background: white;
+  background: var(--bg-gradient);
   border-radius: var(--radius);
   padding: 20px;
   box-shadow: var(--shadow);
@@ -398,7 +398,7 @@
 }
 
 .event-card:hover {
-  background: var(--offwhite);
+  background: var(--bg-gradient);
 }
 
 .event-main {
@@ -468,6 +468,9 @@ time {
   background: none;
 }
 
+.req-card:hover{
+  background: var(--bg-gradient);
+}
 @media (max-width: 900px) {
   .home-event-row {
     grid-template-columns: 1fr;

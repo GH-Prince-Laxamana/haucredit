@@ -17,7 +17,7 @@
 }
 
 .summary-card {
-  background: linear-gradient(90deg, #ecdfe3, #ece9e2, #ecdfe3);;
+  background: var(--bg-gradient);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -43,7 +43,6 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #4b0014, #c2a14d, #4b0014);
   z-index: 2;
 }
 
@@ -153,7 +152,7 @@
 
 .event-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 15px 35px rgba(92, 5, 5, 0.68);
   border-color: rgba(75, 0, 20, 0.2);
 }
 

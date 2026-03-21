@@ -13,10 +13,10 @@
 /* LEFT: Profile Card */
 
 .profile-card {
-   background: var(--surface-2);
-   border: 1px solid var(--border);
-   border-radius: var(--radius);
-   box-shadow: var(--shadow);
+   background: var(--bg-gradient);
+   border: 1px solid rgba(194, 161, 77, 0.25);
+   border-radius: 28px;
+   box-shadow: 0 20px 35px -8px rgba(75, 0, 20, 0.15);
    padding: 18px 14px;
    display: flex;
    flex-direction: column;
@@ -151,7 +151,7 @@
 /* RIGHT PANEL */
 
 .profile-panel {
-   background: var(--surface-2);
+   background: linear-gradient(90deg, #ecdfe3, #ece9e2, #ecdfe3);
    border: 1px solid var(--border);
    border-radius: var(--radius);
    box-shadow: var(--shadow);

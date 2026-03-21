@@ -55,40 +55,79 @@ if (!isset($_SESSION["user_id"])) {
             <section class="content about-page">
                 <!-- Hero section introducing HAUCREDIT -->
                 <header class="about-hero">
-                    <h1>What is HAUCREDIT?</h1>
-                    <p>
-                        <strong>HAUCREDIT</strong> (Holy Angel University Compliance & Records Engine for Documentation and
-                        Institutional Tracking) is a comprehensive web-based event compliance tracking system designed specifically
-                        for Holy Angel University student organizations.
-                    </p>
-                    <p>
-                        Our platform streamlines the event proposal and compliance process, ensuring that all student activities
-                        meet HAU Office of Student Affairs (OSA) requirements while reducing administrative burden on student
-                        leaders.
-                    </p>
+                    <div class="hero-content">
+                        <h1>What is HAUCREDIT?</h1>
+                        <div class="hero-description">
+                            <p>
+                                <strong>HAUCREDIT</strong> (Holy Angel University Compliance & Records Engine for Documentation and
+                                Institutional Tracking) is a comprehensive web-based event compliance tracking system designed specifically
+                                for Holy Angel University student organizations.
+                            </p>
+                            <p>
+                                Our platform streamlines the event proposal and compliance process, ensuring that all student activities
+                                meet HAU Office of Student Affairs (OSA) requirements while reducing administrative burden on student
+                                leaders.
+                            </p>
+                        </div>
+                    </div>
                 </header>
 
                 <!-- Key Features section -->
                 <section class="about-section">
-                    <h2>Key Features</h2>
-                    <ul class="feature-list">
-                        <li><strong>Centralized Event Dashboard</strong> - View all your inputted events in one place with real-time
-                          updates on compliance status, requirements, and progress. Your event dashboard makes planning and monitoring
-                          effortless.</li>
+                    <div class="section-header">
+                        <h2>Key Features</h2>
+                        <p class="section-subtitle">Everything you need to manage events efficiently</p>
+                    </div>
+                    
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                            <h3>Centralized Event Dashboard</h3>
+                            <p>View all your inputted events in one place with real-time updates on compliance status, requirements, and progress. Your event dashboard makes planning and monitoring effortless.</p>
+                        </div>
 
-                        <li><strong>Intelligent Event Guidance</strong> - HAUCREDIT automatically classifies your event type and
-                          highlights required documents, helping student leaders stay on track with institutional policies.</li>
-                        <li><strong>Template Library</strong> - Direct access to official HAU OSA form templates via tinyurl links</li>
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fa-solid fa-lightbulb"></i>
+                            </div>
+                            <h3>Intelligent Event Guidance</h3>
+                            <p>HAUCREDIT automatically classifies your event type and highlights required documents, helping student leaders stay on track with institutional policies.</p>
+                        </div>
 
-                        <li><strong>Automated Compliance Checklist</strong> - Generate a personalized checklist for each event to
-                          ensure nothing is overlooked, minimizing delays and administrative headaches.</li>
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fa-solid fa-book-open"></i>
+                            </div>
+                            <h3>Template Library</h3>
+                            <p>Direct access to official HAU OSA form templates via tinyurl links for quick and easy document preparation.</p>
+                        </div>
 
-                        <li><strong>Built-in Templates for Requirements</strong> - Whenever specific forms are needed, HAUCREDIT
-                          provides direct access to official HAU OSA templates alongside your event requirements.</li>
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fa-solid fa-clipboard-list"></i>
+                            </div>
+                            <h3>Automated Compliance Checklist</h3>
+                            <p>Generate a personalized checklist for each event to ensure nothing is overlooked, minimizing delays and administrative headaches.</p>
+                        </div>
 
-                        <li><strong>Secure Login & Session Management</strong> - Access HAUCREDIT safely with your personal account,
-                          ensuring your event data remains private and protected.</li>
-                    </ul>
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fa-solid fa-file-alt"></i>
+                            </div>
+                            <h3>Built-in Templates for Requirements</h3>
+                            <p>Whenever specific forms are needed, HAUCREDIT provides direct access to official HAU OSA templates alongside your event requirements.</p>
+                        </div>
+
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <i class="fa-solid fa-shield-alt"></i>
+                            </div>
+                            <h3>Secure Login & Session Management</h3>
+                            <p>Access HAUCREDIT safely with your personal account, ensuring your event data remains private and protected.</p>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- Mission section -->
@@ -124,7 +163,7 @@ if (!isset($_SESSION["user_id"])) {
                             <figure><img src="assets/images/team/dannah.jpg" alt="Dannah Mikayla M. Sanchez" class="about-img"></figure>
                             <div class="about-body">
                                 <h3>Dannah Mikayla M. Sanchez</h3>
-                                <p class="role">Frontend Developer (Layout Architect)</p>
+                                <p class="role">Frontend Developer (Layout Architect & UI/UX Designer)</p>
                                 <p>
                                     Responsible for creating the wireframes, defining the site structure, layouts, and navigation flow,
                                     designing the overall user interface reference, and implementing the responsive layout and navigation
