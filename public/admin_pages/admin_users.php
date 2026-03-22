@@ -20,13 +20,24 @@ if (empty($_SESSION["csrf_token"])) {
 }
 $csrf_token = $_SESSION["csrf_token"];
 
-/* ================= HELPERS ================= */
+// ==================== HELPER FUNCTIONS ====================
+
+/**
+ * HELPER: normalizeRoleClass
+ * PURPOSE: Convert user role to CSS class name for styling
+ * USAGE: Converts "admin" → "admin", "user" → "user" for badge styling
+ * 
+ * @param string $role The user role string
+ * @return string CSS class-friendly role name
+ */
 function normalizeRoleClass(string $role): string
 {
     return strtolower(str_replace(' ', '-', trim($role)));
 }
 
-/* ================= SUMMARY COUNTS ================= */
+// ==================== FETCH USER SUMMARY COUNTS ====================
+// Aggregate query: count total users and break down by role
+// Used for summary statistics cards at top of page
 $summarySql = "
     SELECT
         COUNT(*) AS total_users,
@@ -37,7 +48,9 @@ $summarySql = "
 
 $summary = fetchOne($conn, $summarySql, "", []);
 
-/* ================= ORG OPTIONS FROM CONFIG ================= */
+// ==================== FETCH ORGANIZATION OPTIONS ====================
+// Query for all active organizations (for add user form and org filter dropdown)
+// Sorted by sort_order first, then by name for consistent display
 $orgOptionsSql = "
     SELECT org_name
     FROM config_org_options
@@ -47,7 +60,9 @@ $orgOptionsSql = "
 
 $orgOptions = fetchAll($conn, $orgOptionsSql, "", []);
 
-/* ================= USER LIST ================= */
+// ==================== FETCH USER LIST WITH EVENT COUNTS ====================
+// Complex query: get all users with their event statistics by status
+// JOINs with events table (LEFT JOIN for users with no events) and aggregates by status
 $fetchUsersSql = "
     SELECT
         u.user_id,
@@ -76,6 +91,9 @@ $fetchUsersSql = "
 $params = [];
 $types = "";
 
+// ============= FILTER: SEARCH =============
+// If search query provided, filter users by multiple fields with LIKE
+// Searchable fields: username, email, student number, organization, role
 if ($search !== '') {
     $fetchUsersSql .= "
         AND (
@@ -91,12 +109,16 @@ if ($search !== '') {
     $types .= "sssss";
 }
 
+// ============= FILTER: ORGANIZATION =============
+// If organization filter selected, show only users from that organization
 if ($org_filter !== '') {
     $fetchUsersSql .= " AND u.org_body = ?";
     $params[] = $org_filter;
     $types .= "s";
 }
 
+// ==================== GROUP AND SORT USERS ====================
+// Group by user fields to aggregate event counts, then sort for display
 $fetchUsersSql .= "
     GROUP BY
         u.user_id,
@@ -119,11 +141,14 @@ $fetchUsersSql .= "
 
 $users = fetchAll($conn, $fetchUsersSql, $types, $params);
 
-/* ================= DERIVED COUNTS ================= */
+// ==================== EXTRACT SUMMARY COUNTS ====================
+// Convert null counts to 0 for safe arithmetic
 $total_users = (int) ($summary['total_users'] ?? 0);
 $total_admins = (int) ($summary['total_admins'] ?? 0);
 $total_standard_users = (int) ($summary['total_standard_users'] ?? 0);
 
+// ==================== CALCULATE USERS WITH EVENTS ====================
+// Count how many users have created at least one event
 $total_with_events = 0;
 foreach ($users as $user) {
     if ((int) ($user['total_events'] ?? 0) > 0) {
@@ -159,6 +184,7 @@ foreach ($users as $user) {
                 </div>
             </header>
 
+            <!-- ==================== MAIN CONTENT SECTION ==================== -->
             <section class="content admin-users-page">
                 <?php if ($success !== ""): ?>
                     <div class="notice success"><?= htmlspecialchars($success) ?></div>
@@ -191,7 +217,8 @@ foreach ($users as $user) {
                     </article>
                 </section>
 
-                <!-- Add User -->
+                <!-- ==================== ADD USER FORM ==================== -->
+                <!-- Form for creating new user accounts -->
                 <section class="add-user-card">
                     <div class="card-header">
                         <h2>Add User</h2>
@@ -249,7 +276,8 @@ foreach ($users as $user) {
                     </div>
                 </section>
 
-                <!-- Search Toolbar -->
+                <!-- ==================== SEARCH AND FILTER TOOLBAR ==================== -->
+                <!-- Contains search input and organization filter dropdown -->
                 <section class="users-toolbar">
                     <form method="GET" class="toolbar-search" id="usersFilterForm">
                         <div class="search-wrap">
@@ -418,15 +446,20 @@ foreach ($users as $user) {
             const orgSelect = document.getElementById('orgSelect');
             const searchInput = document.getElementById('searchInput');
 
+            // ============= ORGANIZATION DROPDOWN AUTO-SUBMIT =============
+            // When organization filter changes, submit the form immediately
             if (orgSelect) {
                 orgSelect.addEventListener('change', function () {
                     filterForm.submit();
                 });
             }
 
+            // ============= SEARCH INPUT DEBOUNCED AUTO-SUBMIT =============
+            // Submit form after user stops typing for 500ms (debounce to avoid excessive requests)
             if (searchInput) {
                 let searchTimer;
 
+                // On input: start/reset debounce timer
                 searchInput.addEventListener('input', function () {
                     clearTimeout(searchTimer);
                     searchTimer = setTimeout(function () {
@@ -434,6 +467,7 @@ foreach ($users as $user) {
                     }, 500);
                 });
 
+                // On Enter key: submit immediately without delay
                 searchInput.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();
@@ -443,8 +477,12 @@ foreach ($users as $user) {
                 });
             }
 
+            // ============= CONFIRMATION DIALOGS FOR DESTRUCTIVE ACTIONS =============
+            // Find all forms with data-confirm attribute (forms that need confirmation)
             document.querySelectorAll('form[data-confirm]').forEach(form => {
                 form.addEventListener('submit', function (e) {
+                    // Show confirm dialog with message from data-confirm attribute
+                    // If user clicks Cancel, prevent form submission
                     if (!confirm(this.dataset.confirm)) {
                         e.preventDefault();
                     }

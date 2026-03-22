@@ -46,9 +46,9 @@ function parseMetric(?string $metric): ?array
     }
 
     return [
-        'percent' => $percent,
-        'label' => $label,
-        'normalized_label' => strtolower(preg_replace('/\s+/', ' ', $label))
+        'percent' => $percent,                                        // Numeric percentage (0-100)
+        'label' => $label,                                            // Original label text
+        'normalized_label' => strtolower(preg_replace('/\s+/', ' ', $label))  // Lowercase, single-space normalized for comparison
     ];
 }
 
@@ -85,6 +85,14 @@ function getMetricAchievementStatus(?string $target_metric, ?string $actual_metr
 }
 
 /* ================= FETCH NARRATIVE REPORT ================= */
+// Build SQL query to retrieve narrative report and event details for admin review
+// This query joins multiple tables to get complete record information:
+// - events: Event details and admin remarks
+// - users: User who submitted the report
+// - event_requirements: Requirement status and review information
+// - requirement_templates: Filter by "Narrative Report" requirement type
+// - narrative_report_details: Submitted narrative content and links
+// - event_metrics: Target and actual achievement metrics
 $sql = "
     SELECT
         e.event_id,
@@ -136,11 +144,17 @@ if (!$row) {
     popup_error("Narrative Report not found for this event.");
 }
 
+// Evaluate metric achievement status for display in metrics review card
+// Uses target vs actual metrics to determine if goal was achieved, not achieved, type mismatch, or not evaluated
 $metric_status = getMetricAchievementStatus(
     $row['target_metric'] ?? null,
     $row['actual_metric'] ?? null
 );
 
+// Determine if admin can review this narrative report
+// Requirements for review enabled:
+// 1. Event status is NOT "Draft" or "Completed" (workflow allows review)
+// 2. Submission status IS "Uploaded" (user has submitted narrative)
 $can_review = !in_array(($row['event_status'] ?? ''), ['Draft', 'Completed'], true)
     && (($row['submission_status'] ?? '') === 'Uploaded');
 ?>
@@ -160,6 +174,7 @@ $can_review = !in_array(($row['event_status'] ?? ''), ['Draft', 'Completed'], tr
 
         <?php include PUBLIC_PATH . 'assets/includes/admin_nav.php'; ?>
 
+        <!-- ==================== MAIN CONTENT AREA ==================== -->
         <main class="main">
             <header class="topbar">
                 <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
@@ -174,6 +189,8 @@ $can_review = !in_array(($row['event_status'] ?? ''), ['Draft', 'Completed'], tr
                 </div>
             </header>
 
+            <!-- ==================== CONTENT CONTAINER ==================== -->
+            <!-- Main content section with two-column layout (left=details, right=guidance) -->
             <section class="content view-event-page">
                 <div class="status-banner status-<?= htmlspecialchars(normalizeStatusClass($row['event_status'] ?? 'Pending Review')) ?>">
                     <div class="status-content">
@@ -188,6 +205,7 @@ $can_review = !in_array(($row['event_status'] ?? ''), ['Draft', 'Completed'], tr
                     </div>
                 </div>
 
+                <!-- ==================== LEFT COLUMN: DETAIL CARDS ==================== -->
                 <div class="col-left">
                     <section class="detail-card">
                         <div class="card-header">
@@ -231,6 +249,8 @@ $can_review = !in_array(($row['event_status'] ?? ''), ['Draft', 'Completed'], tr
                         </div>
                     </section>
 
+                    <!-- ==================== CARD 2: NARRATIVE CONTENT ==================== -->
+                    <!-- Displays the actual narrative text and video documentation link submitted by user -->
                     <section class="detail-card">
                         <div class="card-header">
                             <h2><i class="fa-solid fa-file-lines"></i> Narrative Content</h2>
@@ -264,6 +284,8 @@ $can_review = !in_array(($row['event_status'] ?? ''), ['Draft', 'Completed'], tr
                         </div>
                     </section>
 
+                    <!-- ==================== CARD 3: METRICS REVIEW ==================== -->
+                    <!-- Compares target vs actual achievement metrics to evaluate success -->
                     <section class="detail-card">
                         <div class="card-header">
                             <h2><i class="fa-solid fa-chart-column"></i> Metrics Review</h2>
@@ -288,6 +310,8 @@ $can_review = !in_array(($row['event_status'] ?? ''), ['Draft', 'Completed'], tr
                         </div>
                     </section>
 
+                    <!-- ==================== CARD 4: REQUIREMENT REMARKS & REVIEW FORM ==================== -->
+                    <!-- Admin review section: Display existing remarks and allow approve/revision actions -->
                     <section class="detail-card">
                         <div class="card-header">
                             <h2><i class="fa-solid fa-comment-dots"></i> Requirement Remarks</h2>
@@ -331,6 +355,7 @@ $can_review = !in_array(($row['event_status'] ?? ''), ['Draft', 'Completed'], tr
                     </section>
                 </div>
 
+                <!-- ==================== RIGHT COLUMN: GUIDANCE SIDEBAR ==================== -->
                 <div class="col-right">
                     <section class="detail-card">
                         <div class="card-header">

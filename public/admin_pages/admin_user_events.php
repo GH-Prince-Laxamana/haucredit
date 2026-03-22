@@ -41,7 +41,9 @@ if (!isValidStatusFilter($status_filter)) {
     $status_filter = 'all';
 }
 
-/* ================= FETCH USER ================= */
+// ==================== FETCH USER ====================
+// Query database for the specific user's profile information
+// Use this to display user details in the header and profile card
 $user = fetchOne(
     $conn,
     "
@@ -66,9 +68,13 @@ if (!$user) {
     popup_error("User not found.");
 }
 
+// ==================== EXTRACT USER ID ====================
+// Store validated user ID for use in subsequent queries and links
 $selected_user_id = (int) $user['user_id'];
 
-/* ================= USER EVENT COUNTS ================= */
+// ==================== FETCH EVENT COUNTS ====================
+// Aggregate query: count total events and break down by status
+// This provides summary statistics for the stats cards below the header
 $countSql = "
     SELECT
         COUNT(*) AS total_events,
@@ -85,7 +91,9 @@ $countSql = "
 
 $counts = fetchOne($conn, $countSql, "i", [$user_id]);
 
-/* ================= FETCH USER EVENTS ================= */
+// ==================== FETCH USER EVENTS ====================
+// Complex query to retrieve all events for this user with related data
+// JOINs with multiple tables to get activity type, background, dates, and location info
 $fetchEventsSql = "
     SELECT
         e.event_id,
@@ -124,15 +132,22 @@ $fetchEventsSql = "
       AND e.is_system_event = 0
 ";
 
+// ==================== BUILD DYNAMIC FILTERS ====================
+// Initialize parameters array and type string for prepared statement
 $params = [$user_id];
 $types = "i";
 
+// ============= FILTER: STATUS =============
+// If status filter is not 'all', add WHERE clause to filter by specific status
 if ($status_filter !== 'all') {
     $fetchEventsSql .= " AND e.event_status = ?";
     $params[] = $status_filter;
     $types .= "s";
 }
 
+// ============= FILTER: SEARCH =============
+// If search query provided, filter events by name, nature, activity type, background, or venue
+// Uses LIKE with wildcards for flexible matching
 if ($search !== '') {
     $fetchEventsSql .= "
         AND (
@@ -143,11 +158,14 @@ if ($search !== '') {
             OR el.venue_platform LIKE ?
         )
     ";
+    // Create LIKE pattern with wildcards on both sides for partial matching
     $like = "%" . $search . "%";
     array_push($params, $like, $like, $like, $like, $like);
     $types .= "sssss";
 }
 
+// ==================== SORT EVENTS ====================
+// Priority-based sort: show events needing attention first, then by date
 $fetchEventsSql .= "
     ORDER BY
         CASE e.event_status
@@ -165,6 +183,8 @@ $fetchEventsSql .= "
 
 $events = fetchAll($conn, $fetchEventsSql, $types, $params);
 
+// ==================== EXTRACT EVENT COUNTS ====================
+// Convert null counts to 0 for safe arithmetic
 $total_events = (int) ($counts['total_events'] ?? 0);
 $draft_count = (int) ($counts['draft_count'] ?? 0);
 $pending_review_count = (int) ($counts['pending_review_count'] ?? 0);
@@ -193,6 +213,7 @@ $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-use
 
         <?php include PUBLIC_PATH . 'assets/includes/admin_nav.php'; ?>
 
+        <!-- ==================== MAIN CONTENT AREA ==================== -->
         <main class="main">
             <header class="topbar">
                 <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
@@ -209,6 +230,7 @@ $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-use
                 </div>
             </header>
 
+            <!-- ==================== MAIN CONTENT SECTION ==================== -->
             <section class="content admin-user-events-page">
                 <!-- User Profile -->
                 <section class="user-profile-card">
@@ -247,7 +269,8 @@ $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-use
                     </div>
                 </section>
 
-                <!-- Stats -->
+                <!-- ==================== EVENT STATISTICS CARDS ==================== -->
+                <!-- Summary cards showing event counts by status -->
                 <section class="events-stats">
                     <article class="stat-card">
                         <div class="stat-number"><?= $total_events ?></div>
@@ -280,7 +303,8 @@ $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-use
                     </article>
                 </section>
 
-                <!-- Toolbar -->
+                <!-- ==================== TOOLBAR: FILTERS AND SEARCH ==================== -->
+                <!-- Contains status filter tabs and search functionality -->
                 <section class="events-toolbar">
                     <div class="toolbar-top">
                         <?php
@@ -338,7 +362,8 @@ $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-use
                     </div>
                 </section>
 
-                <!-- Events Table -->
+                <!-- ==================== EVENTS TABLE ==================== -->
+                <!-- Displays user's events with details and action buttons -->
                 <section class="events-table-container">
                     <table class="events-table">
                         <thead>
@@ -483,15 +508,20 @@ $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-use
             const autoSubmitFields = form.querySelectorAll('.auto-submit-filter');
             const searchInput = document.getElementById('searchInput');
 
+            // ============= STATUS DROPDOWN AUTO-SUBMIT =============
+            // When status dropdown changes, submit the form immediately
             autoSubmitFields.forEach(field => {
                 field.addEventListener('change', function () {
                     form.submit();
                 });
             });
 
+            // ============= SEARCH INPUT DEBOUNCED AUTO-SUBMIT =============
+            // Submit form after user stops typing for 500ms (debounce to avoid excessive requests)
             if (searchInput) {
                 let searchTimer;
 
+                // On input: start/reset debounce timer
                 searchInput.addEventListener('input', function () {
                     clearTimeout(searchTimer);
                     searchTimer = setTimeout(function () {
@@ -499,6 +529,7 @@ $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-use
                     }, 500);
                 });
 
+                // On Enter key: submit immediately without delay
                 searchInput.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter') {
                         e.preventDefault();

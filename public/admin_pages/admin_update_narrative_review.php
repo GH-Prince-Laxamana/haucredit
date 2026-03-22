@@ -25,7 +25,10 @@ if (!in_array($action, $allowed_actions, true)) {
     popup_error("Invalid action.");
 }
 
-/* ================= FETCH NARRATIVE REQUIREMENT ================= */
+// ==================== FETCH NARRATIVE REQUIREMENT ====================
+// Query database for the specific narrative report requirement
+// JOIN requirement_templates: get requirement name to verify this is Narrative Report
+// JOIN events: get event status to validate review eligibility
 $row = fetchOne(
     $conn,
     "
@@ -56,28 +59,42 @@ if (!$row) {
     popup_error("Narrative Report not found.");
 }
 
+// ==================== EXTRACT REQUIRED FIELDS ====================
+// Get event status for workflow validation
 $event_status = $row["event_status"] ?? "";
+// Get submission status to control review eligibility
 $submission_status = $row["submission_status"] ?? "";
 
+// ==================== VALIDATION: EVENT STATUS ====================
+// Narrative Report cannot be reviewed if event is in Draft (not yet submitted) or Completed state
+// These states don't require/allow narrative review
 if (in_array($event_status, ["Draft", "Completed"], true)) {
     popup_error("Narrative Report cannot be reviewed while the event status is {$event_status}.");
 }
 
+// ==================== VALIDATION: SUBMISSION STATUS ====================
+// Only uploaded narratives can be reviewed (save_remarks is allowed anytime)
+// If narrative not uploaded yet, return error unless just saving remarks
 if ($submission_status !== "Uploaded" && $action !== "save_remarks") {
     popup_error("Only uploaded Narrative Reports can be reviewed.");
 }
 
+// ==================== TRANSACTION: UPDATE NARRATIVE REVIEW ====================
+// Use transactions to ensure data consistency: all updates succeed or all fail
 try {
     $conn->begin_transaction();
 
+    // =============== ACTION: SAVE REMARKS ===============
+    // Save admin feedback without changing review status
+    // Remarks are optional; empty remarks are stored as NULL
     if ($action === "save_remarks") {
         execQuery(
             $conn,
             "
             UPDATE event_requirements
             SET
-                remarks = ?,
-                updated_at = CURRENT_TIMESTAMP
+                remarks = ?,                       
+                updated_at = CURRENT_TIMESTAMP      
             WHERE event_req_id = ?
             ",
             "si",
@@ -85,6 +102,9 @@ try {
         );
     }
 
+    // =============== ACTION: APPROVE ===============
+    // Mark narrative report as reviewed and approved
+    // Sets review status to 'Approved', records reviewer ID and timestamp
     if ($action === "approve") {
         execQuery(
             $conn,
@@ -103,6 +123,9 @@ try {
         );
     }
 
+    // =============== ACTION: NEEDS REVISION ===============
+    // Mark narrative report as needing revision
+    // Also cascades to event status: event returns to 'Needs Revision' (user must resubmit narrative)
     if ($action === "needs_revision") {
         execQuery(
             $conn,

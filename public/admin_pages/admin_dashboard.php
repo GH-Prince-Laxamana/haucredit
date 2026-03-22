@@ -1,19 +1,113 @@
 <?php
+/**
+ * Admin Dashboard Page
+ * 
+ * The main admin landing page providing:
+ * - At-a-glance statistics of system activity
+ * - Recent event submissions (last 5)
+ * - Events requiring attention (Needs Revision status)
+ * - Upcoming review deadlines for pending events
+ * - User accounts preview (last 5 registered)
+ * - Visual dashboard with stat cards and summary alerts
+ * 
+ * Key Features:
+ * - Real-time event status counts (Pending Review, Needs Revision, Approved, Completed)
+ * - Document upload progress tracking
+ * - Alert section highlighting events needing revision
+ * - Two-column layout with recent submissions and attention queue
+ * - User registration preview with event counts
+ * - Quick links to detailed pages (View All, Open Queue)
+ * 
+ * Access Control:
+ * - Admin-only page (requireAdmin() prevents non-admin access)
+ * - Requires valid session
+ * 
+ * Data Sources:
+ * - 6 database queries loading statistics and recent data
+ * - Grouped into logical sections for dashboard display
+ */
+
 session_start();
 require_once __DIR__ . '/../../app/database.php';
 
 requireAdmin();
 
+// ========== ADMIN NAME FOR GREETING ==========
+// Get the logged-in admin's username for personalized greeting
+// Falls back to "Admin" if username not in session
+// htmlspecialchars() prevents XSS if username contains HTML characters
 $admin_name = htmlspecialchars($_SESSION["username"] ?? "Admin", ENT_QUOTES, "UTF-8");
 
-/* ================= HELPERS ================= */
+/* ========================================
+   HELPER FUNCTIONS SECTION
+   ======================================== */
+
+/**
+ * Normalizes event status string to CSS class name
+ * 
+ * Converts database status values to valid CSS classes for styling
+ * 
+ * @param string $status - The event status from database
+ *   Examples: "Pending Review", "Needs Revision", "Approved", "Completed"
+ * 
+ * @returns string - CSS class name (lowercase with hyphens)
+ *   Examples: "pending-review", "needs-revision", "approved", "completed"
+ * 
+ * Implementation:
+ * - str_replace(' ', '-'): Converts spaces to hyphens
+ * - strtolower(): Converts to lowercase
+ * - trim(): Removes leading/trailing whitespace
+ * 
+ * Usage:
+ * <span class="status-<?= normalizeStatusClass($status) ?>">
+ * 
+ * Rationale:
+ * - Status names from database contain spaces and mixed case
+ * - CSS classes need to be lowercase with hyphens (convention)
+ * - Allows CSS to style different statuses with corresponding classes
+ */
 function normalizeStatusClass(string $status): string
 {
     return strtolower(str_replace(' ', '-', trim($status)));
 }
 
+/**
+ * Formats datetime for display on dashboard
+ * 
+ * Converts ISO datetime (from database) to readable format
+ * 
+ * @param ?string $datetime - ISO datetime string or null/empty
+ *   Format from database: "2024-03-22 14:30:00"
+ * 
+ * @returns string - Formatted datetime for display
+ *   Examples: "Mar 22, 2024 2:30 PM"
+ *   Empty returns: "No schedule set"
+ * 
+ * Implementation:
+ * - Check if datetime is empty/null
+ * - Use PHP date() function with format string
+ * - strtotime() converts ISO to Unix timestamp
+ * - Format: "M j, Y g:i A" (Month Day, Year Hour:Minutes AM/PM)
+ * 
+ * Format Characters:
+ * - M: Short month name (Jan, Feb, Mar, ...)
+ * - j: Day without leading zero (1-31)
+ * - Y: 4-digit year
+ * - g: Hour in 12-hour format without leading zero (1-12)
+ * - i: Minutes with leading zero (00-59)
+ * - A: AM/PM in uppercase
+ * 
+ * Usage:
+ * <small><?= formatEventDate($event['start_datetime']) ?></small>
+ * 
+ * Rationale:
+ * - ISO format (8:30) not user-friendly for US audience
+ * - AM/PM (12-hour) more intuitive than 24-hour format
+ * - Consistent date formatting across dashboard
+ */
 function formatEventDate(?string $datetime): string
 {
+    // Return default message if datetime is empty/null
     if (empty($datetime)) {
         return "No schedule set";
     }
@@ -21,13 +115,64 @@ function formatEventDate(?string $datetime): string
     return date("M j, Y g:i A", strtotime($datetime));
 }
 
+/**
+ * Gets first initial from user name for avatar
+ * 
+ * Used in user profile cards to display as avatar fallback
+ * 
+ * @param string $name - Full user name (e.g., "John Smith")
+ * @returns string - Single uppercase letter
+ *   Examples: "J" from "John Smith", "S" from "Smith", "U" if empty
+ * 
+ * Implementation:
+ * - Trim whitespace from name
+ * - Check if name is non-empty
+ * - Get first character
+ * - Convert to uppercase
+ * - Fallback to "U" (User) if name is empty
+ * 
+ * Usage:
+ * <div class="avatar-initial"><?= getUserInitial($user['user_name']) ?></div>
+ * 
+ * Rationale:
+ * - User avatars often show first initial in circular badge
+ * - Consistent visual identifier for users
+ * - Fallback prevents showing empty avatar
+ * - Always uppercase for consistent styling
+ */
 function getUserInitial(string $name): string
 {
     $name = trim($name);
+    
+    // Return first character (uppercase) if name is not empty
+    // Otherwise return 'U' as fallback for "User"
     return $name !== '' ? strtoupper(substr($name, 0, 1)) : 'U';
 }
 
-/* ================= SUMMARY COUNTS ================= */
+/* ========================================
+   STATISTICS QUERIES SECTION
+   ======================================== */
+
+/**
+ * Load event status counts
+ * 
+ * Counts events by status to display in stat cards
+ * Only counts non-archived, non-system events
+ * 
+ * Query Logic:
+ * - Uses SUM with CASE to count by status
+ * - Returns 0 for each status if no events exist
+ * - WHERE filters to only user-created events (is_system_event = 0)
+ * - AND filters to non-archived events (archived_at IS NULL)
+ * 
+ * Statuses Counted:
+ * - pending_review_count: Awaiting initial admin review
+ * - needs_revision_count: Sent back to user for changes
+ * - approved_count: Approved by admin
+ * - completed_count: Event happened and all requirements done
+ * 
+ * Result: Single row with 4 columns
+ */
 $countStatusesSql = "
     SELECT
         SUM(CASE WHEN event_status = 'Pending Review' THEN 1 ELSE 0 END) AS pending_review_count,
@@ -40,6 +185,17 @@ $countStatusesSql = "
 ";
 $statusCounts = fetchOne($conn, $countStatusesSql);
 
+/**
+ * Count total regular users
+ * 
+ * Gets number of non-admin user accounts in system
+ * 
+ * Query Logic:
+ * - SELECT COUNT(*): Counts all rows matching criteria
+ * - WHERE role = 'user': Only regular users (excludes admins)
+ * 
+ * Result: Single row with total_users column
+ */
 $countUsersSql = "
     SELECT COUNT(*) AS total_users
     FROM users
@@ -47,6 +203,22 @@ $countUsersSql = "
 ";
 $userCountRow = fetchOne($conn, $countUsersSql);
 
+/**
+ * Count upcoming events pending review
+ * 
+ * Counts pending/revision events that haven't happened yet
+ * Used for "Review Queue" stat card
+ * 
+ * Query Logic:
+ * - LEFT JOIN event_dates: Some events may not have dates yet
+ * - WHERE archived_at IS NULL: Only non-archived
+ * - AND is_system_event = 0: Only user-created events
+ * - AND event_status IN (...): Only pending or revision status
+ * - AND ed.start_datetime IS NOT NULL: Only events with scheduled dates
+ * - AND ed.start_datetime >= NOW(): Only upcoming events (today and later)
+ * 
+ * Result: Single row with total column
+ */
 $countUpcomingReviewSql = "
     SELECT COUNT(*) AS total
     FROM events e
@@ -59,7 +231,38 @@ $countUpcomingReviewSql = "
 ";
 $reviewDeadlineRow = fetchOne($conn, $countUpcomingReviewSql);
 
-/* ================= RECENT EVENT SUBMISSIONS ================= */
+/* ========================================
+   RECENT EVENTS QUERY SECTION
+   ======================================== */
+
+/**
+ * Load recent event submissions
+ * 
+ * Gets last 5 events in active workflow (not archived, recently created)
+ * Displays on left side of dashboard for quick review
+ * 
+ * Join Strategy:
+ * - INNER JOIN users: Get submitter info (required)
+ * - LEFT JOIN event_dates: Optional (many events have dates)
+ * - LEFT JOIN event_location: Optional (many have venues)
+ * 
+ * Filtering:
+ * - archived_at IS NULL: Active events only
+ * - is_system_event = 0: User submissions, not system events
+ * - event_status IN (...): Active workflow (not completed/archived)
+ * 
+ * Sorting:
+ * - created_at DESC: Most recent first
+ * - LIMIT 5: Show last 5 submissions
+ * 
+ * Data Points per Event:
+ * - event_name, event_status, docs_total, docs_uploaded: Progress tracking
+ * - user_name, org_body: Submitter details
+ * - start_datetime: When event is scheduled
+ * - venue_platform: Where event is held
+ * 
+ * Used for: Document upload progress bars, status badges
+ */
 $fetchRecentEventsSql = "
     SELECT
         e.event_id,
@@ -89,7 +292,35 @@ $fetchRecentEventsSql = "
 ";
 $recent_events = fetchAll($conn, $fetchRecentEventsSql);
 
-/* ================= EVENTS REQUIRING ATTENTION ================= */
+/* ========================================
+   EVENTS REQUIRING ATTENTION QUERY SECTION
+   ======================================== */
+
+/**
+ * Load events marked as "Needs Revision"
+ * 
+ * These events have been reviewed and require user action before approval
+ * Highlights problems/missing requirements for admin to track
+ * Shows up to 6 events in attention queue
+ * 
+ * Filtering:
+ * - event_status IN ('Needs Revision'): Only problem events
+ * - archived_at IS NULL: Active events only
+ * - is_system_event = 0: User submissions
+ * 
+ * Sorting Strategy:
+ * - CASE event_status: Priority by urgency (revisions first)
+ * - CASE WHEN ed.start_datetime IS NULL: Events without dates are urgent
+ * - ed.start_datetime ASC: Earlier events first (deadline approaching)
+ * - e.updated_at ASC: Older unanswered updates highest priority
+ * 
+ * Result:
+ * - Up to 6 events sorted by urgency
+ * - Shows events that have been pending longest
+ * - Highlights events approaching start dates
+ * 
+ * Used for: Attention cards section (right side), urgent alert
+ */
 $fetchAttentionEventsSql = "
     SELECT
         e.event_id,
@@ -122,7 +353,38 @@ $fetchAttentionEventsSql = "
 ";
 $attention_events = fetchAll($conn, $fetchAttentionEventsSql);
 
-/* ================= USERS PREVIEW ================= */
+/* ========================================
+   USERS PREVIEW QUERY SECTION
+   ======================================== */
+
+/**
+ * Load user registration preview
+ * 
+ * Shows last 5 registered users with event count
+ * Helps admin track new user signups
+ * 
+ * Join Strategy:
+ * - LEFT JOIN events: Count user's events
+ * - Join filters: Only count non-archived, non-system events
+ * 
+ * Grouping:
+ * - GROUP BY user fields: Aggregate events per user
+ * - COUNT(e.event_id) AS total_events: How many events this user created
+ * 
+ * Filtering:
+ * - u.role = 'user': Only regular users, not admins
+ * 
+ * Sorting:
+ * - user_reg_date DESC: Most recently registered first
+ * - LIMIT 5: Show last 5 registrations
+ * 
+ * Data Points per User:
+ * - user_name, user_email, org_body: User details
+ * - total_events: How many events they've created
+ * - user_reg_date: When they registered (for display)
+ * 
+ * Used for: User registration tracking, user cards
+ */
 $fetchUsersPreviewSql = "
     SELECT
         u.user_id,
@@ -143,7 +405,32 @@ $fetchUsersPreviewSql = "
 ";
 $users_preview = fetchAll($conn, $fetchUsersPreviewSql);
 
-/* ================= REVIEW DEADLINES ================= */
+/* ========================================
+   REVIEW DEADLINES QUERY SECTION
+   ======================================== */
+
+/**
+ * Load upcoming review deadlines
+ * 
+ * Events pending review sorted by event start date (deadline to review before event)
+ * Helps admin prioritize review workload by urgency
+ * 
+ * Filtering:
+ * - event_status IN ('Pending Review'): Only events awaiting initial review
+ * - ed.start_datetime IS NOT NULL: Only events with scheduled dates
+ * - archived_at IS NULL: Active events only
+ * - is_system_event = 0: User submissions
+ * 
+ * Sorting:
+ * - ed.start_datetime ASC: Closest events first (most urgent)
+ * - LIMIT 5: Show 5 most urgent reviews
+ * 
+ * Data Points:
+ * - event_name, user_name, org_body: Context
+ * - start_datetime: Event start date (review deadline)
+ * 
+ * Used for: Review deadlines section displaying timeline
+ */
 $fetchReviewDeadlinesSql = "
     SELECT
         e.event_id,
@@ -166,6 +453,20 @@ $fetchReviewDeadlinesSql = "
 ";
 $review_deadlines = fetchAll($conn, $fetchReviewDeadlinesSql);
 
+/* ========================================
+   EXTRACT STATISTICS FOR DISPLAY
+   ======================================== */
+
+/**
+ * Convert database counts to PHP variables for template use
+ * 
+ * Safely cast to int to handle null/empty results
+ * Provides default 0 if result is missing
+ * 
+ * fetchOne() returns associative array or null
+ * Array access with ?? operator provides fallback
+ * (int) cast ensures numeric value for arithmetic/display
+ */
 $pending_review_count = (int) ($statusCounts['pending_review_count'] ?? 0);
 $needs_revision_count = (int) ($statusCounts['needs_revision_count'] ?? 0);
 $approved_count = (int) ($statusCounts['approved_count'] ?? 0);
