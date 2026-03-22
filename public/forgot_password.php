@@ -5,26 +5,33 @@ require_once __DIR__ . '/../app/database.php';
 require_once("../app/security_headers.php");
 send_security_headers();
 
+// Verify that the user is not already logged in; redirect them if they are
 redirectIfLoggedIn();
 
-// ===== SELF-REFERENCING FORM ACTION =====
+// ===== PAGE VARIABLES =====
+// Generate the self-referencing form action URL with proper HTML escaping
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 
-// ===== MESSAGE VARIABLES =====
+// Initialize message variable to display feedback to the user
 $msg = "";
+
+// Initialize development link variable (used only for demonstration purposes)
 $dev_link = "";
 
 // ===== FORM SUBMISSION HANDLING =====
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // Extract and sanitize the email input from the form submission
     $email = trim($_POST["email"] ?? "");
 
     // ===== EMAIL VALIDATION =====
+    // Verify that the email field is not empty
     if ($email === "") {
         $msg = "Please enter your student email.";
     } else {
         $msg = "If that email exists, a reset link will be generated.";
 
-        // ===== USER LOOKUP =====
+        // ===== DATABASE LOOKUP: FIND USER BY EMAIL =====
+        // Query the database to check if a user account exists with the provided email
         $fetchUserByEmailSql = "
             SELECT user_id
             FROM users
@@ -39,15 +46,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             [$email]
         );
 
-        // ===== TOKEN GENERATION AND STORAGE =====
+        // ===== TOKEN GENERATION & STORAGE =====
+        // Only proceed if a matching user account was found in the database
         if ($user) {
+            // Extract and cast the user ID to ensure proper type handling
             $user_id = (int) $user["user_id"];
 
+            // Generate a cryptographically secure random token for password reset
             $token = bin2hex(random_bytes(32));
+
+            // Hash the token using bcrypt to store a secure version in the database
             $token_hash = password_hash($token, PASSWORD_DEFAULT);
+
+            // Set token expiration to 30 minutes from the current time
             $expires_at = date("Y-m-d H:i:s", time() + 30 * 60);
 
-            // ===== CLEANUP OLD RESET TOKENS =====
+            // ===== CLEANUP: REMOVE EXPIRED OR PREVIOUS RESET TOKENS =====
+            // Delete any existing password reset tokens for this user to prevent token reuse
             $deleteOldResetTokensSql = "
                 DELETE FROM password_resets
                 WHERE user_id = ?
@@ -60,7 +75,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 [$user_id]
             );
 
-            // ===== INSERT NEW RESET TOKEN =====
+            // ===== CREATE & STORE NEW RESET TOKEN =====
+            // Insert the new password reset token record into the database
             $insertResetTokenSql = "
                 INSERT INTO password_resets (user_id, token_hash, expires_at)
                 VALUES (?, ?, ?)
@@ -74,6 +90,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             );
 
             // ===== DEVELOPMENT LINK GENERATION =====
+            // Build the password reset link with the token and email (for development/demo use only)
+            // In production, this link should be sent via email instead of displayed on-screen
             $dev_link = "reset_password.php?token=" . urlencode($token) . "&email=" . urlencode($email);
         }
     }
@@ -126,16 +144,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <!-- ===== USER FEEDBACK MESSAGE ===== -->
                 <p class="notice-msg"><?= htmlspecialchars($msg, ENT_QUOTES, "UTF-8") ?></p>
 
-                <!-- ===== DEVELOPMENT LINK DISPLAY ===== -->
+                <!-- ===== DEVELOPMENT LINK DISPLAY (DEMO ONLY) ===== -->
+                <!-- Show reset link for development testing when form has been submitted -->
+                <!-- Note: In production, this link should be sent via email instead -->
                 <?php if ($msg !== ""): ?>
-                        <div class="notice success">
-                            <?php if ($dev_link !== ""): ?>
-                                    <b>DEV LINK (FOR DEMO PURPOSES ONLY): </b>
-                                    <a class="dev-link" href="<?= htmlspecialchars($dev_link, ENT_QUOTES, "UTF-8") ?>">
-                                        <?= htmlspecialchars($dev_link, ENT_QUOTES, "UTF-8") ?>
-                                    </a>
-                            <?php endif; ?>
-                        </div>
+                    <div class="notice success">
+                        <!-- Display development link only if one was generated (user found in database) -->
+                        <?php if ($dev_link !== ""): ?>
+                            <b>DEV LINK (FOR DEMO PURPOSES ONLY): </b>
+                            <!-- Link to password reset page with token and email parameters -->
+                            <!-- Both URL parameters are properly encoded to handle special characters -->
+                            <a class="dev-link" href="<?= htmlspecialchars($dev_link, ENT_QUOTES, "UTF-8") ?>">
+                                <?= htmlspecialchars($dev_link, ENT_QUOTES, "UTF-8") ?>
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 <?php endif; ?>
 
                 <!-- ===== NAVIGATION LINK ===== -->

@@ -144,11 +144,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 
 <body>
-    <!-- ===== AUTHENTICATION CONTAINER ===== -->
-    <!-- Main container for the password reset page layout -->
     <div class="auth-container">
         <!-- ===== LEFT PANEL ===== -->
-        <!-- Branding and feature highlights -->
         <div class="auth-left-panel">
             <div class="brand-title">
                 <h1 class="brand-name">HAU<span class="brand-accent">CREDIT</span></h1>
@@ -163,14 +160,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
 
         <!-- ===== RIGHT PANEL ===== -->
-        <!-- Password reset form and messages -->
         <div class="auth-right-panel">
             <div class="auth-card">
                 <h2>Reset Password</h2>
                 <div class="subtitle">Create a new password for your account.</div>
 
                 <!-- ===== PASSWORD RESET FORM ===== -->
-                <!-- Form for entering new password with hidden token and email -->
                 <form action="<?= $self ?>" method="post">
                     <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
                     <input type="hidden" name="email" value="<?= htmlspecialchars($email) ?>">
@@ -190,22 +185,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <button type="submit">Update Password</button>
                 </form>
 
-                <!-- ===== ERROR MESSAGE ===== -->
-                <!-- Display error message if reset fails -->
                 <?php if ($error !== ""): ?>
                         <div class="notice error"><?= htmlspecialchars($error) ?></div>
                         <div class="link">Back to <a href="index.php">Log In</a></div>
                 <?php endif; ?>
 
-                <!-- ===== SUCCESS MESSAGE ===== -->
-                <!-- Display success message if reset succeeds -->
                 <?php if ($success !== ""): ?>
                         <div class="notice success"><?= htmlspecialchars($success) ?></div>
                         <div class="link">Go to <a href="index.php">Log In</a></div>
                 <?php endif; ?>
 
-                <!-- ===== DEFAULT LINK ===== -->
-                <!-- Default link to login page when no messages are shown -->
                 <?php if ($error === "" && $success === ""): ?>
                         <div class="link">Back to <a href="index.php">Log In</a></div>
                 <?php endif; ?>
@@ -213,8 +202,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         </div>
     </div>
 
-    <!-- ===== FOOTER ===== -->
-    <!-- Include the site footer -->
     <?php include 'assets/includes/footer.php' ?>
 </body>
 

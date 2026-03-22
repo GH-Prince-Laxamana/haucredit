@@ -1,4 +1,24 @@
 <?php
+// ============================================================================
+// HAUCREDIT MY EVENTS - User Event Manager Page
+// ============================================================================
+/**
+ * Event management dashboard showing all non-archived events for the current user.
+ * Features:
+ * - Complete list of user's events with status indicators
+ * - Filter bar by event status (Draft, Pending Review, Needs Revision, Approved, Completed)
+ * - Search functionality across event name, activity type, venue, date, etc.
+ * - Event cards with document progress visualizations
+ * - Edit access control based on event status (editability rules)
+ * - Summary cards showing count breakdown by status
+ *
+ * Display logic:
+ * - Shows Draft, Pending Review, Needs Revision, Approved, and Completed events
+ * - Excludes archived events (managed separately)
+ * - Applies CSS-based client-side filtering and search
+ * - All data user-scoped (WHERE user_id = ?)
+ */
+
 session_start();
 require_once __DIR__ . '/../../app/database.php';
 
@@ -7,7 +27,32 @@ requireLogin();
 $user_id = (int) $_SESSION["user_id"];
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 
-/* ================= EVENTS QUERY ================= */
+// ============================================================================
+// QUERY 1: FETCH ALL USER EVENTS
+// ============================================================================
+
+/**
+ * Load all non-archived events for the current user with supporting details.
+ * Joins multiple supporting tables to build complete event information for display.
+ *
+ * Table relationships:
+ * - events: Core event record with status, timestamps, document counters
+ * - event_type: Links event to activity type (one-to-one)
+ * - config_activity_types: Human-readable activity type names
+ * - event_dates: Scheduled date/time information (nullable)
+ * - event_location: Venue and platform details (nullable)
+ *
+ * Filtering:
+ * - User-scoped (user_id = ?) ensures data isolation
+ * - Excludes archived events (archived_at IS NULL)
+ * - Includes all status types: Draft, Pending Review, Needs Revision, Approved, Completed
+ *
+ * Sorting:
+ * - Primary: Event status (Draft first for editing, then Pending, Approved, Completed last)
+ * - Secondary: Events with no date scheduled appear first
+ * - Tertiary: By start date (descending - newest first)
+ * - Fallback: By creation date (descending)
+ */
 $fetchUserEventsSql = "
     SELECT
         e.event_id,
@@ -59,42 +104,84 @@ $events = fetchAll(
     [$user_id]
 );
 
-/* ================= SUMMARY COUNTS ================= */
+// ============================================================================
+// CALCULATE STATUS DISTRIBUTION
+// ============================================================================
+
+/**
+ * Count events by their current status.
+ * These counts populate the summary cards shown at top of page.
+ * Used for user feedback on workflow progress.
+ */
+
+// Total non-archived events
 $total_events = count($events);
+
+// Initialize status counters to zero
+// These are incremented as we loop through results
 $draft_count = 0;
 $pending_review_count = 0;
 $needs_revision_count = 0;
 $approved_count = 0;
 $completed_count = 0;
 
+/**
+ * Count events by status using switch statement.
+ * Iterates through all events and increments appropriate counter.
+ */
 foreach ($events as $e) {
+    // Event status determines which counter to increment
+    // Each status represents a stage in the event workflow
     switch ($e['event_status']) {
         case 'Draft':
+            // Event created but not yet submitted for admin review
             $draft_count++;
             break;
         case 'Pending Review':
+            // Event submitted, awaiting admin review
             $pending_review_count++;
             break;
         case 'Needs Revision':
+            // Admin reviewed, requested changes needed
             $needs_revision_count++;
             break;
         case 'Approved':
+            // Event approved, requirements visible to user
             $approved_count++;
             break;
         case 'Completed':
+            // Event concluded (status rarely used currently)
             $completed_count++;
             break;
     }
 }
 
-/* ================= HELPERS ================= */
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
 function normalizeEventStatusClass(string $status): string
 {
     return strtolower(str_replace(' ', '-', $status));
 }
 
+/**
+ * Determine if an event can be edited by the user.
+ *
+ * Edit access rules:
+ * - Draft: Yes (not yet submitted, changes allowed)
+ * - Pending Review: Yes (can revise while waiting for review)
+ * - Needs Revision: Yes (must edit to address admin feedback)
+ * - Approved: No (locked, should not change approved event)
+ * - Completed: No (locked, event concluded)
+ *
+ * @param string $status Current event status
+ * @return bool True if event is in an editable state
+ */
 function canEditEvent(string $status): bool
 {
+    // Event is editable if in any of these three statuses
+    // Check is strict (===) to prevent unintended matches
     return in_array($status, ['Draft', 'Pending Review', 'Needs Revision'], true);
 }
 ?>
@@ -116,6 +203,7 @@ function canEditEvent(string $status): bool
 
         <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
+        <!-- Main content area -->
         <main class="main">
             <header class="topbar">
                 <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
@@ -184,6 +272,10 @@ function canEditEvent(string $status): bool
                     </div>
                 </div>
 
+                <!-- ===== EVENTS GRID ===== -->
+                <!-- Grid layout containing event cards -->
+                <!-- Cards include status, metadata, progress, and action buttons -->
+                <!-- Data attributes enable client-side filtering and search -->
                 <div class="events-grid" id="eventsGrid">
                     <?php foreach ($events as $event): ?>
                         <?php
@@ -275,6 +367,9 @@ function canEditEvent(string $status): bool
                                     </div>
                                 </div>
 
+                                <!-- ===== DOCUMENT SUBMISSION PROGRESS ===== -->
+                                <!-- Shows requirement upload progress for this event -->
+                                <!-- Visual progress bar with percentage and counts -->
                                 <div class="doc-progress">
                                     <div class="doc-progress-label">
                                         <span>Documents</span>

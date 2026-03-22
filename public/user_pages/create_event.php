@@ -1,4 +1,11 @@
 <?php
+/**
+ * Event Creation and Management Module
+ * 
+ * This module handles the creation, editing, and requirement synchronization of events.
+ * It manages form data, database operations, and requirement templates.
+ */
+
 session_start();
 require_once __DIR__ . '/../../app/database.php';
 require_once APP_PATH . "security_headers.php";
@@ -6,6 +13,11 @@ send_security_headers();
 
 requireLogin();
 
+// ============================================================================
+// CONFIGURATION & CONSTANTS
+// ============================================================================
+
+/** List of all form fields used in event creation and editing */
 $ce_fields = [
   'organizing_body',
   'background_id',
@@ -37,18 +49,41 @@ $participant_range_options = ['1-2', '3-15', '15-25', '25 or more'];
 $event_id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $editing = $event_id > 0;
 
+// Initialize form data that will be populated from database or session
 $formData = [];
 
+// ============================================================================
+// UTILITY & VALIDATION FUNCTIONS
+// ============================================================================
+
+/**
+ * Determines if an event with the given status can be edited.
+ * Only Draft, Pending Review, and Needs Revision statuses are editable.
+ *
+ * @param string $status The current event status
+ * @return bool True if the event can be edited, false otherwise
+ */
 function canEditEventStatus(string $status): bool
 {
   return in_array($status, ['Draft', 'Pending Review', 'Needs Revision'], true);
 }
 
-/* ================= LOAD CONFIG OPTIONS FROM DB ================= */
+// ============================================================================
+// DATABASE CONFIGURATION LOADING
+// ============================================================================
+
+/**
+ * Fetches all configuration options required for event form rendering.
+ * Retrieves four sets of configuration data: organizing bodies, backgrounds,
+ * activity types, and series options. All are sorted by order and name.
+ *
+ * @return array Array containing [org_rows, background_rows, activity_rows, series_rows]
+ */
 function fetchConfigOptions(): array
 {
   global $conn;
 
+  // Fetch all active organizing body options, ordered for presentation
   $org_rows = fetchAll(
     $conn,
     "
@@ -59,6 +94,7 @@ function fetchConfigOptions(): array
         "
   );
 
+  // Fetch all active background options with their IDs for form controls
   $background_rows = fetchAll(
     $conn,
     "
@@ -69,6 +105,7 @@ function fetchConfigOptions(): array
         "
   );
 
+  // Fetch all active activity type options with their IDs
   $activity_rows = fetchAll(
     $conn,
     "
@@ -79,6 +116,7 @@ function fetchConfigOptions(): array
         "
   );
 
+  // Fetch all active series options with their IDs
   $series_rows = fetchAll(
     $conn,
     "
@@ -92,7 +130,20 @@ function fetchConfigOptions(): array
   return [$org_rows, $background_rows, $activity_rows, $series_rows];
 }
 
-/* ================= FETCH FORM DATA ================= */
+// ============================================================================
+// FORM DATA MANAGEMENT
+// ============================================================================
+
+/**
+ * Fetches form data for display in the event form.
+ * When editing, loads data from the database. When creating new, loads from session.
+ * Includes validation that the user has permission to edit the event.
+ *
+ * @param int $event_id The event ID (0 if creating new)
+ * @param array $ce_fields List of form field names to load
+ * @param bool $editing Whether we're editing an existing event
+ * @return array Associative array of form field values
+ */
 function fetchFormData(int $event_id, array $ce_fields, bool $editing): array
 {
   global $conn;
@@ -100,6 +151,8 @@ function fetchFormData(int $event_id, array $ce_fields, bool $editing): array
   $formData = [];
 
   if ($editing) {
+    // Complex query that joins all related event tables to gather all necessary data
+    // Uses LEFT JOINs to handle optional tables (some events may not have all child records)
     $sql = "
             SELECT
                 e.organizing_body,
@@ -148,6 +201,7 @@ function fetchFormData(int $event_id, array $ce_fields, bool $editing): array
             LIMIT 1
         ";
 
+    // Fetch the existing event data with user permission check
     $existing_event = fetchOne(
       $conn,
       $sql,
@@ -155,27 +209,33 @@ function fetchFormData(int $event_id, array $ce_fields, bool $editing): array
       [$event_id, $_SESSION["user_id"]]
     );
 
+    // Validate that the event exists and user has permission
     if (!$existing_event) {
       popup_error("Event not found or you do not have permission to edit it.");
     }
 
+    // Validate that the event status allows editing
     if (!canEditEventStatus($existing_event['event_status'] ?? '')) {
       popup_error("This event can no longer be edited.");
     }
 
+    // Populate form data from the existing event record
     foreach ($ce_fields as $field) {
       $formData[$field] = $existing_event[$field] ?? '';
     }
 
+    // Add the human-readable config label names
     $formData['background_name'] = $existing_event['background_name'] ?? '';
     $formData['activity_type_name'] = $existing_event['activity_type_name'] ?? '';
     $formData['series_name'] = $existing_event['series_name'] ?? '';
     $formData['event_status'] = $existing_event['event_status'] ?? 'Draft';
   } else {
+    // For new events, load initial data from session (user may have started filling the form)
     foreach ($ce_fields as $field) {
       $formData[$field] = $_SESSION[$field] ?? '';
     }
 
+    // Initialize config label names as empty for new events
     $formData['background_name'] = '';
     $formData['activity_type_name'] = '';
     $formData['series_name'] = '';
@@ -185,11 +245,17 @@ function fetchFormData(int $event_id, array $ce_fields, bool $editing): array
   return $formData;
 }
 
-/* ================= FETCH TEMPLATE DATA ================= */
+/**
+ * Fetches requirement templates and descriptions from database.
+ * Organizes templates by requirement name for easy lookup during form rendering.
+ *
+ * @return array Array containing [templates_array, descriptions_array]
+ */
 function fetchTemplateData(): array
 {
   global $conn;
 
+  // Fetch all active requirement templates with their metadata
   $rows = fetchAll(
     $conn,
     "
@@ -199,9 +265,11 @@ function fetchTemplateData(): array
         "
   );
 
+  // Initialize associative arrays keyed by requirement name for fast lookup
   $templates = [];
   $descs = [];
 
+  // Organize template data by requirement name
   foreach ($rows as $row) {
     $name = $row['req_name'];
     $templates[$name] = $row['template_url'] ?? '';
@@ -211,15 +279,24 @@ function fetchTemplateData(): array
   return [$templates, $descs];
 }
 
-/* ================= RESOLVE CONFIG LABELS ================= */
+/**
+ * Resolves and looks up human-readable names for configuration IDs.
+ * This function updates the data array in-place, replacing IDs with their display names.
+ * Used after form submission to get readable names for the selected options.
+ *
+ * @param array &$data Reference to data array containing config IDs
+ * @return void Updates $data array in-place with resolved names
+ */
 function resolveConfigLabels(array &$data): void
 {
   global $conn;
 
+  // Initialize all label fields to empty strings
   $data['background_name'] = '';
   $data['activity_type_name'] = '';
   $data['series_name'] = '';
 
+  // Resolve background ID to its display name
   if (!empty($data['background_id'])) {
     $row = fetchOne(
       $conn,
@@ -238,6 +315,7 @@ function resolveConfigLabels(array &$data): void
     }
   }
 
+  // Resolve activity type ID to its display name
   if (!empty($data['activity_type_id'])) {
     $row = fetchOne(
       $conn,
@@ -256,6 +334,7 @@ function resolveConfigLabels(array &$data): void
     }
   }
 
+  // Resolve series option ID to its display name
   if (!empty($data['series_option_id'])) {
     $row = fetchOne(
       $conn,
@@ -275,9 +354,21 @@ function resolveConfigLabels(array &$data): void
   }
 }
 
-/* ================= VALIDATION ================= */
+// ============================================================================
+// EVENT DATA VALIDATION
+// ============================================================================
+
+/**
+ * Validates the complete event submission data before saving to database.
+ * Checks for required fields, proper format, and business logic rules.
+ * Terminates execution with popup_error on validation failure.
+ *
+ * @param array $data The event data to validate
+ * @return void Exits with error message if validation fails
+ */
 function validateEventSubmission(array $data): void
 {
+  // List of fields that must be present and non-empty
   $requiredFields = [
     'background_id',
     'activity_type_id',
@@ -291,77 +382,121 @@ function validateEventSubmission(array $data): void
     'collect_payments'
   ];
 
+  // Verify all required fields are filled
   foreach ($requiredFields as $field) {
     if (!isset($data[$field]) || trim((string) $data[$field]) === '') {
       popup_error("Please complete all required event fields before submitting.");
     }
   }
 
+  // Verify at least one organizing body is selected
   if (empty($data['organizing_body']) || !is_array($data['organizing_body'])) {
     popup_error("Please select at least one organizing body.");
   }
 
+  // Validate target metric format if provided (percentage with description)
   $target_metric = trim($data['target_metric'] ?? '');
   if ($target_metric !== '' && !preg_match('/^(100|[1-9]?\d)\%\s+.+$/', $target_metric)) {
     popup_error("Target Metric must follow this format: 75% Satisfaction Rating");
   }
 
+  // Validate start and end datetime
   $start_datetime = trim($data['start_datetime'] ?? '');
   $end_datetime = trim($data['end_datetime'] ?? '');
 
   if ($start_datetime !== '' && $end_datetime !== '') {
+    // Convert to timestamps for comparison
     $start_ts = strtotime($start_datetime);
     $end_ts = strtotime($end_datetime);
 
+    // Validate that both dates parsed successfully
     if ($start_ts === false || $end_ts === false) {
       popup_error("Invalid start or end date/time.");
     }
 
+    // Validate that end time is at least 2 hours (7200 seconds) after start time
     if (($end_ts - $start_ts) < 7200) {
       popup_error("End Date and Time must be at least 2 hours after the Start Date and Time.");
     }
   }
 
+  // Validate series requirement for participation activities
   $background_name = $data['background_name'] ?? '';
   if ($background_name === 'Participation' && empty($data['series_option_id'])) {
     popup_error("Please select a series for participation activities.");
   }
 }
 
-/* ================= SAVE EVENT CORE + CHILD TABLES ================= */
+// ============================================================================
+// EVENT DATA PERSISTENCE
+// ============================================================================
+
+/**
+ * Saves event data to the database, handling both creation and updates.
+ * For new events: Creates core event record and all child records.
+ * For existing events: Updates all related tables and syncs calendar entries.
+ * 
+ * Function processes session data and distributes it across multiple tables:
+ * - events: Core event information
+ * - event_type: Background and activity classification
+ * - event_dates: Start and end datetime information
+ * - event_participants: Participant count and range information
+ * - event_location: Venue/platform and distance information
+ * - event_logistics: Extraneous flag, payment collection, overnight status
+ * - event_metrics: Target metrics and measurements
+ * - calendar_entries: User calendar synchronization
+ *
+ * @param int $event_id The event ID (0 for new events)
+ * @param bool $editing Whether this is an update operation
+ * @param string $event_status The status to set (Draft, Pending Review)
+ * @return int The event ID (newly generated if creating, same if updating)
+ */
 function saveEventData(int $event_id, bool $editing, string $event_status): int
 {
   global $conn;
 
+  // ======================= EXTRACT & PREPARE DATA =======================
+  
+  // Process organizing body array into JSON format for storage
   $organizing_body_json = isset($_SESSION['organizing_body'])
     ? json_encode($_SESSION['organizing_body'], JSON_UNESCAPED_UNICODE)
     : '[]';
 
+  // Extract and trim string fields
   $nature = trim($_SESSION['nature'] ?? '');
   $event_name = trim($_SESSION['event_name'] ?? '');
 
+  // Extract configuration IDs, with defaults for failed conversions
   $background_id = !empty($_SESSION['background_id']) ? (int) $_SESSION['background_id'] : 0;
   $activity_type_id = !empty($_SESSION['activity_type_id']) ? (int) $_SESSION['activity_type_id'] : 0;
   $series_option_id = ($_SESSION['series_option_id'] ?? '') !== '' ? (int) $_SESSION['series_option_id'] : null;
 
+  // Extract datetime fields
   $start_datetime = $_SESSION['start_datetime'] ?? '';
   $end_datetime = $_SESSION['end_datetime'] ?? '';
 
+  // Extract participant information
   $participants = trim($_SESSION['participants'] ?? '');
   $participant_range = $_SESSION['participant_range'] ?? null;
   $has_visitors = $_SESSION['has_visitors'] ?? null;
 
+  // Extract location information
   $venue_platform = trim($_SESSION['venue_platform'] ?? '');
   $distance = $_SESSION['distance'] ?? null;
 
+  // Extract logistics flags with default values
   $extraneous = $_SESSION['extraneous'] ?? 'No';
   $collect_payments = $_SESSION['collect_payments'] ?? 'No';
   $target_metric = trim($_SESSION['target_metric'] ?? '');
+  // overnight is stored as 1/0, null if not set
   $overnight = (!isset($_SESSION['overnight']) || $_SESSION['overnight'] === '')
     ? null
     : (int) $_SESSION['overnight'];
 
   if ($editing) {
+    // ======================= UPDATING EXISTING EVENT =======================
+    
+    // Update core event information
     execQuery(
       $conn,
       "
@@ -378,6 +513,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$organizing_body_json, $nature, $event_name, $event_status, $event_id, $_SESSION["user_id"]]
     );
 
+    // Update event classification (background and activity type)
     execQuery(
       $conn,
       "
@@ -389,6 +525,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$background_id, $activity_type_id, $series_option_id, $event_id]
     );
 
+    // Update event schedule
     execQuery(
       $conn,
       "
@@ -400,6 +537,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$start_datetime, $end_datetime, $event_id]
     );
 
+    // Update participant information
     execQuery(
       $conn,
       "
@@ -411,6 +549,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$participants, $participant_range, $has_visitors, $event_id]
     );
 
+    // Update location and venue information
     execQuery(
       $conn,
       "
@@ -422,6 +561,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$venue_platform, $distance, $event_id]
     );
 
+    // Update event logistics information
     execQuery(
       $conn,
       "
@@ -433,6 +573,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$extraneous, $collect_payments, $overnight, $event_id]
     );
 
+    // Update or create event metrics (check existence first to use appropriate query)
     $metricExists = fetchOne(
       $conn,
       "
@@ -468,10 +609,12 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       );
     }
 
+    // Generate appropriate calendar note based on event status
     $notes = ($event_status === 'Draft')
       ? "Draft event updated via Event Manager"
       : "Event submitted/updated via Event Manager";
 
+    // Update or create corresponding calendar entry
     $calendarExists = fetchOne(
       $conn,
       "
@@ -507,10 +650,14 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       );
     }
   } else {
+    // ======================= CREATING NEW EVENT =======================
+    
+    // Initialize metrics counters for new events
     $docs_total = 0;
     $docs_uploaded = 0;
     $is_system_event = 0;
 
+    // Insert core event record and retrieve generated ID
     $insertEventStmt = execQuery(
       $conn,
       "
@@ -534,6 +681,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
 
     $event_id = $insertEventStmt->insert_id;
 
+    // Insert event classification record
     execQuery(
       $conn,
       "
@@ -544,6 +692,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$event_id, $background_id, $activity_type_id, $series_option_id]
     );
 
+    // Insert event schedule record
     execQuery(
       $conn,
       "
@@ -554,6 +703,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$event_id, $start_datetime, $end_datetime]
     );
 
+    // Insert participant information record
     execQuery(
       $conn,
       "
@@ -564,6 +714,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$event_id, $participants, $participant_range, $has_visitors]
     );
 
+    // Insert location information record
     execQuery(
       $conn,
       "
@@ -574,6 +725,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$event_id, $venue_platform, $distance]
     );
 
+    // Insert logistics information record
     execQuery(
       $conn,
       "
@@ -584,6 +736,7 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$event_id, $extraneous, $collect_payments, $overnight]
     );
 
+    // Insert event metrics record
     execQuery(
       $conn,
       "
@@ -594,10 +747,12 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
       [$event_id, $target_metric]
     );
 
+    // Generate appropriate calendar note based on event status
     $notes = ($event_status === 'Draft')
       ? "Draft event created via Event Manager"
       : "Event created via Event Manager";
 
+    // Create corresponding calendar entry
     execQuery(
       $conn,
       "
@@ -609,16 +764,38 @@ function saveEventData(int $event_id, bool $editing, string $event_status): int
     );
   }
 
+  // Return the event ID (newly generated for new events, unchanged for updates)
   return $event_id;
 }
 
-/* ================= REQUIREMENT DEADLINE ================= */
+// ============================================================================
+// REQUIREMENT & DEADLINE MANAGEMENT
+// ============================================================================
+
+/**
+ * Computes the deadline for a requirement based on configured offset and basis.
+ * The deadline can be relative to the event's start or end date, or set before/after.
+ * Returns null if the requirement has no automatic deadline calculation.
+ *
+ * @param string $start_datetime Event start datetime in 'Y-m-d H:i:s' format
+ * @param string $end_datetime Event end datetime in 'Y-m-d H:i:s' format
+ * @param mixed $offset_days Number of days to offset from the basis date (nullable)
+ * @param string $basis Basis for deadline calculation:
+ *                      - 'before_start': offset days before event start
+ *                      - 'after_start': offset days after event start
+ *                      - 'before_end': offset days before event end
+ *                      - 'after_end': offset days after event end
+ *                      - 'manual': no automatic deadline
+ * @return string|null Computed deadline in 'Y-m-d H:i:s' format, or null if no deadline
+ */
 function computeRequirementDeadline(string $start_datetime, string $end_datetime, $offset_days, string $basis): ?string
 {
+  // Return null for null offset or manual basis (no automatic calculation)
   if ($offset_days === null || $basis === 'manual') {
     return null;
   }
 
+  // Determine the base date based on the basis parameter
   $baseDate = null;
 
   if (in_array($basis, ['before_start', 'after_start'], true) && $start_datetime !== '') {
@@ -627,24 +804,36 @@ function computeRequirementDeadline(string $start_datetime, string $end_datetime
     $baseDate = new DateTime($end_datetime);
   }
 
+  // If no valid base date could be determined, return null
   if (!$baseDate) {
     return null;
   }
 
+  // Apply the offset based on the basis direction
   if ($basis === 'before_start' || $basis === 'before_end') {
+    // Subtract days for "before" deadlines
     $baseDate->modify("-{$offset_days} days");
   } elseif ($basis === 'after_start' || $basis === 'after_end') {
+    // Add days for "after" deadlines
     $baseDate->modify("+{$offset_days} days");
   }
 
   return $baseDate->format('Y-m-d H:i:s');
 }
 
-/* ================= FETCH MAPPED REQUIREMENT NAMES ================= */
+/**
+ * Fetches the list of requirement names mapped to a specific background/activity combination.
+ * These are the base requirements that should exist for this type of event.
+ *
+ * @param int $background_id The event background ID
+ * @param int $activity_type_id The event activity type ID
+ * @return array List of requirement names (strings) mapped to this combo
+ */
 function fetchMappedRequirementNames(int $background_id, int $activity_type_id): array
 {
   global $conn;
 
+  // Query the requirements map to find all requirements for this background/activity combination
   $rows = fetchAll(
     $conn,
     "
@@ -662,18 +851,37 @@ function fetchMappedRequirementNames(int $background_id, int $activity_type_id):
     [$background_id, $activity_type_id]
   );
 
+  // Extract just the requirement names from the result set
   return array_map(fn($row) => $row['req_name'], $rows);
 }
 
-/* ================= SYNC REQUIREMENTS ================= */
+/**
+ * Synchronizes event requirements with configuration rules and event attributes.
+ * This function:
+ * 1. Determines what requirements SHOULD exist based on event config and attributes
+ * 2. Fetches what requirements CURRENTLY exist for the event
+ * 3. Adds missing requirements, removes unneeded ones, and updates existing ones with correct deadlines
+ * 
+ * The requirement checklist is built from:
+ * - Base requirements mapped to the background/activity combination
+ * - Conditional requirements based on event flags (payments, extraneous, overnight, visitors)
+ * - Narrative Report (always required)
+ *
+ * @param int $event_id The event ID to sync requirements for
+ * @return void Updates database but returns nothing
+ */
 function syncEventRequirements(int $event_id): void
 {
   global $conn;
 
+  // ==================== EXTRACT EVENT CONFIGURATION ====================
+  
+  // Extract event classification and attributes from session
   $background_id = !empty($_SESSION['background_id']) ? (int) $_SESSION['background_id'] : 0;
   $activity_type_id = !empty($_SESSION['activity_type_id']) ? (int) $_SESSION['activity_type_id'] : 0;
   $activity_type_name = $_SESSION['activity_type_name'] ?? '';
 
+  // Extract conditional requirement flags
   $collect_payments = $_SESSION['collect_payments'] ?? null;
   $extraneous = $_SESSION['extraneous'] ?? null;
   $overnight = $_SESSION['overnight'] ?? null;
@@ -681,8 +889,12 @@ function syncEventRequirements(int $event_id): void
   $start_datetime = $_SESSION['start_datetime'] ?? '';
   $end_datetime = $_SESSION['end_datetime'] ?? '';
 
+  // ==================== BUILD DESIRED REQUIREMENT CHECKLIST ====================
+  
+  // Start with base requirements mapped to this background/activity combination
   $checklist = fetchMappedRequirementNames($background_id, $activity_type_id);
 
+  // Add conditional requirements based on event attributes
   if ($collect_payments === 'Yes') {
     $checklist[] = 'Request Letter for Collection/Selling';
   }
@@ -691,17 +903,25 @@ function syncEventRequirements(int $event_id): void
     $checklist[] = 'Medical Clearance of Participants';
   }
 
+  // Off-campus overnight activities require risk assessment
   if ((string) $overnight === '1' && strpos($activity_type_name, 'Off-Campus') !== false) {
     $checklist[] = 'Risk Assessment Plan with Emergency Contacts and Emergency Map';
   }
 
+  // On-campus activities with visitors require visitor/vehicle lists
   if (strpos($activity_type_name, 'On-campus') !== false && $has_visitors === 'Yes') {
     $checklist[] = 'Visitors and Vehicle Lists';
   }
 
+  // Narrative report is always required
   $checklist[] = 'Narrative Report';
+  
+  // Remove duplicates and maintain numeric indexing
   $checklist = array_values(array_unique($checklist));
 
+  // ==================== FETCH CURRENT REQUIREMENTS ====================
+  
+  // Query all requirements currently assigned to this event
   $rows = fetchAll(
     $conn,
     "
@@ -715,17 +935,23 @@ function syncEventRequirements(int $event_id): void
     [$event_id]
   );
 
+  // Index current requirements by name for easy lookup
   $current = [];
   foreach ($rows as $row) {
     $current[$row['req_name']] = $row;
   }
 
+  // ==================== FETCH REQUIREMENT TEMPLATE DETAILS ====================
+  
+  // Pre-fetch template details for all desired requirements
   $desiredTemplates = [];
 
   if (!empty($checklist)) {
+    // Build placeholder string for IN clause
     $placeholders = implode(',', array_fill(0, count($checklist), '?'));
     $types = str_repeat('s', count($checklist));
 
+    // Query template details for all requirements in checklist
     $rows = fetchAll(
       $conn,
       "
@@ -738,6 +964,7 @@ function syncEventRequirements(int $event_id): void
       $checklist
     );
 
+    // Index templates by name with their metadata
     foreach ($rows as $row) {
       $desiredTemplates[$row['req_name']] = [
         'req_template_id' => (int) $row['req_template_id'],
@@ -747,10 +974,16 @@ function syncEventRequirements(int $event_id): void
     }
   }
 
+  // ==================== DETERMINE CHANGES NEEDED ====================
+  
+  // Calculate set differences to determine what to add, remove, and keep
   $toAdd = array_diff($checklist, array_keys($current));
   $toRemove = array_diff(array_keys($current), $checklist);
   $toKeep = array_intersect($checklist, array_keys($current));
 
+  // ==================== UPDATE EXISTING REQUIREMENTS ====================
+  
+  // For requirements that should remain, update their deadlines
   foreach ($toKeep as $reqName) {
     if (!isset($desiredTemplates[$reqName])) {
       continue;
@@ -758,6 +991,8 @@ function syncEventRequirements(int $event_id): void
 
     $template = $desiredTemplates[$reqName];
     $templateId = (int) $template['req_template_id'];
+    
+    // Compute the deadline based on template configuration and event dates
     $deadline = computeRequirementDeadline(
       $start_datetime,
       $end_datetime,
@@ -765,6 +1000,7 @@ function syncEventRequirements(int $event_id): void
       $template['default_due_basis']
     );
 
+    // Update requirement with new deadline
     execQuery(
       $conn,
       "
@@ -776,6 +1012,7 @@ function syncEventRequirements(int $event_id): void
       [$deadline, $event_id, $templateId]
     );
 
+    // Special handling for Narrative Report: ensure narrative_report_details record exists
     if ($reqName === 'Narrative Report') {
       $eventReqRow = fetchOne(
         $conn,
@@ -790,6 +1027,7 @@ function syncEventRequirements(int $event_id): void
       );
 
       if ($eventReqRow) {
+        // Create or update narrative report details record
         execQuery(
           $conn,
           "
@@ -804,13 +1042,18 @@ function syncEventRequirements(int $event_id): void
     }
   }
 
+  // ==================== REMOVE UNNEEDED REQUIREMENTS ====================
+  
+  // Remove requirements that should no longer exist (unless already uploaded)
   foreach ($toRemove as $reqName) {
     $submissionStatus = $current[$reqName]['submission_status'] ?? 'Pending';
 
+    // Don't remove requirements that have been uploaded (preserve submitted work)
     if ($submissionStatus === 'Uploaded') {
       continue;
     }
 
+    // Delete the requirement record
     execQuery(
       $conn,
       "
@@ -825,6 +1068,9 @@ function syncEventRequirements(int $event_id): void
     );
   }
 
+  // ==================== ADD NEW REQUIREMENTS ====================
+  
+  // Add requirements that are now needed but don't currently exist
   foreach ($toAdd as $reqName) {
     if (!isset($desiredTemplates[$reqName])) {
       continue;
@@ -832,6 +1078,8 @@ function syncEventRequirements(int $event_id): void
 
     $template = $desiredTemplates[$reqName];
     $templateId = (int) $template['req_template_id'];
+    
+    // Compute deadline for new requirement
     $deadline = computeRequirementDeadline(
       $start_datetime,
       $end_datetime,
@@ -839,6 +1087,7 @@ function syncEventRequirements(int $event_id): void
       $template['default_due_basis']
     );
 
+    // Create new event requirement record
     execQuery(
       $conn,
       "
@@ -850,6 +1099,7 @@ function syncEventRequirements(int $event_id): void
       [$event_id, $templateId, $deadline]
     );
 
+    // Special handling for Narrative Report: create narrative_report_details record
     if ($reqName === 'Narrative Report') {
       $eventReqRow = fetchOne(
         $conn,
@@ -864,6 +1114,7 @@ function syncEventRequirements(int $event_id): void
       );
 
       if ($eventReqRow) {
+        // Create narrative report details record
         execQuery(
           $conn,
           "
@@ -878,6 +1129,9 @@ function syncEventRequirements(int $event_id): void
     }
   }
 
+  // ==================== UPDATE EVENT DOCUMENT COUNTERS ====================
+  
+  // Count total requirements for this event
   $countRes = fetchOne(
     $conn,
     "
@@ -890,6 +1144,7 @@ function syncEventRequirements(int $event_id): void
   );
   $docs_total = (int) ($countRes['total'] ?? 0);
 
+  // Count uploaded requirements for this event
   $uploadedRes = fetchOne(
     $conn,
     "
@@ -902,6 +1157,7 @@ function syncEventRequirements(int $event_id): void
   );
   $docs_uploaded = (int) ($uploadedRes['uploaded_total'] ?? 0);
 
+  // Update event record with new counters
   execQuery(
     $conn,
     "
@@ -914,29 +1170,54 @@ function syncEventRequirements(int $event_id): void
   );
 }
 
-/* ================= LOAD ================= */
+// ============================================================================
+// INITIALIZATION & DATA LOADING
+// ============================================================================
+
+// Load all configuration options needed for form rendering
 list($org_options, $background_options, $activity_types, $series_options) = fetchConfigOptions();
+
+// Load form data - either from existing event (edit mode) or session (new event mode)
 $formData = fetchFormData($event_id, $ce_fields, $editing);
+
+// Load all requirement templates and descriptions for form reference
 list($requirements_templates, $requirements_descs) = fetchTemplateData();
 
-/* ================= SUBMIT ================= */
+// ============================================================================
+// FORM SUBMISSION HANDLING
+// ============================================================================
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  // Extract the submit action to determine save behavior (draft vs submit)
   $submit_action = $_POST['submit_action'] ?? '';
 
+  // ======================= PERSIST FORM DATA TO SESSION =======================
+  
+  // Copy all form field values from POST to SESSION for persistence across redirects
   foreach ($ce_fields as $field) {
     if ($field === 'organizing_body') {
+      // Special handling for multi-select array
       $_SESSION[$field] = $_POST[$field] ?? [];
     } else {
+      // Copy scalar values
       $_SESSION[$field] = $_POST[$field] ?? null;
     }
   }
 
+  // Resolve config IDs to their human-readable names for use in requirement logic
   resolveConfigLabels($_SESSION);
 
+  // ======================= DETERMINE EVENT STATUS =======================
+  
+  // Determine the target event status based on form action
+  // Draft: saved but not submitted | Pending Review: submitted for approval
   $isDraft = ($submit_action === 'save_draft');
   $event_status = $isDraft ? 'Draft' : 'Pending Review';
 
+  // ======================= VALIDATE EDIT PERMISSIONS =======================
+  
   if ($editing) {
+    // Fetch current event to verify user ownership and editability
     $editableEventRow = fetchOne(
       $conn,
       "
@@ -951,25 +1232,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       [$event_id, $_SESSION["user_id"]]
     );
 
+    // Verify event exists and belongs to current user
     if (!$editableEventRow) {
       popup_error("Event not found or you do not have permission to edit it.");
     }
 
+    // Verify event status allows editing
     if (!canEditEventStatus($editableEventRow['event_status'] ?? '')) {
       popup_error("This event can no longer be edited.");
     }
   }
 
+  // ======================= SAVE EVENT DATA =======================
+  
   try {
+    // Start database transaction to ensure all changes succeed together
     $conn->begin_transaction();
 
+    // Validate submission data only if not saving as draft
+    // Draft mode allows incomplete data
     if (!$isDraft) {
       validateEventSubmission($_SESSION);
     }
 
+    // Save event data to database (creates new or updates existing)
     $event_id = saveEventData($event_id, $editing, $event_status);
 
+    // ======================= POST-SAVE ACTIONS =======================
+    
     if ($isDraft) {
+      // For draft saves, reset document counters (no requirements tracking)
       execQuery(
         $conn,
         "
@@ -981,26 +1273,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         [$event_id]
       );
     } else {
+      // For full submissions, synchronize event requirements
+      // This creates/updates/removes requirements based on event configuration
       syncEventRequirements($event_id);
     }
 
+    // Commit all changes to database
     $conn->commit();
 
+    // ======================= CLEANUP & REDIRECT =======================
+    
+    // Clear session data to prevent accidental reuse
     foreach ($ce_fields as $field) {
       unset($_SESSION[$field]);
     }
     unset($_SESSION['background_name'], $_SESSION['activity_type_name'], $_SESSION['series_name']);
 
+    // Redirect to event view page with success
     header("Location: view_event.php?id=" . $event_id);
     exit();
   } catch (Exception $e) {
+    // Rollback all database changes on error
     $conn->rollback();
+    // Display error message to user
     popup_error("Failed to save event: " . $e->getMessage());
   }
 }
 ?>
 
 <!DOCTYPE html>
+<!--
+Event Creation and Management Page
+
+This page provides a multi-step form for creating new events or editing existing ones.
+The form is organized in collapsible sections (step-1 and step-2 accordions) for better UX.
+
+Step 1: Classification - Background, Activity Type, Organization, Series
+Step 2: Basic Info - Nature, Name, Target Metrics, Extraneous/Payment flags
+Step 3: Logistics - Dates, Participants, Venue, Location details
+
+Database Persistence: Uses transactional saves to ensure data consistency
+Requirement Sync: Automatically creates/removes event requirements based on config/attributes
+-->
 <html lang="en">
 
 <head>
@@ -1027,6 +1341,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </header>
 
+            <!--
+            Main event form
+            Multi-step accordion form with three main sections
+            Uses HTML5 details/summary elements for collapsible sections
+            -->
             <form method="POST" class="event-form">
                 <details class="step-1 acc" open>
                     <summary class="acc-head">
@@ -1362,6 +1681,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </main>
     </div>
 
+    <!--
+    JavaScript Dependencies
+    layout.js: Handles global layout, responsive design, and menu interactions
+    create_event.js: Handles form interaction, step navigation, multi-select, conditional fields
+    -->
     <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
     <script src="<?= APP_URL ?>script/create_event.js"></script>
 </body>

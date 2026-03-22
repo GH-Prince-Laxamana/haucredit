@@ -10,9 +10,15 @@ $user_id = (int) $_SESSION["user_id"];
 $success = $_SESSION["success"] ?? "";
 $error = $_SESSION["error"] ?? "";
 
+// Clear session messages after retrieval to prevent re-display on page refresh
 unset($_SESSION["success"], $_SESSION["error"]);
 
-// ===== LOAD ORGANIZATION OPTIONS FROM DB =====
+// ============================================================================
+// LOAD ORGANIZATION OPTIONS FROM DATABASE
+// ============================================================================
+
+// Query all active organization options sorted by display order and name
+// Used to populate datalist for org_body input field
 $orgRows = fetchAll(
     $conn,
     "
@@ -23,12 +29,19 @@ $orgRows = fetchAll(
     "
 );
 
+// Extract org_name values from result rows for easier access in HTML
+// Result: array of organization names (strings) in sort order
 $org_options = array_map(
     fn($row) => $row['org_name'],
     $orgRows
 );
 
-// ===== GET USER DATA =====
+// ============================================================================
+// FETCH USER PROFILE DATA FROM DATABASE
+// ============================================================================
+
+// Query user profile including all editable fields and password hash
+// Fields: personal info, contact, organization, profile picture, and password
 $fetchUserProfileSql = "
     SELECT user_name, stud_num, user_email, org_body, profile_pic, user_password
     FROM users
@@ -42,24 +55,38 @@ $user = fetchOne(
     [$user_id]
 );
 
+// Validation: Ensure user record exists (safety check)
+// If NOT found, redirect to home and exit - user session may be invalid
 if (!$user) {
     $_SESSION["error"] = "User profile not found.";
     header("Location:" . PUBLIC_URL . "index.php");
     exit();
 }
 
-// ===== PROFILE IMAGE UPLOAD =====
+// ============================================================================
+// PROFILE PICTURE UPLOAD & REPLACEMENT HANDLER
+// ============================================================================
+
+// Check if upload_photo form was submitted
 if (isset($_POST["upload_photo"])) {
+    // ==== STEP 1: VALIDATE FILE WAS UPLOADED ====
     if (isset($_FILES["profile_pic"]) && $_FILES["profile_pic"]["error"] === 0) {
+        // Define allowed image file extensions
         $allowed = ["jpg", "jpeg", "png", "webp"];
+        
+        // Extract file extension from uploaded filename and convert to lowercase
         $ext = strtolower(pathinfo($_FILES["profile_pic"]["name"], PATHINFO_EXTENSION));
 
+        // ==== STEP 2: VALIDATE FILE EXTENSION ====
+        // Only allow whitelisted image formats
         if (!in_array($ext, $allowed, true)) {
             $_SESSION["error"] = "Only .JPG, .JPEG, .PNG, and .WEBP files are allowed.";
             header("Location:" . USER_PAGE . "profile.php");
             exit();
         }
 
+        // ==== STEP 3: VALIDATE FILE IS ACTUAL IMAGE ====
+        // getimagesize() returns FALSE if file is not a valid image
         $check = getimagesize($_FILES["profile_pic"]["tmp_name"]);
         if ($check === false) {
             $_SESSION["error"] = "Invalid image file.";
@@ -67,15 +94,25 @@ if (isset($_POST["upload_photo"])) {
             exit();
         }
 
+        // ==== STEP 4: PREPARE UPLOAD DIRECTORY ====
+        // Define upload directory path
         $uploadDir = PUBLIC_PATH . "assets/profiles/";
+        
+        // Create directory if it doesn't exist (with full permissions)
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }
 
+        // ==== STEP 5: GENERATE UNIQUE FILENAME ====
+        // Filename format: user_[USER_ID]_[TIMESTAMP].[EXT]
+        // Ensures unique filenames and prevents conflicts
         $newName = "user_" . $user_id . "_" . time() . "." . $ext;
         $targetPath = $uploadDir . $newName;
 
+        // ==== STEP 6: MOVE UPLOADED FILE TO FINAL LOCATION ====
         if (move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $targetPath)) {
+            // ==== STEP 7: DELETE OLD PROFILE PICTURE (IF EXISTS & NOT DEFAULT) ====
+            // Prevent orphaned image files in storage
             if (!empty($user['profile_pic']) && $user['profile_pic'] !== 'default.jpg') {
                 $oldPicPath = $uploadDir . $user['profile_pic'];
                 if (is_file($oldPicPath)) {
@@ -83,6 +120,7 @@ if (isset($_POST["upload_photo"])) {
                 }
             }
 
+            // ==== STEP 8: UPDATE DATABASE WITH NEW FILENAME ====
             $updateProfilePictureSql = "
                 UPDATE users
                 SET profile_pic = ?
@@ -96,29 +134,41 @@ if (isset($_POST["upload_photo"])) {
                 [$newName, $user_id]
             );
 
+            // ==== STEP 9: REDIRECT WITH SUCCESS MESSAGE ====
             $_SESSION["success"] = "Profile picture updated.";
             header("Location:" . USER_PAGE . "profile.php");
             exit();
         } else {
+            // File move failed (permission issue or disk space)
             $_SESSION["error"] = "Failed to upload profile picture.";
             header("Location:" . USER_PAGE . "profile.php");
             exit();
         }
     } else {
+        // No file was selected or upload error occurred
         $_SESSION["error"] = "Please select an image to upload.";
         header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 }
 
-// ===== REMOVE PROFILE PHOTO =====
+// ============================================================================
+// PROFILE PICTURE REMOVAL HANDLER
+// ============================================================================
+
+// Check if remove_photo form was submitted
 if (isset($_POST['remove_photo'])) {
+    // ==== STEP 1: CHECK IF USER HAS CUSTOM PROFILE PICTURE ====
+    // Only proceed if current picture is not default
     if (!empty($user['profile_pic']) && $user['profile_pic'] !== 'default.jpg') {
+        // ==== STEP 2: DELETE PHYSICAL FILE FROM STORAGE ====
         $oldPic = PUBLIC_PATH . "/assets/profiles/" . $user['profile_pic'];
+        // Check file exists before attempting deletion
         if (is_file($oldPic)) {
             @unlink($oldPic);
         }
 
+        // ==== STEP 3: RESET DATABASE TO DEFAULT PICTURE ====
         $resetProfilePictureSql = "
             UPDATE users
             SET profile_pic = 'default.jpg'
@@ -133,55 +183,77 @@ if (isset($_POST['remove_photo'])) {
         );
     }
 
+    // ==== STEP 4: REDIRECT WITH SUCCESS MESSAGE ====
+    // Always show success (even if user had no custom pic, it's now default)
     $_SESSION['success'] = "Profile photo removed.";
     header("Location:" . USER_PAGE . "profile.php");
     exit();
 }
 
-// ===== UPDATE PROFILE INFO =====
+// ============================================================================
+// UPDATE PROFILE INFORMATION HANDLER
+// ============================================================================
+
+// Check if update_profile form was submitted
 if (isset($_POST["update_profile"])) {
+    // ==== STEP 1: EXTRACT & TRIM FORM INPUT ====
+    // Remove leading/trailing whitespace from all fields
     $username = trim($_POST["username"] ?? "");
     $studnum = trim($_POST["stud_num"] ?? "");
     $email = trim($_POST["email"] ?? "");
     $org = trim($_POST["org_body"] ?? "");
 
+    // ==== STEP 2: VALIDATE REQUIRED FIELDS ====
+    // All fields must be non-empty
     if ($username === "" || $studnum === "" || $email === "" || $org === "") {
         $_SESSION["error"] = "All fields are required.";
         header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
+    // ==== STEP 3: VALIDATE EMAIL FORMAT ====
+    // Check email follows standard email format (RFC 5322 basic)
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $_SESSION["error"] = "Invalid email format.";
         header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
+    // ==== STEP 4: VALIDATE EMAIL DOMAIN ====
+    // Enforce HAU (Holy Angel University) student email domain
     if (!preg_match('/@(student\.hau\.edu\.ph)$/i', $email)) {
         $_SESSION["error"] = "Email must be your HAU student email.";
         header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
+    // ==== STEP 5: VALIDATE STUDENT NUMBER LENGTH ====
+    // Student number must be at least 8 characters (HAU format requirement)
     if (strlen($studnum) < 8) {
         $_SESSION["error"] = "Invalid student number.";
         header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
+    // ==== STEP 6: VALIDATE USERNAME LENGTH ====
+    // Username must be at least 4 characters for usability
     if (strlen($username) < 4) {
         $_SESSION["error"] = "Username must be at least 4 characters.";
         header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
+    // ==== STEP 7: VALIDATE ORGANIZATION OPTION ====
+    // Ensure selected organization is from the allowed list
     if (!in_array($org, $org_options, true)) {
         $_SESSION["error"] = "Please select a valid organizing body.";
         header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
-    // ===== VALIDATION: UNIQUE CONSTRAINTS =====
+    // ==== STEP 8: VALIDATE UNIQUE CONSTRAINTS ====
+    // Check if username, email, or student number already exist in database
+    // Exclude current user's record (they can keep their own values)
     $checkUniqueProfileFieldsSql = "
         SELECT user_name, user_email, stud_num
         FROM users
@@ -197,6 +269,7 @@ if (isset($_POST["update_profile"])) {
         [$username, $email, $studnum, $user_id]
     );
 
+    // If duplicate found, identify which field caused the conflict
     if ($row) {
         if (($row["user_name"] ?? '') === $username) {
             $_SESSION["error"] = "Username already exists.";
@@ -210,7 +283,8 @@ if (isset($_POST["update_profile"])) {
         exit();
     }
 
-    // ===== UPDATE PROFILE =====
+    // ==== STEP 9: UPDATE DATABASE WITH NEW PROFILE DATA ====
+    // All validations passed, update user record
     $updateUserProfileSql = "
         UPDATE users
         SET user_name = ?, stud_num = ?, user_email = ?, org_body = ?
@@ -224,32 +298,51 @@ if (isset($_POST["update_profile"])) {
         [$username, $studnum, $email, $org, $user_id]
     );
 
+    // ==== STEP 10: UPDATE SESSION DATA ====
+    // Keep session in sync with updated profile
     $_SESSION["username"] = $username;
     $_SESSION["org_body"] = $org;
 
+    // ==== STEP 11: REDIRECT WITH SUCCESS MESSAGE ====
     $_SESSION["success"] = "Profile updated successfully.";
     header("Location:" . USER_PAGE . "profile.php");
     exit();
 }
 
-// ===== PASSWORD CHANGE =====
+// ============================================================================
+// PASSWORD CHANGE HANDLER
+// ============================================================================
+
+// Check if change_password form was submitted
 if (isset($_POST["change_password"])) {
+    // ==== STEP 1: EXTRACT PASSWORD FORM INPUTS ====
     $current = $_POST["current_password"] ?? "";
     $new = $_POST["new_password"] ?? "";
     $confirm = $_POST["confirm_password"] ?? "";
 
+    // ==== STEP 2: VERIFY CURRENT PASSWORD ====
+    // Use password_verify() for secure hash comparison (prevents timing attacks)
     if (!password_verify($current, $user["user_password"])) {
         $_SESSION["error"] = "Current password incorrect.";
         header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
+    // ==== STEP 3: VALIDATE NEW PASSWORDS MATCH ====
+    // Ensure user typed new password correctly twice
     if ($new !== $confirm) {
         $_SESSION["error"] = "Passwords do not match.";
         header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
+    // ==== STEP 4: VALIDATE PASSWORD STRENGTH ====
+    // Enforce minimum 8 characters with uppercase, lowercase, and numbers
+    // Requirements:
+    //   - At least 8 characters total
+    //   - At least one uppercase letter (A-Z)
+    //   - At least one lowercase letter (a-z)
+    //   - At least one digit (0-9)
     if (
         strlen($new) < 8 ||
         !preg_match('/[A-Z]/', $new) ||
@@ -261,8 +354,13 @@ if (isset($_POST["change_password"])) {
         exit();
     }
 
+    // ==== STEP 5: HASH NEW PASSWORD ====
+    // Use PASSWORD_DEFAULT algorithm (currently bcrypt, upgradeable in future)
+    // Hash is computed here, NOT transmitted to database raw
     $hash = password_hash($new, PASSWORD_DEFAULT);
 
+    // ==== STEP 6: UPDATE DATABASE WITH NEW PASSWORD HASH ====
+    // Store only the hash, never store plain-text passwords
     $updateUserPasswordSql = "
         UPDATE users
         SET user_password = ?
@@ -276,6 +374,7 @@ if (isset($_POST["change_password"])) {
         [$hash, $user_id]
     );
 
+    // ==== STEP 7: REDIRECT WITH SUCCESS MESSAGE ====
     $_SESSION["success"] = "Password changed successfully.";
     header("Location:" . USER_PAGE . "profile.php");
     exit();

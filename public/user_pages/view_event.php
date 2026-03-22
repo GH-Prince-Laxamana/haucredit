@@ -1,4 +1,22 @@
 <?php
+/**
+ * VIEW EVENT PAGE - Event Details & Compliance Document Management
+ * 
+ * Purpose: Display comprehensive event details, compliance requirements, document upload status,
+ * and submission/review tracking for a single event. Users can preview requirements, upload documents,
+ * and view narrative report details.
+ * 
+ * Page Features:
+ * - Event metadata display (classification, basic info, schedule, logistics)
+ * - Required documents list with submission/review status tracking
+ * - Document preview and upload interface
+ * - Narrative report viewing/editing (with special handling)
+ * - Progress tracker with percent completion
+ * - Archive/restore/delete functionality
+ * - Admin remarks display (when event needs revision)
+ * 
+ */
+
 session_start();
 require_once __DIR__ . '/../../app/database.php';
 
@@ -149,9 +167,9 @@ function getEventStatusBanner(string $event_status, ?string $admin_remarks = nul
             break;
     }
 
-    // if (!empty($admin_remarks)) {
-    //     $message .= "<br><strong>Admin remarks:</strong> " . htmlspecialchars($admin_remarks);
-    // }
+    if (!empty($admin_remarks)) {
+        $message .= "<br><strong>Admin remarks:</strong> " . htmlspecialchars($admin_remarks);
+    }
 
     return [
         'title' => $title,
@@ -160,7 +178,17 @@ function getEventStatusBanner(string $event_status, ?string $admin_remarks = nul
     ];
 }
 
-/* ================= EVENT DATA FETCH ================= */
+/**
+ * ===== DATA FETCHING & PROCESSING =====
+ * 
+ * This section loads event data from database, applies business logic transformations,
+ * and prepares display-ready variables for the HTML template.
+ */
+
+// ==== FETCH EVENT DATA ====
+// Query: Multi-table LEFT JOIN to assemble complete event profile
+// Includes: Core event fields + type classification + dates + participants + location + logistics + metrics
+// Security: Parameterized query with user_id check (only owner sees their events)
 $fetchEventSql = "
     SELECT
         e.event_id,
@@ -232,9 +260,19 @@ if (!$event) {
     popup_error("Event not found or you don't have permission to view it.", PUBLIC_URL . 'index.php');
 }
 
-/* ================= EVENT STATE ================= */
+/**
+ * EVENT STATE DETERMINATION
+ * 
+ * Derive boolean flags from event_status and archived_at to control UI visibility and editing permissions.
+ * These state flags are used throughout the template to show/hide sections and enforce business rules.
+ */
+
+// ==== ARCHIVED STATE ====
+// Check if event has been archived (soft delete with 30-day expiry)
 $is_archived = !empty($event['archived_at']);
 
+// ==== STATUS FLAGS ====
+// Determine current event status (default: 'Draft' if missing)
 $event_status = $event['event_status'] ?? 'Draft';
 $is_completed = ($event_status === 'Completed');
 $is_approved = ($event_status === 'Approved');
@@ -242,33 +280,67 @@ $is_draft = ($event_status === 'Draft');
 $is_pending_review = ($event_status === 'Pending Review');
 $is_needs_revision = ($event_status === 'Needs Revision');
 
-/* editable states */
+// ==== EDITABLE STATE ====
+// Determine if user can edit event fields and upload/modify documents
+// Rule: Can only edit if NOT archived AND status allows edits (Draft, Pending Review, or Needs Revision)
+// Completed and Approved events are read-only (documents can be uploaded post-event for Approved)
 $can_edit_event = !$is_archived && in_array($event_status, ['Draft', 'Pending Review', 'Needs Revision'], true);
+
+// Determine if user can upload/remove documents for requirements
+// Same rule as event editing but also checked individually per document
 $can_modify_documents = !$is_archived && in_array($event_status, ['Draft', 'Pending Review', 'Needs Revision'], true);
 
+/**
+ * canModifyRequirement - Check if user can modify a specific requirement/document
+ * 
+ * Business Rule: User can modify requirement IF:
+ * 1. Global permission exists (can_modify_documents = true)
+ * 2. AND document hasn't been approved by admin (review_status !== 'Approved')
+ * 
+ * Approved documents are locked from further changes (admin verified correctness).
+ * 
+ * @param array $doc - Requirement record with 'review_status' field
+ * @param bool $can_modify_documents - Global permission flag
+ * @return bool - True if user can modify this specific document
+ */
 function canModifyRequirement(array $doc, bool $can_modify_documents): bool
 {
+    // ==== CHECK 1: Global modification permission ====
     if (!$can_modify_documents) {
-        return false;
+        return false; // User can't modify any documents
     }
 
+    // ==== CHECK 2: Document-level lock (approved by admin) ====
+    // Approved documents are locked from further changes
     if (($doc['review_status'] ?? '') === 'Approved') {
-        return false;
+        return false; // This specific document is approved/locked
     }
 
+    // ==== RETURN: All checks passed, user can modify ====
     return true;
 }
 
+// ==== ARCHIVE EXPIRY COUNTDOWN ====
+// Calculate days remaining before archived event is permanently deleted
+// Archived events have 30-day grace period for restoration
 $days_remaining = null;
 if ($is_archived) {
+    // Parse archived_at timestamp
     $archived_time = strtotime($event['archived_at']);
+    // Add 30 days (30 * 24 hours * 60 mins * 60 secs)
     $expiry_time = $archived_time + (30 * 24 * 60 * 60);
+    // Calculate days left (ceil rounds up so partial day remaining shows as 1)
     $days_remaining = ceil(($expiry_time - time()) / 86400);
 }
 
 $status_banner = getEventStatusBanner($event_status, $event['admin_remarks'] ?? null);
 
-/* ================= REQUIRED DOCUMENTS FETCH ================= */
+/**
+ * FETCH REQUIRED DOCUMENTS
+ * 
+ * Query: Multi-table query to fetch all requirements for this event with submission/review details.
+ * JOINs: requirement_templates (definitions), requirement_files (user uploads), narrative_report_details (narrative/video).
+ */
 $fetchRequiredDocsSql = "
     SELECT
         er.event_req_id,
@@ -312,36 +384,86 @@ $fetchRequiredDocsSql = "
         rt.req_name ASC
 ";
 
+// Fetch all requirements for this event
+// Returns: Documents with deadline, submission status, review status, uploaded file info, and narrative details
 $required_docs = fetchAll($conn, $fetchRequiredDocsSql, "i", [$event_id]);
 
+/**
+ * TRANSFORM: Add display-ready fields to each requirement
+ * 
+ * Transform raw database fields into template-ready values:
+ * - Add status flags for template conditionals (is_narrative_report)
+ * - Add formatted status labels for display (display_submission_status, display_review_status)
+ * - Keep all original fields intact
+ */
 $required_docs = array_map(function ($doc) {
+    // Extract status values or use defaults if missing
     $submission_status = $doc['submission_status'] ?? 'Pending';
     $review_status = $doc['review_status'] ?? 'Not Reviewed';
 
+    // ==== FLAG: Is this the Narrative Report (special handling)? ====
+    // Narrative Report has unique editors/submission interface vs standard requirements
     $doc['is_narrative_report'] = (($doc['req_name'] ?? '') === 'Narrative Report');
+    
+    // ==== TRANSFORM: Format status for display ====
+    // Convert internal status values to user-friendly labels
     $doc['display_submission_status'] = formatSubmissionStatus($submission_status);
     $doc['display_review_status'] = formatReviewStatus($review_status);
 
     return $doc;
 }, $required_docs);
 
-/* ================= PROGRESS CALCULATION ================= */
+/**
+ * PROGRESS CALCULATION
+ * 
+ * Calculate document upload progress percentage and derive color visualization.
+ * Used for progress tracker ring and progress bar displays.
+ */
+
+// Extract total and uploaded document counts from event record
 $total_docs = (int) ($event['docs_total'] ?? 0);
 $uploaded_docs = (int) ($event['docs_uploaded'] ?? 0);
+
+// Calculate pending count (never negative via max())
 $pending_docs = max(0, $total_docs - $uploaded_docs);
+
+// ==== PROGRESS PERCENT ====
+// Formula: (uploaded / total) * 100, rounded to nearest integer
+// Edge case: If total is 0, progress is 0% (avoid division by zero)
 $progress_percentage = $total_docs ? round(($uploaded_docs / $total_docs) * 100) : 0;
 
-$pct = max(0, min(100, (int) $progress_percentage));
-$hue = ($pct / 100) * 120;
-$progress_color = "hsl($hue, 70%, 45%)";
+// ==== PROGRESS COLOR (HSL gradient) ====
+// Convert percent to hue value: 0% = red (0°), 100% = green (120°)
+// This creates visual gradient from red→yellow→green as progress increases
+$pct = max(0, min(100, (int) $progress_percentage));  // Clamp to 0-100 range
+$hue = ($pct / 100) * 120;                             // Convert to hue (0-120 degrees)
+$progress_color = "hsl($hue, 70%, 45%)";              // HSL color (saturation: 70%, lightness: 45%)
 
-/* ================= ORGANIZING BODY FORMAT ================= */
+/**
+ * ORGANIZING BODY FORMATTING
+ * 
+ * Database stores organizing body as JSON array, but display prefers comma-separated list.
+ * Parse JSON and join with commas for readable output.
+ */
+
+// Start with raw organizing_body value (may be JSON or empty)
 $organizing_body_display = $event['organizing_body'] ?? '';
+
+// Attempt to decode as JSON array
 $decoded_orgs = json_decode($organizing_body_display, true);
+
+// If decode successful and is array, convert to comma-separated string
 if (is_array($decoded_orgs)) {
     $organizing_body_display = implode(", ", $decoded_orgs);
 }
+// Otherwise display as-is (already string or empty)
 
+/**
+ * METRIC ACHIEVEMENT STATUS
+ * 
+ * Compare target vs actual event metrics and determine achievement.
+ * Returns status info for "Basic Information" card display.
+ */
 $metric_status = getMetricAchievementStatus(
     $event['target_metric'] ?? null,
     $event['actual_metric'] ?? null

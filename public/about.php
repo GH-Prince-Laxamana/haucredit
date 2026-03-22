@@ -1,14 +1,6 @@
 <?php
-// ===== SESSION INITIALIZATION =====
-// Start the session to manage user authentication state
 session_start();
-
-// ===== DATABASE CONNECTION =====
-// Include the database connection file to establish a connection for potential future use
 require_once __DIR__ . '/../app/database.php';
-
-// ===== SECURITY HEADERS =====
-// Include and send security headers to protect against common web vulnerabilities
 require_once APP_PATH . "security_headers.php";
 send_security_headers();
 
@@ -22,31 +14,24 @@ if (!isset($_SESSION["user_id"])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Character encoding and viewport for responsive design -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Page title -->
     <title>About Us</title>
-    <!-- Stylesheets for layout and about page specific styles -->
     <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
     <link rel="stylesheet" href="assets/styles/about_styles.css" />
 </head>
 
 <body>
     <div class="app">
-        <!-- Overlay for sidebar on mobile devices -->
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-        <!-- Include the general navigation component -->
         <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
         <main class="main">
             <header class="topbar">
-                <!-- Hamburger menu button for mobile navigation -->
                 <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
 
                 <div class="title-wrap">
-                    <!-- Main heading and subtitle for the page -->
                     <h1>About Us</h1>
                     <p>Learn How HAUCREDIT Simplifies Student Event Management</p>
                 </div>
@@ -230,12 +215,10 @@ if (!isset($_SESSION["user_id"])) {
                 </section>
             </section>
 
-            <!-- Include the footer component -->
             <?php include PUBLIC_PATH . 'assets/includes/footer.php' ?>
         </main>
     </div>
 
-    <!-- Include the layout JavaScript for navigation functionality -->
     <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
 </body>
 </html>

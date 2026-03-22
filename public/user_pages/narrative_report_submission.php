@@ -1,4 +1,28 @@
 <?php
+// ============================================================================
+// HAUCREDIT NARRATIVE REPORT SUBMISSION - Post-Event Documentation
+// ============================================================================
+/**
+ * Narrative Report submission form for approved events.
+ * Allows users to document event outcomes post-event execution.
+ *
+ * Access rules:
+ * - Only accessible for events in "Approved" or "Needs Revision" status
+ * - Cannot submit when narrative report approval is complete
+ * - Archived events are blocked
+ *
+ * Submission includes:
+ * - Written narrative report describing event execution
+ * - Actual metric (performance measurement from event)
+ * - Video documentation link to supporting media
+ *
+ * Form has transaction-safe submission that updates:
+ * - narrative_report_details with user-submitted content
+ * - event_metrics with actual performance metric
+ * - event_requirements status reset for admin review
+ * - event document counters (docs_uploaded, docs_total)
+ */
+
 session_start();
 require_once __DIR__ . '/../../app/database.php';
 
@@ -11,26 +35,52 @@ if ($event_id <= 0) {
     popup_error("Invalid event.", PUBLIC_URL . 'index.php');
 }
 
-/* ================= HELPERS ================= */
+// ============================================================================
+// HELPER FUNCTIONS - FORMATTING & STATUS DETERMINATION
+// ============================================================================
+
+/**
+ * Format requirement submission status for user display.
+ * Maps internal status values to human-readable labels.
+ *
+ * @param string $status Internal status value (Uploaded, Pending, etc.)
+ * @return string Human-readable status label
+ */
 function formatSubmissionStatus(string $status): string
 {
+    // Use match expression for clean status mapping
     return match ($status) {
-        'Uploaded' => 'Submitted',
-        'Pending' => 'Pending',
-        default => $status
+        'Uploaded' => 'Submitted',  // Internal value 'Uploaded' is shown as 'Submitted' to users
+        'Pending' => 'Pending',     // Not yet uploaded
+        default => $status          // Pass through unknown statuses
     };
 }
 
+/**
+ * Format requirement review status for user display.
+ * Maps admin review states to human-readable labels.
+ *
+ * @param string $status Internal review status (Not Reviewed, Needs Revision, Approved)
+ * @return string Human-readable review status label
+ */
 function formatReviewStatus(string $status): string
 {
+    // Use match expression for review status mapping
     return match ($status) {
-        'Not Reviewed' => 'Not Reviewed',
-        'Needs Revision' => 'Needs Revision',
-        'Approved' => 'Approved',
-        default => $status
+        'Not Reviewed' => 'Not Reviewed',        // Admin has not yet reviewed
+        'Needs Revision' => 'Needs Revision',    // Admin requested changes
+        'Approved' => 'Approved',                // Admin approved this submission
+        default => $status                       // Pass through unknown statuses
     };
 }
 
+/**
+ * Format database datetime values to human-readable format.
+ * Converts NULL/empty to 'N/A' and formats timestamps as readable dates.
+ *
+ * @param ?string $value DateTime string from database (or NULL)
+ * @return string Formatted datetime or 'N/A' if empty
+ */
 function formatDateTimeValue(?string $value): string
 {
     if (empty($value)) {
@@ -41,46 +91,82 @@ function formatDateTimeValue(?string $value): string
     return $ts ? date('F j, Y g:i A', $ts) : 'N/A';
 }
 
+/**
+ * Generate banner/alert message based on event and narrative report status.
+ * Determines what message to show user and applies appropriate CSS styling.
+ *
+ * Approval rules:
+ * - If narrative report is already approved -> show read-only message
+ * - If event not yet approved -> show "pending approval" message
+ * - If event approved -> show "ready to submit" message
+ * - If revisions needed -> show "revise submission" message
+ *
+ * @param string $event_status Event workflow status (Draft, Pending Review, Approved, Needs Revision, Completed)
+ * @param ?string $admin_remarks Optional admin feedback/remarks to display
+ * @param string $review_status Narrative report review status (Not Reviewed, Needs Revision, Approved)
+ * @return array Array with keys: 'title' (banner heading), 'message' (html content), 'class' (css class)
+ */
 function getNarrativeBanner(string $event_status, ?string $admin_remarks = null, string $review_status = 'Not Reviewed'): array
 {
     $class = strtolower(str_replace(' ', '-', $event_status));
     $title = 'Narrative Report Status';
+    
+    // Initialize message (populated based on status checks)
     $message = '';
 
+    // ===== CHECK 1: APPROVED STATUS CHECK =====/
+    // If narrative report already approved, user cannot edit
     if ($review_status === 'Approved') {
         $message = "This Narrative Report has already been approved. Editing is no longer available.";
     } else {
+        // ===== CHECK 2: EVENT STATUS CHECKS =====/
+        // Determine permissions based on event's workflow status
+        
         switch ($event_status) {
             case 'Approved':
+                // Event approved for post-event submission
+                // User can now submit narrative report
                 $message = "This event is approved. You may now submit the Narrative Report and post-event details.";
                 break;
 
             case 'Needs Revision':
+                // Event needs revision OR narrative report needs revision
+                // User must address admin feedback
                 $message = "This Narrative Report or related event submission needs revision. Please review the remarks and update your submission.";
                 break;
 
             case 'Completed':
+                // Event already concluded
+                // No further edits allowed
                 $message = "This event is already completed. Narrative Report editing is no longer available.";
                 break;
 
             case 'Pending Review':
+                // Event still in pre-execution approval phase
+                // Cannot submit narrative yet (event hasn't happened)
                 $message = "This event is still in the pre-event review stage. Narrative Report submission is not yet available.";
                 break;
 
             case 'Draft':
+                // Event not yet submitted for approval
+                // Cannot submit narrative yet
                 $message = "This event is still in draft status. Narrative Report submission is not yet available.";
                 break;
 
             default:
+                // Unknown event status
                 $message = "Narrative Report status is currently unavailable.";
                 break;
         }
     }
 
+    // ===== ADD ADMIN REMARKS IF PRESENT =====/
+    // Append admin feedback to message if provided
     if (!empty($admin_remarks)) {
         $message .= "<br><strong>Admin remarks:</strong> " . htmlspecialchars($admin_remarks);
     }
 
+    // Return banner data as associative array
     return [
         'title' => $title,
         'message' => $message,
@@ -88,7 +174,27 @@ function getNarrativeBanner(string $event_status, ?string $admin_remarks = null,
     ];
 }
 
-/* ================= FETCH NARRATIVE REPORT REQUIREMENT ================= */
+// ============================================================================
+// FETCH NARRATIVE REPORT REQUIREMENT - EVENT & SUBMISSION DATA
+// ============================================================================
+
+/**
+ * Multi-table query to fetch complete event and narrative report context.
+ * Retrieves event details, requirement status, existing submissions, and metrics.
+ * 
+ * JOIN STRATEGY:
+ * - events (e): Base table, anchors query to user/event context
+ * - event_requirements (er): Requirement assignment for this specific event
+ * - requirement_templates (rt): Filters to ensure this is the Narrative Report requirement
+ * - narrative_report_details (nrd): Previous submission data (if any) - LEFT JOIN allows NULL
+ * - event_metrics (em): Target and actual metrics - LEFT JOIN allows NULL if not set yet
+ * 
+ * WHERE CONDITIONS:
+ * - event_id matches requested event: Ensures we fetch correct event
+ * - user_id matches current user: Security - prevent accessing other users' events
+ * - archived_at IS NULL: Exclude archived events (users cannot edit archived submissions)
+ * - req_name = 'Narrative Report': Filter to only the narrative report requirement
+ */
 $sql = "
     SELECT
         e.event_id,

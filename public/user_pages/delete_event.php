@@ -1,4 +1,31 @@
 <?php
+/**
+ * Event Permanent Deletion Handler
+ * 
+ * This module handles the permanent deletion of archived events.
+ * Only events with archived_at timestamps can be deleted to prevent accidental removal
+ * of active events. Associated files stored on disk are cleaned up after successful deletion.
+ * 
+ * Security & Data Integrity:
+ * - Verifies user ownership of the event
+ * - Only allows deletion of archived events (soft-deleted)
+ * - Uses database cascade deletes to remove all related records atomically
+ * - Cleans up physical files from disk after database commit
+ * - Rolls back all changes if deletion fails
+ * 
+ * Database Cascade Behavior:
+ * Deleting an event cascades to:
+ * - event_type: Deleted via ON DELETE CASCADE
+ * - event_dates: Deleted via ON DELETE CASCADE
+ * - event_participants: Deleted via ON DELETE CASCADE
+ * - event_location: Deleted via ON DELETE CASCADE
+ * - event_logistics: Deleted via ON DELETE CASCADE
+ * - event_metrics: Deleted via ON DELETE CASCADE
+ * - event_requirements: Deleted via ON DELETE CASCADE
+ * - requirement_files: Deleted via ON DELETE CASCADE (through event_requirements)
+ * - calendar_entries: event_id set to NULL via ON DELETE SET NULL (keeps calendar entry)
+ */
+
 session_start();
 require_once __DIR__ . '/../../app/database.php';
 
@@ -15,7 +42,25 @@ if ($event_id <= 0) {
     popup_error("Invalid event.", PUBLIC_URL . 'index.php');
 }
 
-/* ================= OWNERSHIP + ARCHIVE CHECK ================= */
+// ============================================================================
+// OWNERSHIP & ARCHIVE STATUS VERIFICATION
+// ============================================================================
+
+/**
+ * Verify that:
+ * 1. The event exists in the database
+ * 2. The logged-in user owns the event (as creator)
+ * 3. The event has been previously archived (soft-deleted)
+ * 
+ * This prevents accidental deletion of active events and ensures
+ * only the event owner can delete their own events.
+ * 
+ * Only archived events (where archived_at IS NOT NULL) can be permanently deleted.
+ * This provides a safety mechanism - events must be archived before permanent removal.
+ */
+
+// Query to check if the event exists, belongs to the current user,
+// and has been previously archived
 $checkArchivedEventSql = "
     SELECT event_id
     FROM events
@@ -25,6 +70,7 @@ $checkArchivedEventSql = "
     LIMIT 1
 ";
 
+// Fetch the event record with all three validations (ID, ownership, archive status)
 $eventRow = fetchOne(
     $conn,
     $checkArchivedEventSql,
@@ -32,14 +78,31 @@ $eventRow = fetchOne(
     [$event_id, $user_id]
 );
 
+// Terminate if event doesn't exist, doesn't belong to user, or isn't archived
 if (!$eventRow) {
     popup_error("Unauthorized action or event is not archived.");
 }
 
-/* ================= COLLECT FILE PATHS =================
-   Current DB path:
-   events -> event_requirements -> requirement_files
-*/
+// ============================================================================
+// FILE PATH COLLECTION
+// ============================================================================
+
+/**
+ * Collect all file paths associated with this event BEFORE deletion.
+ * These files need to be removed from disk after the database deletion commits.
+ * 
+ * The relationship chain is:
+ * events (being deleted)
+ *   -> event_requirements (cascade deleted)
+ *     -> requirement_files (cascade deleted, contains file paths)
+ * 
+ * We collect paths while records still exist, then delete them from disk
+ * after database transaction succeeds.
+ */
+
+// Query to retrieve all file paths associated with this event
+// Joins through event_requirements to requirement_files
+// Only selects distinct paths that have actual values (non-null, non-empty)
 $fetchEventFilePathsSql = "
     SELECT DISTINCT rf.file_path
     FROM requirement_files rf
@@ -53,6 +116,7 @@ $fetchEventFilePathsSql = "
       AND rf.file_path != ''
 ";
 
+// Fetch all file records to extract paths
 $fileRows = fetchAll(
     $conn,
     $fetchEventFilePathsSql,
@@ -60,27 +124,46 @@ $fileRows = fetchAll(
     [$event_id, $user_id]
 );
 
+// Extract file paths into a simple array for later disk cleanup
 $filePaths = [];
 foreach ($fileRows as $row) {
     $filePaths[] = $row['file_path'];
 }
 
-/* ================= DELETE EVENT =================
-   Cascades will remove:
-   - event_type
-   - event_dates
-   - event_participants
-   - event_location
-   - event_logistics
-   - event_metrics
-   - event_requirements
-   - requirement_files
+// ============================================================================
+// DATABASE DELETION & TRANSACTION MANAGEMENT
+// ============================================================================
 
-   calendar_entries.event_id becomes NULL because of ON DELETE SET NULL
-*/
+/**
+ * Use an ACID transaction to ensure all-or-nothing deletion semantics.
+ * If any part of the deletion fails, the entire operation rolls back,
+ * leaving the database in a consistent state.
+ * 
+ * Cascade Deletion Behavior:
+ * When the events record is deleted, database CASCADE rules automatically
+ * remove all dependent records:
+ * - event_type (child of events)
+ * - event_dates (child of events)
+ * - event_participants (child of events)
+ * - event_location (child of events)
+ * - event_logistics (child of events)
+ * - event_metrics (child of events)
+ * - event_requirements (child of events) -> which cascades to requirement_files
+ * - calendar_entries (has ON DELETE SET NULL, so event_id becomes NULL)
+ */
+
 try {
+    // Begin atomic transaction - all changes succeed together or rollback together
     $conn->begin_transaction();
 
+    // ===== STEP 1: DELETE THE EVENT RECORD =====
+    
+    // Delete the event record with triple verification:
+    // - Matches the event ID we're deleting
+    // - Belongs to the current user (security check)
+    // - Has been archived (safety check - only delete truly archived events)
+    // 
+    // All related records cascade delete automatically via foreign key constraints
     $deleteArchivedEventSql = "
         DELETE FROM events
         WHERE event_id = ?
@@ -96,14 +179,29 @@ try {
         [$event_id, $user_id]
     );
 
+    // Verify that exactly one event record was deleted
+    // If affected_rows is 0, something went wrong (maybe concurrent deletion)
+    // If affected_rows > 1, the LIMIT 1 was somehow ignored (shouldn't happen)
     if ($deleteStmt->affected_rows === 0) {
         throw new Exception("Event could not be deleted.");
     }
 
     $conn->commit();
 
-    /* ================= DELETE PHYSICAL FILES AFTER COMMIT ================= */
+    // ===== STEP 3: DELETE PHYSICAL FILES FROM DISK =====
+    
+    /**
+     * Delete uploaded files from disk AFTER the database commit succeeds.
+     * This ensures we don't orphan files if the database delete fails.
+     * 
+     * If this step fails (permissions, missing files), we continue anyway
+     * because the database is already consistent. Orphaned files are
+     * preferable to a partially-deleted event record.
+     */
     foreach ($filePaths as $relativePath) {
+        // Convert relative path to absolute filesystem path
+        // relativePath example: "uploads/requirements/req_12345.pdf"
+        // absolutePath example: "/var/www/html/public/uploads/requirements/req_12345.pdf"
         $fullPath = __DIR__ . "/../" . ltrim($relativePath, "/");
 
         if (is_file($fullPath)) {

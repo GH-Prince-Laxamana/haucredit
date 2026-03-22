@@ -1,4 +1,20 @@
 <?php
+// ============================================================================
+// HAUCREDIT DASHBOARD - Home Page
+// ============================================================================
+/**
+ * User dashboard displaying:
+ * - Key metrics: current events, upcoming deadlines, compliance progress, archived events
+ * - Event cards with progress bars (active events only)
+ * - Upcoming deadline list (sorted by deadline date)
+ * - Event status distribution and statistics
+ *
+ * This page loads only non-archived events in active states (Pending Review, Needs Revision, Approved).
+ * Archived events are tracked separately and shown only in count form.
+ * All data is user-scoped for security (WHERE user_id = ?).
+ */
+
+
 session_start();
 require_once __DIR__ . '/../../app/database.php';
 require_once APP_PATH . "security_headers.php";
@@ -7,7 +23,14 @@ send_security_headers();
 requireLogin();
 
 $user_id = (int) $_SESSION['user_id'];
+
+// User's display username
+// htmlspecialchars() prevents script injection via user-controlled data
+// ENT_QUOTES escapes both double and single quotes
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
+
+// Organization body this user belongs to
+// Used in header to show user's organizational context
 $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
 
 /* ================= HELPERS ================= */
@@ -16,14 +39,27 @@ function normalizeStatusClass(string $status): string
     return strtolower(str_replace(' ', '-', $status));
 }
 
-/* ================= CURRENT EVENTS QUERY =================
-   Uses:
-   - events
-   - event_dates
-   - event_location
-   - event_metrics
-   - docs_total / docs_uploaded from events
-*/
+// ============================================================================
+// QUERY 1: FETCH CURRENT ACTIVE EVENTS
+// ============================================================================
+
+/**
+ * Load all non-archived events for the current user in active status.
+ * Joins supporting tables to display event details and requirement progress.
+ * 
+ * Table relationships:
+ * - events: Core event record with status, document counters
+ * - event_dates: Scheduled date/time information (nullable)
+ * - event_location: Venue and platform details (nullable)
+ * - event_metrics: Target metric for event measurement (nullable)
+ * 
+ * Filtered to show only:
+ * - User's own events (user_id = ?)
+ * - Non-archived events (archived_at IS NULL)
+ * - Active statuses (Needs Revision, Pending Review, Approved)
+ * 
+ * Sorted by status priority then by start date
+ */
 $fetchAllEventsSql = "
     SELECT
         e.event_id,
@@ -62,23 +98,77 @@ $all_events = fetchAll(
     [$user_id]
 );
 
-/* ================= PROGRESS CALCULATIONS ================= */
+// ============================================================================
+// CALCULATE OVERALL COMPLIANCE PROGRESS
+// ============================================================================
+
+/**
+ * Aggregate document submission statistics across all user's active events.
+ * Shows user's overall progress toward meeting all requirement submissions.
+ * 
+ * Progress formula: (Total Uploaded / Total Expected) * 100
+ * Each event tracks its own doc counts, we sum all events to get overall.
+ */
+
+// Sum requirement document counts across all events
+// Each event has docs_total (required documents) and docs_uploaded (submitted documents)
+// Filter to integers with null-safety (default 0)
 $total_docs_all = array_sum(array_map(fn($e) => (int) ($e['docs_total'] ?? 0), $all_events));
 $uploaded_docs_all = array_sum(array_map(fn($e) => (int) ($e['docs_uploaded'] ?? 0), $all_events));
+
+// Calculate percentage complete
+// If no requirements exist, show 0% progress (prevent division by zero)
+// Otherwise: (uploaded / total) * 100, rounded to whole percent
 $overall_progress = $total_docs_all > 0 ? round(($uploaded_docs_all / $total_docs_all) * 100) : 0;
 
-/* ================= EVENT DISPLAY ================= */
+// ============================================================================
+// EVENT DISPLAY PAGINATION
+// ============================================================================
+
+/**
+ * Prepare event data for dashboard display.
+ * Shows first 3 events on homepage, with link to "View All" if more exist.
+ * This keeps dashboard concise while allowing access to all events.
+ */
+
+// Count total number of events user has
+// Used to determine if "View All" link should be shown
 $total_current_events = count($all_events);
+
+// Flag to show "View All" link only if more events exist beyond the 3 shown
+// If 3 or fewer events, don't show view all link
 $show_view_all = $total_current_events > 3;
+
+// Extract first 3 events for display
+// array_slice preserves array keys and order
 $show_limit_events = array_slice($all_events, 0, 3);
 
-/* ================= EVENT STATUS COUNTS ================= */
+// ============================================================================
+// QUERY 2: FETCH ALL EVENT STATUS COUNTS
+// ============================================================================
+
+/**
+ * Count events by their current status across all user's events (including archived).
+ * This provides statistics on user's event distribution and workflow state.
+ * 
+ * Status meaning:
+ * - Draft: Event created but not submitted for review
+ * - Pending Review: Awaiting admin review of event details
+ * - Needs Revision: Admin requested changes
+ * - Approved: Event approved, requirements visible to user
+ * - Completed: Event concluded (currently unused but tracked)
+ */
+
+// Initialize status counters to zero
+// These are incremented as we loop through results
 $draft_count = 0;
 $pending_review_count = 0;
 $needs_revision_count = 0;
 $approved_count = 0;
 $completed_count = 0;
 
+// Fetch all events status (including archived) for this user
+// Shows complete status distribution across all user's events
 $allUserEventsForCounts = fetchAll(
     $conn,
     "
@@ -91,6 +181,10 @@ $allUserEventsForCounts = fetchAll(
     [$user_id]
 );
 
+/**
+ * Count events by status using switch statement.
+ * Iterates through all events and increments appropriate counter.
+ */
 foreach ($allUserEventsForCounts as $e) {
     switch ($e['event_status']) {
         case 'Draft':
@@ -111,12 +205,28 @@ foreach ($allUserEventsForCounts as $e) {
     }
 }
 
-/* ================= DEADLINES QUERY =================
-   Uses:
-   - event_requirements.deadline
-   - event_requirements.submission_status
-   - requirement_templates.req_name / req_desc
-*/
+// ============================================================================
+// QUERY 3: FETCH UPCOMING DEADLINES
+// ============================================================================
+
+/**
+ * Retrieve requirement deadlines for active events.
+ * Only shows requirements still pending submission (not yet uploaded).
+ * Filters to events that haven't ended yet.
+ * 
+ * Table relationships:
+ * - event_requirements: Links events to required document types
+ * - events: Event details including status and dates
+ * - requirement_templates: Human-readable requirement names/descriptions
+ * - event_dates: Event schedule to filter by end date
+ * 
+ * Display logic:
+ * - Must be pending submission (submission_status = 'Pending')
+ * - Must have deadline set (NOT NULL)
+ * - Event must still be active (end_datetime >= NOW or null)
+ * - Event must be in active status (not Draft, not Archived)
+ * - Sorted by earliest deadline first (ascending)
+ */
 $fetchDeadlinesSql = "
     SELECT
         e.event_id,
@@ -151,10 +261,25 @@ $deadlines = fetchAll(
     [$user_id]
 );
 
+/**
+ * Prepare deadline list for dashboard display.
+ * Shows first 3 upcoming deadlines, with "View All" link if more exist.
+ */
 $show_view_all_deadlines = count($deadlines) > 3;
 $show_limit_deadlines = array_slice($deadlines, 0, 3);
 
-/* ================= ARCHIVED EVENTS COUNT ================= */
+// ============================================================================
+// QUERY 4: COUNT ARCHIVED EVENTS
+// ============================================================================
+
+/**
+ * Retrieve count of all archived events for the current user.
+ * Archived events are completed events moved to archive storage.
+ * Shown as a stat card but not displayed in detail on home.
+ * 
+ * Events are archived by setting archived_at timestamp.
+ * This separates completed work from active events for cleaner dashboard.
+ */
 $countArchivedEventsSql = "
     SELECT COUNT(*) AS total
     FROM events
@@ -168,6 +293,8 @@ $archivedRow = fetchOne(
     [$user_id]
 );
 
+// Extract count from result with null-safe default
+// Cast to int to ensure numeric type
 $archived_events = (int) ($archivedRow['total'] ?? 0);
 ?>
 <!DOCTYPE html>
@@ -187,6 +314,7 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
 
         <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
+        <!-- Main content area -->
         <main class="main">
             <header class="topbar">
                 <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
@@ -246,6 +374,10 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                     <?php endforeach; ?>
                 </section>
 
+
+                <!-- ===== CURRENT EVENTS SECTION ===== -->
+                <!-- Lists first 3 active events with progress indicators -->
+                <!-- Link to "View All" appears if more than 3 events exist -->
                 <section class="home-section">
                     <header class="home-section-header">
                         <h2 class="home-section-title">Current Events</h2>
@@ -301,7 +433,9 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                             <?php endforeach; ?>
                         </ul>
                     <?php else: ?>
-                        <!-- ===== EMPTY STATE FOR ACTIVE EVENTS ===== -->
+                        <!-- ===== EMPTY STATE - NO ACTIVE EVENTS ===== -->
+                        <!-- Shown when user has no current events -->
+                        <!-- Provides helpful message and encouragement to create first event -->
                         <div class="empty-state">
                             <div class="empty-icon">
                                 <i class="fa-solid fa-file-circle-xmark"></i>
@@ -315,6 +449,10 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                     <?php endif; ?>
                 </section>
 
+
+                <!-- ===== UPCOMING DEADLINES SECTION ===== -->
+                <!-- Lists first 3 requirement deadlines sorted by urgency -->
+                <!-- Shows pending requirements that haven't been uploaded yet -->
                 <section class="home-section">
                     <header class="home-section-header">
                         <h2 class="home-section-title">Upcoming Deadlines</h2>

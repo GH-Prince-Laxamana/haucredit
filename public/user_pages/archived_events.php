@@ -14,10 +14,16 @@ function normalizeEventStatusClass(string $status): string
     return strtolower(str_replace(' ', '-', $status));
 }
 
-/* ================= CLEANUP OF EXPIRED ARCHIVED EVENTS =================
-   Delete archived events older than 30 days for this user.
-   Pull uploaded files from requirement_files through event_requirements.
-*/
+// ==================== CLEANUP OF EXPIRED ARCHIVED EVENTS ====================
+// Automatically delete archived events older than 30 days for this user
+// This prevents the archive from accumulating too much data over time
+// Process:
+//   1. Query for events archived >30 days ago
+//   2. For each event, find all uploaded requirement files
+//   3. Delete event from database (transaction-protected)
+//   4. Delete uploaded files from file system
+
+// First, fetch IDs of archived events older than 30 days
 $fetchExpiredArchivedEventsSql = "
     SELECT event_id
     FROM events
@@ -26,6 +32,7 @@ $fetchExpiredArchivedEventsSql = "
       AND user_id = ?
 ";
 
+// Execute query to get all expired archived events for this user
 $expiredArchivedEvents = fetchAll(
     $conn,
     $fetchExpiredArchivedEventsSql,
@@ -33,9 +40,13 @@ $expiredArchivedEvents = fetchAll(
     [$user_id]
 );
 
+// For each expired event, delete its files and database record
 foreach ($expiredArchivedEvents as $row) {
+    // Extract event ID as integer from query result
     $event_id = (int) $row['event_id'];
 
+    // Query to find all uploaded requirement files for this event
+    // This uses INNER JOINs to only find files actually associated with this event
     $fetchRequirementFilePathsSql = "
         SELECT rf.file_path
         FROM requirement_files rf
@@ -46,6 +57,7 @@ foreach ($expiredArchivedEvents as $row) {
           AND rf.file_path != ''
     ";
 
+    // Execute file query to get paths of all files for this event
     $fileRows = fetchAll(
         $conn,
         $fetchRequirementFilePathsSql,
@@ -53,6 +65,7 @@ foreach ($expiredArchivedEvents as $row) {
         [$event_id]
     );
 
+    // Extract file paths from query results into simple array
     $filePaths = [];
     foreach ($fileRows as $file) {
         $filePaths[] = $file['file_path'];
@@ -61,6 +74,11 @@ foreach ($expiredArchivedEvents as $row) {
     try {
         $conn->begin_transaction();
 
+        // SQL to delete the event from database
+        // Multiple WHERE conditions for safety:
+        //   - Identifies specific event
+        //   - Ensures it's this user's event (security)
+        //   - Confirms event is actually archived (safety check)
         $deleteExpiredArchivedEventSql = "
             DELETE FROM events
             WHERE event_id = ?
@@ -77,9 +95,15 @@ foreach ($expiredArchivedEvents as $row) {
 
         $conn->commit();
 
+        // After successful database deletion, delete uploaded files from file system
+        // This runs after commit so if files can't be deleted, at least DB is cleaned
         foreach ($filePaths as $relativePath) {
+            // Convert relative path (e.g., 'uploads/requirements/file.pdf')
+            // to absolute file system path
             $path = __DIR__ . "/../" . ltrim($relativePath, "/");
+            // Check if file exists before attempting deletion
             if (is_file($path)) {
+                // @unlink suppresses PHP warnings if file doesn't exist or can't be deleted
                 @unlink($path);
             }
         }
@@ -88,7 +112,8 @@ foreach ($expiredArchivedEvents as $row) {
     }
 }
 
-/* ================= FETCH ARCHIVED EVENTS ================= */
+// ==================== FETCH ACTIVE ARCHIVED EVENTS ====================
+// Query to retrieve all non-deleted archived events for display to the user
 $fetchArchivedEventsSql = "
     SELECT
         e.event_id,
@@ -138,6 +163,7 @@ $events = fetchAll(
 
         <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
+        <!-- ==================== MAIN CONTENT AREA ==================== -->
         <main class="main">
             <header class="topbar">
                 <button class="hamburger" id="menuBtn" type="button" aria-label="Open menu">☰</button>
@@ -159,6 +185,7 @@ $events = fetchAll(
                     <h2 class="home-section-title">Archived Events</h2>
                 </header>
 
+                <!-- ========== EVENT LIST ========== -->
                 <ul class="events-table">
                     <?php if (!empty($events)): ?>
                         <?php foreach ($events as $event): ?>
