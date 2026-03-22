@@ -26,10 +26,11 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 // ========== Database Connection Configuration ==========
 // These constants define the credentials and target database for the application
-const DB_SERVER = "127.0.0.1";    // Database server host
-const DB_USER = "root";            // Database user account
-const DB_PASSWORD = "";            // Database user password
-const DB_NAME = "haucredit_db";   // Target database name
+// Use environment variables for Docker compatibility, fallback to defaults for local development
+define('DB_SERVER', getenv('DB_SERVER') ?: "127.0.0.1");       // Database server host
+define('DB_USER', getenv('DB_USER') ?: "dbuser");              // Database user account
+define('DB_PASSWORD', getenv('DB_PASSWORD') ?: "dbpassword");   // Database user password
+define('DB_NAME', getenv('DB_NAME') ?: "haucredit_db");        // Target database name
 
 // ========== Session Authentication & Authorization Functions ==========
 

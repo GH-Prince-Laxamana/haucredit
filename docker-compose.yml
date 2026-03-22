@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # MySQL Database Service
+  mysql:
+    image: mysql:8.0
+    container_name: haucredit_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      # Persist database data
+      - mysql_data:/var/lib/mysql
+      # Load SQL initialization scripts (creates database and user with proper permissions)
+      - ./sql:/docker-entrypoint-initdb.d
+    networks:
+      - haucredit_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+      interval: 10s
+
+  # PHP Application Service
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: haucredit_php
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # Database configuration
+      DB_SERVER: mysql
+      DB_USER: ${DB_USER:-dbuser}
+      DB_PASSWORD: ${DB_PASSWORD:-dbpassword}
+      DB_NAME: ${DB_NAME:-haucredit_db}
+      # PHP configuration
+      PHP_MEMORY_LIMIT: 256M
+      MAX_EXECUTION_TIME: 300
+    ports:
+      - "${APP_PORT:-80}:80"
+    volumes:
+      # Mount application code for development (comment out for production)
+      - .:/var/www/html
+      # Optional: Mount a custom PHP configuration
+      - ./php.ini:/usr/local/etc/php/php.ini:ro
+      # Apache logs volume
+      - apache_logs:/var/log/apache2
+    networks:
+      - haucredit_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mysql_data:
+    driver: local
+  apache_logs:
+    driver: local
+
+networks:
+  haucredit_network:
+    driver: bridge
