@@ -1,18 +1,10 @@
 <?php
 session_start();
-require_once "../app/database.php";
-require_once "../app/security_headers.php";
-require_once "../app/query_builder_functions.php";
+require_once __DIR__ . '/../../app/database.php';
+require_once APP_PATH . "security_headers.php";
 send_security_headers();
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
-
-if (($_SESSION["role"] ?? "") !== "admin") {
-    popup_error("Access denied.");
-}
+requireAdmin();
 
 $current_admin_id = (int) $_SESSION["user_id"];
 $search = trim($_GET['search'] ?? '');
@@ -146,16 +138,16 @@ foreach ($users as $user) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Users - HAUCREDIT</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/home_styles.css" />
-    <link rel="stylesheet" href="assets/styles/admin_users.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/home_styles.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/admin_users.css" />
 </head>
 
 <body>
     <div class="app">
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-        <?php include 'assets/includes/admin_nav.php'; ?>
+        <?php include PUBLIC_PATH . 'assets/includes/admin_nav.php'; ?>
 
         <main class="main">
             <header class="topbar">
@@ -311,7 +303,7 @@ foreach ($users as $user) {
 
                                 <div class="user-card-body">
                                     <div class="user-profile-row">
-                                        <img src="assets/profiles/<?= htmlspecialchars($profile_pic) ?>"
+                                        <img src="<?= PUBLIC_URL ?>assets/profiles/<?= htmlspecialchars($profile_pic) ?>"
                                             alt="<?= htmlspecialchars($user['user_name']) ?>" class="user-avatar">
 
                                         <div>
@@ -367,10 +359,12 @@ foreach ($users as $user) {
                                     <span class="user-id-tag">User ID #<?= (int) $user['user_id'] ?></span>
 
                                     <div class="footer-actions">
-                                        <a href="admin_user_events.php?user_id=<?= (int) $user['user_id'] ?>"
-                                            class="btn-secondary btn-smaller">
-                                            View Events
-                                        </a>
+                                        <?php if (($user['role'] ?? '') !== 'admin'): ?>
+                                            <a href="admin_user_events.php?user_id=<?= (int) $user['user_id'] ?>"
+                                                class="btn-secondary btn-smaller">
+                                                View Events
+                                            </a>
+                                        <?php endif; ?>
 
                                         <?php if (!$is_self && ($user['role'] ?? '') === 'user'): ?>
                                             <form method="POST" action="admin_update_user.php" class="inline-form">
@@ -413,11 +407,11 @@ foreach ($users as $user) {
                 </section>
             </section>
 
-            <?php include 'assets/includes/footer.php'; ?>
+            <?php include PUBLIC_PATH . 'assets/includes/footer.php'; ?>
         </main>
     </div>
 
-    <script src="../app/script/layout.js?v=1"></script>
+    <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
     <script>
         (function () {
             const filterForm = document.getElementById('usersFilterForm');

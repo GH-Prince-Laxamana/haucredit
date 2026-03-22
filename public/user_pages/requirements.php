@@ -1,13 +1,10 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../../app/database.php';
 
 date_default_timezone_set('Asia/Manila');
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
+requireLogin();
 
 $user_id = (int) $_SESSION["user_id"];
 $event_filter = isset($_GET['event_id']) && $_GET['event_id'] !== '' ? (int) $_GET['event_id'] : null;
@@ -246,14 +243,14 @@ $percent = $total ? round(($uploaded / $total) * 100) : 0;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Requirements</title>
 
-    <link rel="stylesheet" href="assets/styles/layout.css">
-    <link rel="stylesheet" href="assets/styles/requirements.css">
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/requirements.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
 <body>
     <div class="app">
-        <?php include "assets/includes/general_nav.php"; ?>
+        <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
         <main class="main">
             <header class="topbar">

@@ -1,18 +1,10 @@
 <?php
 session_start();
-require_once "../app/database.php";
-require_once "../app/security_headers.php";
-require_once "../app/query_builder_functions.php";
+require_once __DIR__ . '/../../app/database.php';
+require_once APP_PATH . "security_headers.php";
 send_security_headers();
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
-
-if (($_SESSION["role"] ?? "") !== "admin") {
-    popup_error("Access denied.");
-}
+requireAdmin();
 
 /* ================= CSRF ================= */
 if (empty($_SESSION["csrf_token"])) {
@@ -167,16 +159,16 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Configurations - HAUCREDIT</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/home_styles.css" />
-    <link rel="stylesheet" href="assets/styles/admin_configurations.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/home_styles.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/admin_configurations.css" />
 </head>
 
 <body>
     <div class="app">
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-        <?php include 'assets/includes/admin_nav.php'; ?>
+        <?php include PUBLIC_PATH . 'assets/includes/admin_nav.php'; ?>
 
         <main class="main">
             <header class="topbar">
@@ -742,11 +734,11 @@ $basis_options = ['before_start', 'after_start', 'before_end', 'after_end', 'man
                 </section>
             </section>
 
-            <?php include 'assets/includes/footer.php'; ?>
+            <?php include PUBLIC_PATH . 'assets/includes/footer.php'; ?>
         </main>
     </div>
 
-    <script src="../app/script/layout.js?v=1"></script>
+    <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
     <script>
         function toggleSection(headerButton) {
             const section = headerButton.closest('.config-section');

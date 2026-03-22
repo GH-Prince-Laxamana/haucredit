@@ -1,14 +1,8 @@
 <?php
 session_start();
-require_once "../app/database.php";
-require_once "../app/security_headers.php";
-require_once "../app/query_builder_functions.php";
-send_security_headers();
+require_once __DIR__ . '/../../app/database.php';
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
+requireLogin();
 
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
 $org_body = htmlspecialchars($_SESSION["org_body"], ENT_QUOTES, "UTF-8");
@@ -134,15 +128,15 @@ $events = fetchAll(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAUCREDIT - Archived</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/home_styles.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/home_styles.css" />
 </head>
 
 <body>
     <div class="app">
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-        <?php include 'assets/includes/general_nav.php' ?>
+        <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
         <main class="main">
             <header class="topbar">
@@ -240,7 +234,7 @@ $events = fetchAll(
         </main>
     </div>
 
-    <script src="../app/script/layout.js?v=1"></script>
+    <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
 </body>
 
 </html>

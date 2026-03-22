@@ -1,21 +1,14 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../../app/database.php';
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
-
-if (($_SESSION["role"] ?? "") !== "admin") {
-    popup_error("Access denied.");
-}
+requireAdmin();
 
 $admin_user_id = (int) $_SESSION["user_id"];
 $event_id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
 if ($event_id <= 0) {
-    popup_error("Invalid event ID.");
+    popup_error("Invalid event.", PUBLIC_URL . 'index.php');
 }
 
 /* ================= HELPERS ================= */
@@ -309,15 +302,15 @@ foreach ($requirements as $doc) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Manage Event - HAUCREDIT</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/admin_manage_event.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/admin_manage_event.css" />
 </head>
 
 <body>
     <div class="app">
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-        <?php include 'assets/includes/admin_nav.php'; ?>
+        <?php include PUBLIC_PATH . 'assets/includes/admin_nav.php'; ?>
 
         <main class="main">
             <header class="topbar">
@@ -752,7 +745,7 @@ foreach ($requirements as $doc) {
                     </aside>
                 </div>
 
-                <?php include 'assets/includes/footer.php'; ?>
+                <?php include PUBLIC_PATH . 'assets/includes/footer.php'; ?>
             </section>
         </main>
     </div>
@@ -771,7 +764,7 @@ foreach ($requirements as $doc) {
         </div>
     </div>
 
-    <script src="../app/script/layout.js?v=1"></script>
+    <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
     <script>
         function previewDocument(url, name, noTemplateMsg = '') {
             const modal = document.getElementById('docPreviewModal');

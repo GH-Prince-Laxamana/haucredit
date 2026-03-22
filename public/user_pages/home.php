@@ -1,14 +1,10 @@
 <?php
 session_start();
-require_once "../app/database.php";
-require_once "../app/security_headers.php";
-require_once "../app/query_builder_functions.php";
+require_once __DIR__ . '/../../app/database.php';
+require_once APP_PATH . "security_headers.php";
 send_security_headers();
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
+requireLogin();
 
 $user_id = (int) $_SESSION['user_id'];
 $username = htmlspecialchars($_SESSION["username"], ENT_QUOTES, "UTF-8");
@@ -181,15 +177,15 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAUCREDIT - Dashboard</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/home_styles.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/home_styles.css" />
 </head>
 
 <body>
     <div class="app">
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-        <?php include 'assets/includes/general_nav.php' ?>
+        <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
         <main class="main">
             <header class="topbar">
@@ -370,11 +366,11 @@ $archived_events = (int) ($archivedRow['total'] ?? 0);
                 </section>
             </section>
 
-            <?php include 'assets/includes/footer.php' ?>
+            <?php include PUBLIC_PATH . 'assets/includes/footer.php' ?>
         </main>
     </div>
 
-    <script src="../app/script/layout.js?v=1"></script>
+    <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
 </body>
 
 </html>

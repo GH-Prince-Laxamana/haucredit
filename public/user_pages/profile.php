@@ -1,12 +1,8 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../../app/database.php';
 
-// ===== AUTHENTICATION CHECK =====
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
+requireLogin();
 
 $user_id = (int) $_SESSION["user_id"];
 
@@ -48,7 +44,7 @@ $user = fetchOne(
 
 if (!$user) {
     $_SESSION["error"] = "User profile not found.";
-    header("Location: index.php");
+    header("Location:" . PUBLIC_URL . "index.php");
     exit();
 }
 
@@ -60,18 +56,18 @@ if (isset($_POST["upload_photo"])) {
 
         if (!in_array($ext, $allowed, true)) {
             $_SESSION["error"] = "Only .JPG, .JPEG, .PNG, and .WEBP files are allowed.";
-            header("Location: profile.php");
+            header("Location:" . PUBLIC_URL . "profile.php");
             exit();
         }
 
         $check = getimagesize($_FILES["profile_pic"]["tmp_name"]);
         if ($check === false) {
             $_SESSION["error"] = "Invalid image file.";
-            header("Location: profile.php");
+            header("Location:" . PUBLIC_URL . "profile.php");
             exit();
         }
 
-        $uploadDir = __DIR__ . "/assets/profiles/";
+        $uploadDir = PUBLIC_PATH . "assets/profiles/";
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }
@@ -101,16 +97,16 @@ if (isset($_POST["upload_photo"])) {
             );
 
             $_SESSION["success"] = "Profile picture updated.";
-            header("Location: profile.php");
+            header("Location:" . PUBLIC_URL . "profile.php");
             exit();
         } else {
             $_SESSION["error"] = "Failed to upload profile picture.";
-            header("Location: profile.php");
+            header("Location:" . PUBLIC_URL . "profile.php");
             exit();
         }
     } else {
         $_SESSION["error"] = "Please select an image to upload.";
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 }
@@ -118,7 +114,7 @@ if (isset($_POST["upload_photo"])) {
 // ===== REMOVE PROFILE PHOTO =====
 if (isset($_POST['remove_photo'])) {
     if (!empty($user['profile_pic']) && $user['profile_pic'] !== 'default.jpg') {
-        $oldPic = __DIR__ . "/assets/profiles/" . $user['profile_pic'];
+        $oldPic = PUBLIC_PATH . "/assets/profiles/" . $user['profile_pic'];
         if (is_file($oldPic)) {
             @unlink($oldPic);
         }
@@ -138,7 +134,7 @@ if (isset($_POST['remove_photo'])) {
     }
 
     $_SESSION['success'] = "Profile photo removed.";
-    header("Location: profile.php");
+    header("Location:" . PUBLIC_URL . "profile.php");
     exit();
 }
 
@@ -151,37 +147,37 @@ if (isset($_POST["update_profile"])) {
 
     if ($username === "" || $studnum === "" || $email === "" || $org === "") {
         $_SESSION["error"] = "All fields are required.";
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $_SESSION["error"] = "Invalid email format.";
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 
     if (!preg_match('/@(student\.hau\.edu\.ph)$/i', $email)) {
         $_SESSION["error"] = "Email must be your HAU student email.";
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 
     if (strlen($studnum) < 8) {
         $_SESSION["error"] = "Invalid student number.";
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 
     if (strlen($username) < 4) {
         $_SESSION["error"] = "Username must be at least 4 characters.";
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 
     if (!in_array($org, $org_options, true)) {
         $_SESSION["error"] = "Please select a valid organizing body.";
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 
@@ -210,7 +206,7 @@ if (isset($_POST["update_profile"])) {
             $_SESSION["error"] = "Student number already exists.";
         }
 
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 
@@ -232,7 +228,7 @@ if (isset($_POST["update_profile"])) {
     $_SESSION["org_body"] = $org;
 
     $_SESSION["success"] = "Profile updated successfully.";
-    header("Location: profile.php");
+    header("Location:" . PUBLIC_URL . "profile.php");
     exit();
 }
 
@@ -244,13 +240,13 @@ if (isset($_POST["change_password"])) {
 
     if (!password_verify($current, $user["user_password"])) {
         $_SESSION["error"] = "Current password incorrect.";
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 
     if ($new !== $confirm) {
         $_SESSION["error"] = "Passwords do not match.";
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 
@@ -261,7 +257,7 @@ if (isset($_POST["change_password"])) {
         !preg_match('/[0-9]/', $new)
     ) {
         $_SESSION["error"] = "Password must be at least 8 characters including uppercase, lowercase, and numbers.";
-        header("Location: profile.php");
+        header("Location:" . PUBLIC_URL . "profile.php");
         exit();
     }
 
@@ -281,7 +277,7 @@ if (isset($_POST["change_password"])) {
     );
 
     $_SESSION["success"] = "Password changed successfully.";
-    header("Location: profile.php");
+    header("Location:" . PUBLIC_URL . "profile.php");
     exit();
 }
 ?>
@@ -293,8 +289,8 @@ if (isset($_POST["change_password"])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile Settings</title>
-    <link rel="stylesheet" href="assets/styles/layout.css">
-    <link rel="stylesheet" href="assets/styles/profile.css">
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/profile.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
 </head>
 
@@ -304,8 +300,8 @@ if (isset($_POST["change_password"])) {
     <div class="app">
         <?php
         $nav_file = (($_SESSION["role"] ?? "") === "admin")
-            ? 'assets/includes/admin_nav.php'
-            : 'assets/includes/general_nav.php';
+            ? PUBLIC_PATH . 'assets/includes/admin_nav.php'
+            : PUBLIC_PATH . 'assets/includes/general_nav.php';
 
         include $nav_file;
         ?>
@@ -322,11 +318,11 @@ if (isset($_POST["change_password"])) {
                 <aside class="profile-card">
                     <div class="profile-avatar-wrap">
                         <img class="profile-avatar"
-                            src="assets/profiles/<?php echo htmlspecialchars($user['profile_pic'] ?? 'default.jpg'); ?>"
+                            src="<?= PUBLIC_URL ?>assets/profiles/<?php echo htmlspecialchars($user['profile_pic'] ?? 'default.jpg'); ?>"
                             alt="Profile Picture">
 
                         <button class="pencil-btn" type="button" id="editPhotoBtn">
-                            <img class="pencil-icon" src="assets/images/pencil.png" alt="Pencil">
+                            <img class="pencil-icon" src="<?= PUBLIC_URL ?>assets/images/pencil.png" alt="Pencil">
                         </button>
 
                         <form method="post" enctype="multipart/form-data" id="photoForm">
@@ -475,7 +471,7 @@ if (isset($_POST["change_password"])) {
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script src="../app/script/profile.js" defer></script>
+    <script src="<?= APP_URL ?>script/profile.js" defer></script>
 </body>
 
 </html>

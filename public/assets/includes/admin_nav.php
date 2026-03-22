@@ -40,10 +40,10 @@ function isActiveNav(string $current_page, array $pages): string
 </head>
 
 <aside class="sidebar">
-    <img class="avatar" src="assets/profiles/<?= htmlspecialchars($profile_pic) ?>" alt="<?= $username ?>">
+    <img class="avatar" src="<?= PUBLIC_URL ?>assets/profiles/<?= htmlspecialchars($profile_pic) ?>" alt="<?= $username ?>">
 
     <div class="brand">
-        <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
+        <img class="navbar-mark" src="<?= PUBLIC_URL ?>assets/images/haucredit_logo.png" alt="HAUCREDIT mark">
 
         <div class="brand-text">
             <div class="brand-name">HAUCREDIT</div>
@@ -53,32 +53,32 @@ function isActiveNav(string $current_page, array $pages): string
 
     <nav class="nav">
         <!-- Dashboard -->
-        <a class="nav-item <?= isActiveNav($current_page, $dashboard_pages) ?>" href="admin_dashboard.php">
+        <a class="nav-item <?= isActiveNav($current_page, $dashboard_pages) ?>" href="<?= ADMIN_PAGE ?>admin_dashboard.php">
             <span><i class="fa-solid fa-chart-line"></i> Dashboard</span>
         </a>
 
         <!-- Event Management -->
-        <a class="nav-item <?= isActiveNav($current_page, $event_pages) ?>" href="admin_events.php">
+        <a class="nav-item <?= isActiveNav($current_page, $event_pages) ?>" href="<?= ADMIN_PAGE ?>admin_events.php">
             <span><i class="fa-solid fa-calendar-check"></i> Event Management</span>
         </a>
 
         <!-- Users -->
-        <a class="nav-item <?= isActiveNav($current_page, $user_pages) ?>" href="admin_users.php">
+        <a class="nav-item <?= isActiveNav($current_page, $user_pages) ?>" href="<?= ADMIN_PAGE ?>admin_users.php">
             <span><i class="fa-solid fa-users"></i> Users</span>
         </a>
 
         <!-- Configurations -->
-        <a class="nav-item <?= isActiveNav($current_page, $config_pages) ?>" href="admin_configurations.php">
+        <a class="nav-item <?= isActiveNav($current_page, $config_pages) ?>" href="<?= ADMIN_PAGE ?>admin_configurations.php">
             <span><i class="fa-solid fa-sliders"></i> Configurations</span>
         </a>
 
         <!-- Account -->
         <div class="account">
-            <a class="account-btn" href="profile.php">
+            <a class="account-btn" href="<?= USER_PAGE ?>profile.php">
                 <span><i class="fa-regular fa-user"></i> My Account</span>
             </a>
 
-            <form action="logout.php" method="POST">
+            <form action="<?= PUBLIC_URL ?>logout.php" method="POST">
                 <button type="submit" class="logout-link">Logout</button>
             </form>
         </div>

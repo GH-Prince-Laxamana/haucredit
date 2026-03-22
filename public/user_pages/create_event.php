@@ -1,13 +1,10 @@
 <?php
 session_start();
-require_once "../app/database.php";
-require_once "../app/security_headers.php";
+require_once __DIR__ . '/../../app/database.php';
+require_once APP_PATH . "security_headers.php";
 send_security_headers();
 
-if (!isset($_SESSION["user_id"])) {
-  header("Location: index.php");
-  exit();
-}
+requireLogin();
 
 $ce_fields = [
   'organizing_body',
@@ -1010,15 +1007,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title><?= $editing ? 'Edit' : 'Create' ?> Event</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/ce_styles.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/ce_styles.css" />
 </head>
 
 <body>
     <div class="app">
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-        <?php include 'assets/includes/general_nav.php' ?>
+        <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
         <main class="main">
             <header class="topbar ce-topbar">
@@ -1361,11 +1358,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </form>
 
-            <?php include 'assets/includes/footer.php' ?>
+            <?php include PUBLIC_PATH . 'assets/includes/footer.php' ?>
         </main>
     </div>
 
-    <script src="../app/script/layout.js?v=1"></script>
-    <script src="../app/script/create_event.js"></script>
+    <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
+    <script src="<?= APP_URL ?>script/create_event.js"></script>
 </body>
 </html>

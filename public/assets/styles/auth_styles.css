@@ -21,7 +21,7 @@ a {
 }
 
 body:has(.auth-container) {
-  background: url("../images/HOLY.jpg") center/cover no-repeat fixed;
+  background: url("../images/auth_bg.jpg") center/cover no-repeat fixed;
   min-height: 100vh;
   overflow-y: auto;
   padding: 16px 0 26px;

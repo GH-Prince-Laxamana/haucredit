@@ -28,10 +28,10 @@ if ($user_id) {
 </head>
 
 <aside class="sidebar">
-    <img class="avatar" src="assets/profiles/<?= $profile_pic ?>" alt="<?= $username ?>">
+    <img class="avatar" src="<?= PUBLIC_URL ?>assets/profiles/<?= $profile_pic ?>" alt="<?= $username ?>">
 
     <div class="brand">
-        <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
+        <img class="navbar-mark" src="<?= PUBLIC_URL ?>assets/images/haucredit_logo.png" alt="HAUCREDIT mark">
 
         <div class="brand-text">
             <div class="brand-name">HAUCREDIT</div>
@@ -42,38 +42,38 @@ if ($user_id) {
     <nav class="nav">
 
         <!-- Dashboard -->
-        <a class="nav-item <?= ($current_page == 'home.php') ? 'active' : '' ?>" href="home.php">
+        <a class="nav-item <?= ($current_page == 'home.php') ? 'active' : '' ?>" href="<?= USER_PAGE ?>home.php">
             <i class="fa-regular fa-house"></i>
             <span>Dashboard</span>
         </a>
 
         <!-- Create Event -->
-        <a class="nav-item <?= ($current_page == 'create_event.php') ? 'active' : '' ?>" href="create_event.php">
+        <a class="nav-item <?= ($current_page == 'create_event.php') ? 'active' : '' ?>" href="<?= USER_PAGE ?>create_event.php">
             <i class="fa-solid fa-plus"></i>
             <span>Create Event</span>
         </a>
 
         <!-- My Events — active on both my_events.php and view_event.php -->
         <a class="nav-item <?= in_array($current_page, ['my_events.php', 'view_event.php']) ? 'active' : '' ?>"
-            href="my_events.php">
+            href="<?= USER_PAGE ?>my_events.php">
             <i class="fa-regular fa-clipboard"></i>
             <span>My Events</span>
         </a>
 
         <!-- Calendar -->
-        <a class="nav-item <?= ($current_page == 'calendar.php') ? 'active' : '' ?>" href="calendar.php">
+        <a class="nav-item <?= ($current_page == 'calendar.php') ? 'active' : '' ?>" href="<?= USER_PAGE ?>calendar.php">
             <i class="fa-regular fa-calendar"></i>
             <span>Calendar</span>
         </a>
 
         <!-- Requirements -->
-        <a class="nav-item <?= ($current_page == 'requirements.php') ? 'active' : '' ?>" href="requirements.php">
+        <a class="nav-item <?= ($current_page == 'requirements.php') ? 'active' : '' ?>" href="<?= USER_PAGE ?>requirements.php">
             <i class="fa-solid fa-list-check"></i>
             <span>Requirements</span>
         </a>
 
         <!-- About -->
-        <a class="nav-item <?= ($current_page == 'about.php') ? 'active' : '' ?>" href="about.php">
+        <a class="nav-item <?= ($current_page == 'about.php') ? 'active' : '' ?>" href="<?= PUBLIC_URL ?>about.php">
             <i class="fa-regular fa-circle-question"></i>
             <span>About Us</span>
         </a>
@@ -94,7 +94,7 @@ if ($user_id) {
             }
             ?>
 
-            <form action="logout.php" method="POST">
+            <form action="<?= PUBLIC_URL ?>logout.php" method="POST">
                 <?php
                 if ($current_page === 'about.php' && $username === "") {
                     echo '<button type="submit" class="logout-link">

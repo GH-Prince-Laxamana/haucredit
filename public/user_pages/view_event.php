@@ -1,17 +1,14 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../../app/database.php';
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
+requireLogin();
 
 $user_id = (int) $_SESSION["user_id"];
 $event_id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
 if ($event_id <= 0) {
-    popup_error("Invalid event ID.");
+    popup_error("Invalid event.", PUBLIC_URL . 'index.php');
 }
 
 /* ================= HELPERS ================= */
@@ -232,7 +229,7 @@ $fetchEventSql = "
 $event = fetchOne($conn, $fetchEventSql, "ii", [$event_id, $user_id]);
 
 if (!$event) {
-    popup_error("Event not found or you don't have permission to view it.");
+    popup_error("Event not found or you don't have permission to view it.", PUBLIC_URL . 'index.php');
 }
 
 /* ================= EVENT STATE ================= */
@@ -358,15 +355,15 @@ $metric_status = getMetricAchievementStatus(
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>View Event - HAUCREDIT</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/view_event.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/view_event.css" />
 </head>
 
 <body>
     <div class="app">
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-        <?php include 'assets/includes/general_nav.php' ?>
+        <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
         <main class="main">
             <header class="topbar">
@@ -774,7 +771,7 @@ $metric_status = getMetricAchievementStatus(
                     </section>
                 <?php endif; ?>
 
-                <?php include 'assets/includes/footer.php' ?>
+                <?php include PUBLIC_PATH . 'assets/includes/footer.php' ?>
             </section>
         </main>
     </div>
@@ -793,7 +790,7 @@ $metric_status = getMetricAchievementStatus(
         </div>
     </div>
 
-    <script src="../app/script/layout.js?v=1"></script>
+    <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
     <script>
         function previewDocument(url, name, noTemplateMsg = '') {
             const modal = document.getElementById('docPreviewModal');

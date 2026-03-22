@@ -1,14 +1,10 @@
 <?php
 session_start();
-require_once "../app/database.php";
-require_once "../app/security_headers.php";
+require_once __DIR__ . '/../../app/database.php';
+require_once APP_PATH . "security_headers.php";
 send_security_headers();
 
-/* ================= AUTH ================= */
-if (!isset($_SESSION["user_id"])) {
-  header("Location: index.php");
-  exit();
-}
+requireLogin();
 
 $user_id = (int) $_SESSION["user_id"];
 
@@ -347,8 +343,8 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Calendar</title>
 
-  <link rel="stylesheet" href="assets/styles/layout.css" />
-  <link rel="stylesheet" href="assets/styles/calendar_styles.css" />
+  <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+  <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/calendar_styles.css" />
 </head>
 
 <body data-month-start="<?= htmlspecialchars($monthStartDate); ?>"
@@ -357,7 +353,7 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
   <div class="app">
     <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-    <?php include 'assets/includes/general_nav.php' ?>
+    <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
     <main class="main">
 
@@ -512,7 +508,7 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
         </div>
       </section>
 
-      <?php include 'assets/includes/footer.php' ?>
+      <?php include PUBLIC_PATH . 'assets/includes/footer.php' ?>
     </main>
   </div>
 
@@ -569,8 +565,8 @@ $s = stats($conn, $user_id, $monthStart, $monthEnd, $monthStartDate, $monthEndDa
     </div>
   </div>
 
-  <script src="../app/script/layout.js?v=1"></script>
-  <script src="../app/script/calendar.js?v=1"></script>
+  <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
+  <script src="<?= APP_URL ?>script/calendar.js?v=1"></script>
 </body>
 
 </html>

@@ -1,15 +1,8 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../../app/database.php';
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
-
-if (($_SESSION["role"] ?? "") !== "admin") {
-    popup_error("Access denied.");
-}
+requireAdmin();
 
 $admin_name = htmlspecialchars($_SESSION["username"] ?? "Admin", ENT_QUOTES, "UTF-8");
 
@@ -265,16 +258,16 @@ $showing_to = min($offset + $per_page, $total_rows);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Events - HAUCREDIT</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/home_styles.css" />
-    <link rel="stylesheet" href="assets/styles/admin_events.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/home_styles.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/admin_events.css" />
 </head>
 
 <body>
     <div class="app">
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-        <?php include 'assets/includes/admin_nav.php'; ?>
+        <?php include PUBLIC_PATH . 'assets/includes/admin_nav.php'; ?>
 
         <main class="main">
             <header class="topbar">
@@ -549,12 +542,12 @@ $showing_to = min($offset + $per_page, $total_rows);
                     </section>
                 <?php endif; ?>
 
-                <?php include 'assets/includes/footer.php'; ?>
+                <?php include PUBLIC_PATH . 'assets/includes/footer.php'; ?>
             </section>
         </main>
     </div>
 
-    <script src="../app/script/layout.js?v=1"></script>
+    <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
     <script>
         (function () {
             const form = document.getElementById('eventsFilterForm');

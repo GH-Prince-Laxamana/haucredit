@@ -1,15 +1,8 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../../app/database.php';
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
-
-if (($_SESSION["role"] ?? "") !== "admin") {
-    popup_error("Access denied.");
-}
+requireAdmin();
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     popup_error("Invalid request.");
@@ -21,7 +14,7 @@ $action = trim($_POST["action"] ?? "");
 $admin_remarks = trim($_POST["admin_remarks"] ?? "");
 
 if ($event_id <= 0) {
-    popup_error("Invalid event.");
+    popup_error("Invalid event.", PUBLIC_URL . 'index.php');
 }
 
 $allowed_actions = ["save_remarks", "needs_revision", "approve", "complete"];

@@ -1,10 +1,12 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../app/database.php';
 
 // ===== SECURITY HEADERS =====
-require_once "../app/security_headers.php";
+require_once APP_PATH . "security_headers.php";
 send_security_headers();
+
+redirectIfLoggedIn();
 
 // ===== SELF-REFERENCING URL =====
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");

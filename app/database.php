@@ -1,6 +1,7 @@
 <?php
 require_once 'error.php';
 require_once 'query_builder_functions.php';
+require_once __DIR__ . '/config/base_path_definition.php';
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
@@ -8,6 +9,40 @@ $db_server = "127.0.0.1";
 $db_user = "root";
 $db_pass = "";
 $db_name = "haucredit_db";
+
+function redirectIfLoggedIn(): void
+{
+    if (isset($_SESSION["user_id"])) {
+        $role = $_SESSION["role"] ?? "user";
+
+        if ($role === "admin") {
+            header("Location: " . ADMIN_PAGE . "admin_dashboard.php");
+        } else {
+            header("Location: " . USER_PAGE . "home.php");
+        }
+        exit();
+    }
+}
+
+function requireLogin(): void
+{
+    if (!isset($_SESSION["user_id"])) {
+        header("Location: " . PUBLIC_URL . "index.php");
+        exit();
+    }
+}
+
+function requireAdmin(): void
+{
+    if (!isset($_SESSION["user_id"])) {
+        header("Location: " . PUBLIC_URL . "index.php");
+        exit();
+    }
+
+    if (($_SESSION["role"] ?? "") !== "admin") {
+        popup_error("Access denied.", PUBLIC_URL . 'index.php');
+    }
+}
 
 try {
     $conn = new mysqli($db_server, $db_user, $db_pass);

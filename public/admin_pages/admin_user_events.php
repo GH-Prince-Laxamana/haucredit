@@ -1,15 +1,8 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../../app/database.php';
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
-
-if (($_SESSION["role"] ?? "") !== "admin") {
-    popup_error("Access denied.");
-}
+requireAdmin();
 
 $user_id = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
 $status_filter = trim($_GET['status'] ?? 'all');
@@ -189,16 +182,16 @@ $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-use
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>User Events - HAUCREDIT</title>
-    <link rel="stylesheet" href="assets/styles/layout.css" />
-    <link rel="stylesheet" href="assets/styles/home_styles.css" />
-    <link rel="stylesheet" href="assets/styles/admin_user_events.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/home_styles.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/admin_user_events.css" />
 </head>
 
 <body>
     <div class="app">
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
-        <?php include 'assets/includes/admin_nav.php'; ?>
+        <?php include PUBLIC_PATH . 'assets/includes/admin_nav.php'; ?>
 
         <main class="main">
             <header class="topbar">
@@ -219,7 +212,7 @@ $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-use
             <section class="content admin-user-events-page">
                 <!-- User Profile -->
                 <section class="user-profile-card">
-                    <img src="assets/profiles/<?= htmlspecialchars($profile_pic) ?>"
+                    <img src="<?= PUBLIC_URL ?>assets/profiles/<?= htmlspecialchars($profile_pic) ?>"
                         alt="<?= htmlspecialchars($user['user_name']) ?>" class="user-profile-avatar">
 
                     <div class="user-profile-info">
@@ -476,12 +469,12 @@ $role_class = (($user['role'] ?? 'user') === 'admin') ? 'role-admin' : 'role-use
                     </table>
                 </section>
 
-                <?php include 'assets/includes/footer.php'; ?>
+                <?php include PUBLIC_PATH . 'assets/includes/footer.php'; ?>
             </section>
         </main>
     </div>
 
-    <script src="../app/script/layout.js?v=1"></script>
+    <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
     <script>
         (function () {
             const form = document.getElementById('userEventsFilterForm');

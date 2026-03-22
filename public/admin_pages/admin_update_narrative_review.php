@@ -1,15 +1,10 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../../app/database.php';
+require_once APP_PATH . "security_headers.php";
+send_security_headers();
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
-
-if (($_SESSION["role"] ?? "") !== "admin") {
-    popup_error("Access denied.");
-}
+requireAdmin();
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     popup_error("Invalid request.");
@@ -30,7 +25,7 @@ if (!in_array($action, $allowed_actions, true)) {
     popup_error("Invalid action.");
 }
 
-/* ================= FETCH REQUIREMENT + EVENT ================= */
+/* ================= FETCH NARRATIVE REQUIREMENT ================= */
 $row = fetchOne(
     $conn,
     "
@@ -39,7 +34,6 @@ $row = fetchOne(
         er.event_id,
         er.submission_status,
         er.review_status,
-        er.remarks,
         rt.req_name,
         e.event_status,
         e.archived_at
@@ -51,6 +45,7 @@ $row = fetchOne(
     WHERE er.event_req_id = ?
       AND er.event_id = ?
       AND e.archived_at IS NULL
+      AND rt.req_name = 'Narrative Report'
     LIMIT 1
     ",
     "ii",
@@ -58,20 +53,18 @@ $row = fetchOne(
 );
 
 if (!$row) {
-    popup_error("Requirement not found.");
+    popup_error("Narrative Report not found.");
 }
 
 $event_status = $row["event_status"] ?? "";
 $submission_status = $row["submission_status"] ?? "";
-$req_name = $row["req_name"] ?? "";
 
-/* ================= VALIDATE WORKFLOW ================= */
 if (in_array($event_status, ["Draft", "Completed"], true)) {
-    popup_error("Requirements cannot be reviewed while the event status is {$event_status}.");
+    popup_error("Narrative Report cannot be reviewed while the event status is {$event_status}.");
 }
 
 if ($submission_status !== "Uploaded" && $action !== "save_remarks") {
-    popup_error("Only uploaded requirements can be reviewed.");
+    popup_error("Only uploaded Narrative Reports can be reviewed.");
 }
 
 try {
@@ -127,8 +120,6 @@ try {
             [$admin_user_id, $remarks !== "" ? $remarks : null, $event_req_id]
         );
 
-        /* If a requirement needs revision, event should also reflect Needs Revision
-           unless already Completed */
         execQuery(
             $conn,
             "
@@ -148,9 +139,9 @@ try {
 
 } catch (Exception $e) {
     $conn->rollback();
-    popup_error("Failed to update requirement: " . $e->getMessage());
+    popup_error("Failed to update Narrative Report review: " . $e->getMessage());
 }
 
-header("Location: admin_manage_event.php?id=" . $event_id);
+header("Location: admin_review_narrative.php?event_id=" . $event_id);
 exit();
 ?>

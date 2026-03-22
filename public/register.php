@@ -1,17 +1,14 @@
 <?php
 session_start();
-require_once "../app/database.php";
-require_once "../app/security_headers.php";
+require_once __DIR__ . '/../app/database.php';
+require_once APP_PATH . "security_headers.php";
 send_security_headers();
 
 // ===== SELF-REFERENCING URL =====
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 
 // ===== AUTHENTICATION CHECK =====
-if (isset($_SESSION["user_id"])) {
-    header("Location: home.php");
-    exit();
-}
+redirectIfLoggedIn();
 
 // ===== LOAD ORGANIZATION OPTIONS FROM DB =====
 $orgRows = fetchAll(
@@ -131,7 +128,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
     <div class="navbar">
         <div class="navbar-brand">
-            <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
+            <img class="navbar-mark" src="assets/images/haucredit_logo.png" alt="HAUCREDIT mark">
             <div class="navbar-title">HAU<span class="accent">CREDIT</span></div>
         </div>
 

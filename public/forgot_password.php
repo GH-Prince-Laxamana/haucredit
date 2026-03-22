@@ -1,9 +1,11 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../app/database.php';
 
 require_once("../app/security_headers.php");
 send_security_headers();
+
+redirectIfLoggedIn();
 
 // ===== SELF-REFERENCING FORM ACTION =====
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");

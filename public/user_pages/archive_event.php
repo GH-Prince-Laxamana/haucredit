@@ -1,11 +1,8 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../../app/database.php';
 
-if (!isset($_SESSION["user_id"])) {
-  header("Location: index.php");
-  exit();
-}
+requireLogin();
 
 if (isset($_POST['action'])) {
   $event_id = (int) $_POST['event_id'];

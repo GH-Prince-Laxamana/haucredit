@@ -5,11 +5,11 @@ session_start();
 
 // ===== DATABASE CONNECTION =====
 // Include the database connection file to establish a connection for potential future use
-require_once "../app/database.php";
+require_once __DIR__ . '/../app/database.php';
 
 // ===== SECURITY HEADERS =====
 // Include and send security headers to protect against common web vulnerabilities
-require_once "../app/security_headers.php";
+require_once APP_PATH . "security_headers.php";
 send_security_headers();
 
 // ===== PROFILE PICTURE INITIALIZATION =====
@@ -28,7 +28,7 @@ if (!isset($_SESSION["user_id"])) {
     <!-- Page title -->
     <title>About Us</title>
     <!-- Stylesheets for layout and about page specific styles -->
-    <link rel="stylesheet" href="assets/styles/layout.css" />
+    <link rel="stylesheet" href="<?= PUBLIC_URL ?>assets/styles/layout.css" />
     <link rel="stylesheet" href="assets/styles/about_styles.css" />
 </head>
 
@@ -38,7 +38,7 @@ if (!isset($_SESSION["user_id"])) {
         <div class="sidebar-overlay" id="sidebarOverlay" hidden></div>
 
         <!-- Include the general navigation component -->
-        <?php include 'assets/includes/general_nav.php' ?>
+        <?php include PUBLIC_PATH . 'assets/includes/general_nav.php' ?>
 
         <main class="main">
             <header class="topbar">
@@ -231,11 +231,11 @@ if (!isset($_SESSION["user_id"])) {
             </section>
 
             <!-- Include the footer component -->
-            <?php include 'assets/includes/footer.php' ?>
+            <?php include PUBLIC_PATH . 'assets/includes/footer.php' ?>
         </main>
     </div>
 
     <!-- Include the layout JavaScript for navigation functionality -->
-    <script src="../app/script/layout.js?v=1"></script>
+    <script src="<?= APP_URL ?>script/layout.js?v=1"></script>
 </body>
 </html>

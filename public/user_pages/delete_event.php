@@ -1,11 +1,8 @@
 <?php
 session_start();
-require_once "../app/database.php";
+require_once __DIR__ . '/../../app/database.php';
 
-if (!isset($_SESSION["user_id"])) {
-    header("Location: index.php");
-    exit();
-}
+requireLogin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['event_id'])) {
     popup_error("Invalid request.");
@@ -15,7 +12,7 @@ $event_id = (int) $_POST['event_id'];
 $user_id = (int) $_SESSION['user_id'];
 
 if ($event_id <= 0) {
-    popup_error("Invalid event.");
+    popup_error("Invalid event.", PUBLIC_URL . 'index.php');
 }
 
 /* ================= OWNERSHIP + ARCHIVE CHECK ================= */

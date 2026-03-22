@@ -1,8 +1,8 @@
 <?php
 session_start();
-require_once "../app/database.php";
-require_once("../app/security_headers.php");
-require_once "../app/query_builder_functions.php";
+require_once __DIR__ . '/../app/database.php';
+require_once APP_PATH . "security_headers.php";
+require_once APP_PATH . "query_builder_functions.php";
 send_security_headers();
 
 /* ===== SELF-REFERENCING FORM ACTION ===== */
@@ -12,16 +12,7 @@ $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 $error = "";
 
 /* ===== REDIRECT IF ALREADY LOGGED IN ===== */
-if (isset($_SESSION["user_id"])) {
-    $role = $_SESSION["role"] ?? "user";
-
-    if ($role === "admin") {
-        header("Location: admin_dashboard.php");
-    } else {
-        header("Location: home.php");
-    }
-    exit();
-}
+redirectIfLoggedIn();
 
 /* ===== FORM SUBMISSION HANDLING ===== */
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -90,9 +81,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $_SESSION["role"] = $row["role"] ?? "user";
 
                 if (($_SESSION["role"] ?? "user") === "admin") {
-                    header("Location: admin_dashboard.php");
+                    header("Location: " . ADMIN_PAGE . "admin_dashboard.php");
                 } else {
-                    header("Location: home.php");
+                    header("Location: " . USER_PAGE . "home.php");
                 }
                 exit();
             } else {
@@ -120,7 +111,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <!-- ===== NAVIGATION BAR ===== -->
     <div class="navbar">
         <div class="navbar-brand">
-            <img class="navbar-mark" src="assets/images/FavLogo.png" alt="HAUCREDIT mark">
+            <img class="navbar-mark" src="assets/images/haucredit_logo.png" alt="HAUCREDIT mark">
             <div class="navbar-title">HAU<span class="accent">CREDIT</span></div>
         </div>
 
