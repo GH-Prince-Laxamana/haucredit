@@ -1,5 +1,5 @@
 <?php 
-// activity_types
+// activity_types for seed_configurations.php
 return [
     'On-campus Activity',
     'Virtual Activity',

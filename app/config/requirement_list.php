@@ -1,5 +1,5 @@
 <?php
-// requirement_list
+// requirement_list for seed_configurations.php
 return [
     'default_requirements' => [
         'Approval Letter from Dean',

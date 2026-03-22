@@ -87,7 +87,7 @@ if ($user_id) {
                         <span style="text-align: center;">Please Sign In to Continue</span>
                       </button>';
             } else {
-                echo '<a class="account-btn" href="profile.php">
+                echo '<a class="account-btn" href="' . USER_PAGE . 'profile.php">
                         <i class="fa-regular fa-circle-user"></i>
                         <span>My Account</span>
                       </a>';

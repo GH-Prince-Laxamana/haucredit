@@ -1,5 +1,5 @@
 <?php
-// series_options
+// series_options for seed_configurations.php
 return [
     'College Days',
     'University Days',

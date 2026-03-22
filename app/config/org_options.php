@@ -1,5 +1,5 @@
 <?php
-// org_options
+// org_options for seed_configurations.php
 return [
     // OSA-Based
     "HAU OSA",

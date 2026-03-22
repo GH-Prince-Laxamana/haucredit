@@ -1,4 +1,5 @@
 <?php
+// Path and URL definitions for flexible access on relative use
 
 define('BASE_PATH', dirname(__DIR__));      // your full file path/haucredit/app (ex. C:\xampp\htdocs\haucredit\app)
 define('ROOT_PATH', dirname(BASE_PATH));   // your full file path/haucredit (ex. C:\xampp\htdocs\haucredit)

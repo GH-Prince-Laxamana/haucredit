@@ -1,5 +1,5 @@
 <?php
-// requirements_map
+// requirements_map for seed_configurations.php
 /* ================= REQUIREMENTS MAP ================= */
 return [
   'OSA-Initiated Activity' => [

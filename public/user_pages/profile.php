@@ -56,14 +56,14 @@ if (isset($_POST["upload_photo"])) {
 
         if (!in_array($ext, $allowed, true)) {
             $_SESSION["error"] = "Only .JPG, .JPEG, .PNG, and .WEBP files are allowed.";
-            header("Location:" . PUBLIC_URL . "profile.php");
+            header("Location:" . USER_PAGE . "profile.php");
             exit();
         }
 
         $check = getimagesize($_FILES["profile_pic"]["tmp_name"]);
         if ($check === false) {
             $_SESSION["error"] = "Invalid image file.";
-            header("Location:" . PUBLIC_URL . "profile.php");
+            header("Location:" . USER_PAGE . "profile.php");
             exit();
         }
 
@@ -97,16 +97,16 @@ if (isset($_POST["upload_photo"])) {
             );
 
             $_SESSION["success"] = "Profile picture updated.";
-            header("Location:" . PUBLIC_URL . "profile.php");
+            header("Location:" . USER_PAGE . "profile.php");
             exit();
         } else {
             $_SESSION["error"] = "Failed to upload profile picture.";
-            header("Location:" . PUBLIC_URL . "profile.php");
+            header("Location:" . USER_PAGE . "profile.php");
             exit();
         }
     } else {
         $_SESSION["error"] = "Please select an image to upload.";
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 }
@@ -134,7 +134,7 @@ if (isset($_POST['remove_photo'])) {
     }
 
     $_SESSION['success'] = "Profile photo removed.";
-    header("Location:" . PUBLIC_URL . "profile.php");
+    header("Location:" . USER_PAGE . "profile.php");
     exit();
 }
 
@@ -147,37 +147,37 @@ if (isset($_POST["update_profile"])) {
 
     if ($username === "" || $studnum === "" || $email === "" || $org === "") {
         $_SESSION["error"] = "All fields are required.";
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $_SESSION["error"] = "Invalid email format.";
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
     if (!preg_match('/@(student\.hau\.edu\.ph)$/i', $email)) {
         $_SESSION["error"] = "Email must be your HAU student email.";
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
     if (strlen($studnum) < 8) {
         $_SESSION["error"] = "Invalid student number.";
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
     if (strlen($username) < 4) {
         $_SESSION["error"] = "Username must be at least 4 characters.";
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
     if (!in_array($org, $org_options, true)) {
         $_SESSION["error"] = "Please select a valid organizing body.";
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
@@ -206,7 +206,7 @@ if (isset($_POST["update_profile"])) {
             $_SESSION["error"] = "Student number already exists.";
         }
 
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
@@ -228,7 +228,7 @@ if (isset($_POST["update_profile"])) {
     $_SESSION["org_body"] = $org;
 
     $_SESSION["success"] = "Profile updated successfully.";
-    header("Location:" . PUBLIC_URL . "profile.php");
+    header("Location:" . USER_PAGE . "profile.php");
     exit();
 }
 
@@ -240,13 +240,13 @@ if (isset($_POST["change_password"])) {
 
     if (!password_verify($current, $user["user_password"])) {
         $_SESSION["error"] = "Current password incorrect.";
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
     if ($new !== $confirm) {
         $_SESSION["error"] = "Passwords do not match.";
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
@@ -257,7 +257,7 @@ if (isset($_POST["change_password"])) {
         !preg_match('/[0-9]/', $new)
     ) {
         $_SESSION["error"] = "Password must be at least 8 characters including uppercase, lowercase, and numbers.";
-        header("Location:" . PUBLIC_URL . "profile.php");
+        header("Location:" . USER_PAGE . "profile.php");
         exit();
     }
 
@@ -277,7 +277,7 @@ if (isset($_POST["change_password"])) {
     );
 
     $_SESSION["success"] = "Password changed successfully.";
-    header("Location:" . PUBLIC_URL . "profile.php");
+    header("Location:" . USER_PAGE . "profile.php");
     exit();
 }
 ?>
