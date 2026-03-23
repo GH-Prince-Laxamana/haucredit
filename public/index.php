@@ -5,6 +5,64 @@ require_once APP_PATH . "security_headers.php";
 require_once APP_PATH . "query_builder_functions.php";
 send_security_headers();
 
+// ========== Prepare Seeding Banner ==========
+// Store banner output for later display to avoid header conflicts
+$seedingBanner = "";
+if (defined('SEEDING_REQUIRED') && SEEDING_REQUIRED && !isset($_POST['seed_database'])) {
+    $seedingBanner = "
+        <div style='
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10000;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+
+            padding: 14px 20px;
+
+            background: linear-gradient(135deg, #4b0014, #3d0010);
+            color: #fff;
+
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        '>
+            <span style='white-space: nowrap;'>
+                Optional: Load default system data to speed up setup and skip most admin configuration — based on the 2025–2026 OSA Student Activity Manual
+            </span>
+
+            <form method='POST' style='margin: 0;'>
+                <button type='submit' name='seed_database' value='1' style='
+                    background: #fff;
+                    color: #4b0014;
+
+                    border: none;
+                    border-radius: 6px;
+
+                    padding: 8px 16px;
+                    font-size: 13px;
+                    font-weight: 600;
+
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                ' onmouseover='this.style.background=\"#ffe0b2\"; this.style.transform=\"translateY(-1px)\"'
+                onmouseout='this.style.background=\"#ffffff\"; this.style.transform=\"translateY(0)\"'>
+                    Seed Initial Configurations
+                </button>
+            </form>
+        </div>
+
+        <div style='height: 60px;'></div>
+    ";
+}
+
 /* ===== SELF-REFERENCING FORM ACTION ===== */
 $self = htmlspecialchars($_SERVER["PHP_SELF"], ENT_QUOTES, "UTF-8");
 
@@ -108,6 +166,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 </head>
 
 <body>
+    <?php echo $seedingBanner; ?>
     <!-- ===== NAVIGATION BAR ===== -->
     <div class="navbar">
         <div class="navbar-brand">

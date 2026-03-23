@@ -1,7 +1,8 @@
 <?php
 /**
  * NOTE: THIS IS AN OPTIONAL FILE
- * File is included in the final repository for testing purposes.
+ * This file is included by database.php when seeding is required.
+ * It can also be called manually by developers for testing purposes.
  * 
  * Database Configuration Seeding Script
  * 
@@ -18,9 +19,15 @@
  */
 
 // Import required database and utility functions
-require_once 'error.php';
-require_once 'query_builder_functions.php';
-require_once 'database.php';
+// Only require if not already loaded (to avoid conflicts when called from database.php)
+if (!function_exists('fetchOne')) {
+    require_once 'error.php';
+    require_once 'query_builder_functions.php';
+}
+
+if (!isset($conn)) {
+    require_once 'database.php';
+}
 
 // ========== Load Configuration Data ==========
 // Import configuration arrays from external config files

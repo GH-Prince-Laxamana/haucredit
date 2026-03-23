@@ -22,8 +22,10 @@ docker-compose up -d
 
 ### Access the Application
 - **URL**: http://localhost/public/
-- **Username**: `admin`
-- **Password**: `203`
+- **Admin Number**: `203`
+- **Admin Password**: `203`
+- **Test User Number**: `123`
+- **Test User Password**: `123`
 
 ---
 
@@ -145,12 +147,15 @@ MAX_EXECUTION_TIME=300
 
 ---
 
-## 📋 Default Admin Credentials
+## 📋 Default Test Credentials
 
-- **Username**: `admin`
+**Admin Account:**
+- **Number**: `203`
 - **Password**: `203`
 
-⚠️ **Change these credentials after first login!**
+**Test User Account:**
+- **Number**: `203`
+- **Password**: `123`
 
 ---
 
@@ -225,6 +230,15 @@ For issues or questions:
 1. Check the troubleshooting section above
 2. Review Docker logs: `docker-compose logs -f`
 3. Verify all services are running: `docker-compose ps`
+
+---
+
+## 👨‍💻 Development Team
+
+- **Prince Laxamana**
+- **Dannah Mikayla Sanchez**
+- **Justine Lee Larioza**
+- **Kenaz Brian Yañez**
 
 ---
 

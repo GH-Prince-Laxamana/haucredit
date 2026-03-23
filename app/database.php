@@ -6,7 +6,7 @@
  * GitHub Copilot handled code refactoring and documentation. 
  * The frontend architecture and UI design were optimized using Claude and DeepSeek.
  * 
-*/
+ */
 
 /**
  * Database Configuration and Session Management
@@ -101,7 +101,7 @@ function requireAdmin(): void
 try {
     // Create database connection with strict error reporting enabled
     $conn = new mysqli(DB_SERVER, DB_USER, DB_PASSWORD);
-    
+
     // Set character encoding to UTF-8 for proper Unicode support
     $conn->set_charset("utf8mb4");
 
@@ -114,7 +114,7 @@ try {
 
     // Select the target database for subsequent queries
     $conn->select_db(DB_NAME);
-    
+
     // Start transaction to ensure all tables are created atomically
     $conn->begin_transaction();
 
@@ -447,8 +447,57 @@ try {
                 $adminPass,
                 'admin@hau.edu.ph',
                 '203',
-                'SOC',
+                'HAU-SOC',
                 'admin',
+                'default.jpg'
+            ]
+        );
+    }
+
+    // ========== Default Test User Creation ==========
+    // Check if a default test user already exists in the system
+    $existingTestUser = fetchOne(
+        $conn,
+        "
+        SELECT user_id
+        FROM users
+        WHERE user_name = ?
+        LIMIT 1
+        ",
+        "s",
+        ['testuser']
+    );
+
+    // If no test user exists, create a default test account for testing purposes
+    if (!$existingTestUser) {
+        // Hash the test user password with bcrypt algorithm
+        $testUserPass = password_hash("123", PASSWORD_DEFAULT);
+
+        // Insert the default test user into the database
+        execQuery(
+            $conn,
+            "
+            INSERT INTO users
+            (
+                user_name,
+                user_password,
+                user_email,
+                stud_num,
+                org_body,
+                role,
+                profile_pic,
+                user_reg_date
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+            ",
+            "sssssss",
+            [
+                'testuser',
+                $testUserPass,
+                'testuser@hau.edu.ph',
+                '123',
+                'HAU-CSC-SOC',
+                'user',
                 'default.jpg'
             ]
         );
@@ -456,6 +505,18 @@ try {
 
     // Commit all database changes atomically
     $conn->commit();
+
+    // ========== Check if database seeding is required ==========
+    // Verify if configuration tables have been seeded with initial data
+    $seedCheck = fetchOne(
+        $conn,
+        "SELECT COUNT(*) as config_count FROM config_org_options",
+        "",
+        []
+    );
+
+    $seedingRequired = !$seedCheck || (int) $seedCheck['config_count'] === 0;
+    define('SEEDING_REQUIRED', $seedingRequired);
 
 } catch (Exception $e) {
     // Attempt to rollback the transaction if an error occurred
@@ -470,5 +531,18 @@ try {
 
     // Display the error message and redirect user to login
     popup_error("Database Error: " . $e->getMessage());
+}
+
+// ========== Handle Database Seeding ==========
+// If user clicked the seed button, run the seeding process
+if (isset($_POST['seed_database']) && $_POST['seed_database'] === '1') {
+    try {
+        require_once 'seed_configurations.php';
+        // Redirect to prevent form resubmission
+        header("Location: " . $_SERVER['REQUEST_URI']);
+        exit();
+    } catch (Exception $e) {
+        popup_error("Seeding Error: " . $e->getMessage());
+    }
 }
 ?>
