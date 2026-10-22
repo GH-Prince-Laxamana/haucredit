@@ -1,5 +1,5 @@
 # Multi-stage build for PHP application
-FROM php:8.2-apache AS builder
+FROM php:8.2.35-apache AS builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
